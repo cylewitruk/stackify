@@ -1,6 +1,195 @@
+use std::path::Path;
+
+use color_eyre::eyre::Result;
+
+use crate::EnvironmentName;
+
 pub mod stackify_docker;
 #[cfg(test)]
 pub mod tests;
 
 pub const STACKIFY_DOCKERFILE: &str = include_str!("../../../../assets/Dockerfile");
 pub const STACKIFY_CARGO_CONFIG: &str = include_str!("../../../../assets/cargo-config.toml");
+
+#[derive(Debug)]
+pub struct NewStacksNetworkResult {
+    pub id: String,
+    pub name: String
+}
+
+#[derive(Debug)]
+pub struct NewStacksNodeContainer<'a> {
+    _environment_name: &'a EnvironmentName,
+    
+}
+
+pub enum ContainerService {
+    Environment,
+    BitcoinMiner,
+    StacksMiner,
+    StacksFollower,
+    StacksSigner,
+    StacksSelfStacker,
+    StacksPoolStacker
+}
+
+impl std::fmt::Display for ContainerService {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ContainerService::Environment => write!(f, "{}", "Environment"),
+            ContainerService::BitcoinMiner => write!(f, "{}", "Bitcoin Miner"),
+            ContainerService::StacksMiner => write!(f, "{}", "Stacks Miner"),
+            ContainerService::StacksFollower => write!(f, "{}", "Stacks Follower"),
+            ContainerService::StacksSigner => write!(f, "{}", "Stacks Signer"),
+            ContainerService::StacksSelfStacker => write!(f, "{}", "Stacks Stacker (Self)"),
+            ContainerService::StacksPoolStacker => write!(f, "{}", "Stacks Stacker (Pool)")
+        }
+    }
+}
+
+impl ContainerService {
+    pub fn from_id(id: u32) -> Option<Self> {
+        match id {
+            0 => Some(Self::BitcoinMiner),
+            1 => Some(Self::StacksMiner),
+            2 => Some(Self::StacksFollower),
+            3 => Some(Self::StacksSigner),
+            4 => Some(Self::StacksSelfStacker),
+            5 => Some(Self::StacksPoolStacker),
+            _ => None
+        }
+    }
+
+    pub fn id(&self) -> u32 {
+        match self {
+            Self::Environment => 99,
+            Self::BitcoinMiner => 0,
+            Self::StacksMiner => 1,
+            Self::StacksFollower => 2,
+            Self::StacksSigner => 3,
+            Self::StacksSelfStacker => 4,
+            Self::StacksPoolStacker => 5
+        }
+    }
+
+    pub fn to_label_string(&self) -> String {
+        match self {
+            Self::Environment => "environment".to_string(),
+            Self::BitcoinMiner => "bitcoin-miner".to_string(),
+            Self::StacksMiner => "stacks-miner".to_string(),
+            Self::StacksFollower => "stacks-follower".to_string(),
+            Self::StacksSigner => "stacks-signer".to_string(),
+            Self::StacksSelfStacker => "stacks-self-stacker".to_string(),
+            Self::StacksPoolStacker => "stacks-pool-stacker".to_string()
+        }
+    }
+}
+
+/*INSERT INTO service_type (id, name) VALUES (0, 'Bitcoin Miner');
+INSERT INTO service_type (id, name) VALUES (1, 'Bitcoin Follower');
+INSERT INTO service_type (id, name) VALUES (2, 'Stacks Miner');
+INSERT INTO service_type (id, name) VALUES (3, 'Stacks Follower');
+INSERT INTO service_type (id, name) VALUES (4, 'Stacks Signer'); -- Minimum epoch 2.5
+INSERT INTO service_type (id, name) VALUES (5, 'Stacks Stacker (Self)');
+INSERT INTO service_type (id, name) VALUES (6, 'Stacks Stacker (Pool)'); */
+
+#[derive(Debug)]
+pub enum Label {
+    Stackify,
+    EnvironmentName,
+    Service,
+    NodeVersion,
+    IsLeader
+}
+
+impl std::fmt::Display for Label {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Label::Stackify => write!(f, "{}", "local.stackify"),
+            Label::EnvironmentName => write!(f, "{}", "local.stackify.environment"),
+            Label::Service => write!(f, "{}", "local.stackify.service"),
+            Label::NodeVersion => write!(f, "{}", "local.stackify.node_version"),
+            Label::IsLeader => write!(f, "{}", "local.stackify.is_leader")
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct StacksLabel<T>(Label, T) where T: Into<String>;
+
+impl<T> Into<(String, T)> for StacksLabel<T> 
+where T: Into<String>
+{
+    fn into(self) -> (String, T) {
+        (self.0.to_string(), self.1)
+    }
+}
+
+#[derive(Debug)]
+pub struct DockerVersion {
+    pub version: String,
+    pub api_version: String,
+    pub min_api_version: String,
+    pub components: Vec<String>
+}
+
+#[derive(Debug)]
+pub struct DockerNetwork {
+    pub id: String,
+    pub name: String
+}
+
+#[derive(Debug)]
+pub struct BuildStackifyArtifacts {
+    pub user_id: u32,
+    pub group_id: u32,
+    pub bitcoin_version: String
+}
+
+pub struct BuildInfo {
+    pub message: String,
+    pub error: Option<String>,
+    /// Progress tuple (current, total).
+    pub progress: Option<Progress>
+}
+
+pub struct Progress {
+    pub current: u32,
+    pub total: u32
+}
+
+impl Progress {
+    pub fn new(current: u32, total: u32) -> Self {
+        Self {
+            current,
+            total
+        }
+    }
+
+    pub fn percent(&self) -> u32 {
+        self.current / self.total * 100
+    }
+}
+
+pub trait TarAppend{
+    fn append_data2<P: AsRef<Path>>(&mut self, path: P, data: &[u8]) -> Result<()>;
+}
+
+impl TarAppend for tar::Builder<Vec<u8>> {
+    fn append_data2<P: AsRef<Path>>(&mut self, path: P, data: &[u8]) -> Result<()> {
+        let mut header = tar::Header::new_gnu();
+        header.set_path(path)?;
+        header.set_size(data.len() as u64);
+        header.set_mode(0o644);
+        header.set_cksum();
+        self.append(&header, data)?;
+        Ok(())
+    }
+}
+
+pub struct StackifyImage {
+    pub id: String,
+    pub tags: Vec<String>,
+    pub container_count: i64,
+    pub size: i64
+}

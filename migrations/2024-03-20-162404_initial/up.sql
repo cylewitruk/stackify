@@ -30,7 +30,7 @@ CREATE TABLE environment (
     name TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    bitcoin_block_speed_seconds INTEGER NOT NULL,
+    bitcoin_block_speed INTEGER NOT NULL,
 
     UNIQUE (name)
 );

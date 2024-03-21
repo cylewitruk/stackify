@@ -1,11 +1,11 @@
-use std::{fmt::Write, time::Duration};
+use std::time::Duration;
 
 use clap::Args;
 use color_eyre::{eyre::Result, owo_colors::OwoColorize};
 use futures_util::StreamExt;
-use indicatif::{ProgressBar, ProgressState, ProgressStyle};
+use indicatif::{ProgressBar, ProgressStyle};
 use regex::Regex;
-use stackify_common::docker::stackify_docker::BuildStackifyArtifacts;
+use stackify_common::docker::BuildStackifyArtifacts;
 
 use crate::context::CliContext;
 

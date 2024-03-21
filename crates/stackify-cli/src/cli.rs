@@ -1,5 +1,5 @@
 use clap::builder::styling::{AnsiColor, Effects, Styles};
-use clap::{command, Args, ColorChoice, Parser, Subcommand};
+use clap::{command, ColorChoice, Parser, Subcommand};
 use clap_verbosity_flag::Verbosity;
 use color_eyre::eyre::Result;
 
@@ -58,7 +58,8 @@ pub enum Commands {
     /// Commands for configuring, manipulating and interacting with environments.
     #[clap(visible_alias = "env")]
     Environment(EnvArgs),
-    /// Displays the current environment status.
+    /// Displays information about current environments and optionally other
+    /// details.
     Info(InfoArgs),
     /// Cleans up resources created/used by stackify.
     Clean(CleanArgs),

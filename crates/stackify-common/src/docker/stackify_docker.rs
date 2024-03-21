@@ -1,12 +1,12 @@
-use std::pin::Pin;
 use std::{collections::HashMap, path::Path};
 use std::io::Write;
 
+use bollard::container::{Config, CreateContainerOptions};
 use bollard::{
     container::UploadToContainerOptions, image::{BuildImageOptions, BuilderVersion}, network::{CreateNetworkOptions, ListNetworksOptions}, secret::Ipam, Docker, API_DEFAULT_VERSION
 };
 use bytes::Bytes;
-use color_eyre::eyre::{eyre, Error, Result};
+use color_eyre::eyre::{eyre, Result};
 use futures_util::{Stream, StreamExt, TryStreamExt};
 use log::debug;
 use rand::{thread_rng, Rng};
@@ -15,52 +15,13 @@ use tokio::runtime::Runtime;
 use crate::util::random_hex;
 use crate::EnvironmentName;
 
-use super::{STACKIFY_CARGO_CONFIG, STACKIFY_DOCKERFILE};
+use super::{BuildInfo, BuildStackifyArtifacts, ContainerService, DockerNetwork, DockerVersion, Label, NewStacksNetworkResult, Progress, StackifyImage, StacksLabel, TarAppend, STACKIFY_CARGO_CONFIG, STACKIFY_DOCKERFILE};
 
-#[derive(Debug)]
-pub struct NewStacksNetworkResult {
-    pub id: String,
-    pub name: String
-}
-
-#[derive(Debug)]
-pub struct NewStacksNodeContainer<'a> {
-    _environment_name: &'a EnvironmentName,
-    
-}
-
-#[derive(Debug)]
-pub enum Label {
-    Stackify,
-    EnvironmentName,
-    Service,
-    NodeVersion,
-    IsLeader
-}
-
-impl std::fmt::Display for Label {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Label::Stackify => write!(f, "{}", "local.stacks.stackify"),
-            Label::EnvironmentName => write!(f, "{}", "local.stacks.environment"),
-            Label::Service => write!(f, "{}", "local.stacks.service"),
-            Label::NodeVersion => write!(f, "{}", "local.stacks.node_version"),
-            Label::IsLeader => write!(f, "{}", "local.stacks.is_leader")
-        }
-    }
-}
-
-#[derive(Debug)]
-pub struct StacksLabel<T>(Label, T) where T: Into<String>;
-
-impl<T> Into<(String, T)> for StacksLabel<T> 
-where T: Into<String>
-{
-    fn into(self) -> (String, T) {
-        (self.0.to_string(), self.1)
-    }
-}
-
+/// A Docker client for Stackify which also includes a Tokio runtime for
+/// sync-wrapping async functions.
+/// 
+/// This struct is the primary interface for interacting with Docker in the
+/// Stackify CLI and Daemon.
 pub struct StackifyDocker {
     pub(crate) docker: bollard::Docker,
     pub(crate) runtime: Runtime
@@ -74,6 +35,9 @@ impl Default for StackifyDocker {
 }
 
 impl StackifyDocker {
+    /// Creates a new instance of `StackifyDocker`, attempting to connect to 
+    /// the Docker daemon. It will attempt several connection paradigms, including
+    /// the new 'rootless' model on Unix systems.
     pub fn new() -> Result<Self> {
         let uid;
         unsafe {
@@ -118,69 +82,69 @@ impl StackifyDocker {
     }
 }
 
-#[derive(Debug)]
-pub struct DockerVersion {
-    pub version: String,
-    pub api_version: String,
-    pub min_api_version: String,
-    pub components: Vec<String>
-}
-
-#[derive(Debug)]
-pub struct DockerNetwork {
-    pub id: String,
-    pub name: String
-}
-
-#[derive(Debug)]
-pub struct BuildStackifyArtifacts {
-    pub user_id: u32,
-    pub group_id: u32,
-    pub bitcoin_version: String
-}
-
-pub struct BuildInfo {
-    pub message: String,
-    pub error: Option<String>,
-    /// Progress tuple (current, total).
-    pub progress: Option<Progress>
-}
-
-pub struct Progress {
-    pub current: u32,
-    pub total: u32
-}
-
-impl Progress {
-    pub fn new(current: u32, total: u32) -> Self {
-        Self {
-            current,
-            total
-        }
-    }
-
-    pub fn percent(&self) -> u32 {
-        self.current / self.total * 100
-    }
-}
-
-pub trait TarAppend{
-    fn append_data2<P: AsRef<Path>>(&mut self, path: P, data: &[u8]) -> Result<()>;
-}
-
-impl TarAppend for tar::Builder<Vec<u8>> {
-    fn append_data2<P: AsRef<Path>>(&mut self, path: P, data: &[u8]) -> Result<()> {
-        let mut header = tar::Header::new_gnu();
-        header.set_path(path)?;
-        header.set_size(data.len() as u64);
-        header.set_mode(0o644);
-        header.set_cksum();
-        self.append(&header, data)?;
-        Ok(())
-    }
-}
-
 impl StackifyDocker {
+    pub fn create_environment_container(
+        &self, 
+        environment_name: &EnvironmentName
+    ) -> Result<()> {
+        let container_name = format!("stackify-env-{}", environment_name);
+        let opts = CreateContainerOptions {
+            name: container_name.clone(),
+            ..Default::default()
+        };
+
+        let labels = vec![
+            StacksLabel(Label::EnvironmentName, environment_name.into()).into(),
+            StacksLabel(Label::Service, ContainerService::Environment.to_label_string()).into()
+        ]
+            .into_iter()
+            .collect::<HashMap<String, String>>();
+
+        let config = Config {
+            image: Some("busybox:latest".to_string()),
+            hostname: Some(container_name.clone()),
+            entrypoint: Some(vec![
+                "/usr/bin/env sh -c 'while true; do sleep 1; done'".to_string()
+            ]),
+            labels: Some(labels),
+
+            ..Default::default()
+        };
+
+        self.runtime.block_on(async {
+            let container = self.docker.create_container(Some(opts), config)
+                .await?;
+            Ok(())
+        })
+    }
+
+    /// Lists all images with the label "local.stackify".
+    pub fn list_stackify_images(&self) -> Result<Vec<StackifyImage>> {
+        let mut filters = HashMap::new();
+        filters.insert("label".to_string(), vec![Label::Stackify.to_string()]);
+
+        let opts = bollard::image::ListImagesOptions {
+            filters,
+            ..Default::default()
+        };
+
+        self.runtime.block_on(async {
+            let images = self.docker.list_images(Some(opts)).await?
+                .iter()
+                .map(|image| {
+                    StackifyImage {
+                        id: image.id.clone(),
+                        tags: image.repo_tags.clone(),
+                        container_count: image.containers,
+                        size: image.size,
+                    }
+                })
+                .collect::<Vec<_>>();
+            Ok(images)
+        })
+    }
+
+    /// Builds the Stackify images and binaries.
     pub fn build_stackify_artifacts(&self, build: BuildStackifyArtifacts) -> Result<impl Stream<Item = Result<BuildInfo>> + Unpin + '_> {
 
         let mut tar = tar::Builder::new(Vec::new());
