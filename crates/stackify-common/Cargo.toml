@@ -1,0 +1,25 @@
+[package]
+name = "stackify-common"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bollard = { workspace = true }
+log = { workspace = true }
+libc = { workspace = true }
+rand = { workspace = true }
+diesel = { workspace = true }
+diesel_migrations = { workspace = true }
+color-eyre = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+time = { workspace = true }
+regex = { workspace = true }
+hex = { workspace = true }
+tar = { workspace = true }
+
+bytes = "1.5.0"
+flate2 = "1.0.28"
+futures-util = { workspace = true }

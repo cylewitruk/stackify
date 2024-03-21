@@ -1,0 +1,43 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/stackify-cli",
+    "crates/stackify-common", 
+    "crates/stackify-daemon", 
+    "crates/stackify-lib"
+]
+
+[workspace.dependencies]
+# Util
+rand = { version = "0.8.5" }
+signal-hook = { version = "0.3.17" }
+tempfile = "3.9.0"
+pathdiff = "0.2.0"
+time = { version = "0.3.31", features = ["formatting", "local-offset"] }
+libc = "0.2.153"
+home = "0.5.9"
+regex = "1.10.3"
+hex = "0.4.3"
+# Logging
+env_logger = "0.11.3"
+log = "0.4.20"
+# CLI
+clap = { version = "4.5.3", features = ["default", "derive"] }
+clap_complete = "4.5.1"
+shellwords = "1.1.0"
+anstyle = "1.0.6"
+# Async
+tokio = { version = "1.36.0", features = ["full"] }
+futures-util = "0.3.30"
+# Docker
+bollard = { version ="0.16.0", features = ["ssl", "time", "buildkit"] }
+# Error handling
+thiserror = { version = "1.0.58" }
+color-eyre = { version = "0.6.2" }
+# Database
+diesel = { version = "2.1.5", features = ["sqlite", "returning_clauses_for_sqlite_3_35", "time"] }
+diesel_migrations = { version = "2.1.0" }
+# Console/terminal libraries
+console = { version = "0.15.7" }
+comfy-table = { version = "7.1.0", features = ["custom_styling"] }
+tar = "0.4.40"

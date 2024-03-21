@@ -1,0 +1,145 @@
+use std::cell::RefCell;
+
+use color_eyre::eyre::bail;
+use color_eyre::eyre::Result;
+use diesel::connection::SimpleConnection;
+use diesel::prelude::*;
+use diesel_migrations::embed_migrations;
+use diesel_migrations::EmbeddedMigrations;
+use diesel_migrations::MigrationHarness;
+use log::info;
+
+use self::model::*;
+use self::schema::*;
+
+pub mod model;
+pub mod schema;
+
+pub const DB_MIGRATIONS: EmbeddedMigrations = embed_migrations!("../../migrations");
+
+pub struct AppDb {
+    conn: RefCell<SqliteConnection>
+}
+
+impl AppDb {
+    pub fn new(conn: SqliteConnection) -> Self {
+        Self {
+            conn: RefCell::new(conn)
+        }
+    }
+}
+
+/// Environments
+impl AppDb {
+    pub fn list_environments(&self) -> Result<Vec<Environment>> {
+        Ok(
+            environment::table
+                .order_by(environment::name.asc())
+                .load(&mut *self.conn.borrow_mut())?
+        )
+    }
+
+    pub fn create_environment(&self, name: &str, bitcoin_block_speed: u32) -> Result<Environment> {
+        Ok(
+            diesel::insert_into(environment::table)
+                .values((
+                    environment::name.eq(name),
+                    environment::bitcoin_block_speed.eq(bitcoin_block_speed as i32),
+                ))
+                .get_result::<Environment>(&mut *self.conn.borrow_mut())?
+        )
+    }
+    
+    pub fn delete_environment(&self, name: &str) -> Result<()> {
+        let environment_id: Option<i32> = environment::table
+            .select(environment::id)
+            .filter(environment::name.eq(name))
+            .first::<i32>(&mut *self.conn.borrow_mut())
+            .optional()?;
+
+        if let Some(environment_id) = environment_id {
+            let service_ids = service::table
+                .select(service::id)
+                .filter(service::environment_id.eq(environment_id))
+                .load::<i32>(&mut *self.conn.borrow_mut())?;
+
+            diesel::delete(service_upgrade::table.filter(service_upgrade::service_id.eq_any(service_ids)))
+                .execute(&mut *self.conn.borrow_mut())?;
+
+            diesel::delete(service::table.filter(service::environment_id.eq(environment_id)))
+                .execute(&mut *self.conn.borrow_mut())?;
+        }
+        
+        Ok(())
+    }
+}
+
+impl AppDb {
+    pub fn list_services(&self) -> Result<Vec<Service>> {
+        Ok(
+            service::table
+                .order_by(service::name.asc())
+                .load(&mut *self.conn.borrow_mut())?
+        )
+    }
+
+    pub fn list_service_types(&self) -> Result<Vec<ServiceType>> {
+        Ok(
+            service_type::table
+                .order_by(service_type::name.asc())
+                .load(&mut *self.conn.borrow_mut())?
+        )
+    }
+
+    pub fn list_epochs(&self) -> Result<Vec<Epoch>> {
+        Ok(
+            epoch::table
+                .order_by(epoch::name.asc())
+                .load(&mut *self.conn.borrow_mut())?
+        )
+    }
+
+    pub fn list_service_versions(&self) -> Result<Vec<ServiceVersion>> {
+        Ok(
+            service_version::table
+                .order_by(service_version::version.asc())
+                .load(&mut *self.conn.borrow_mut())?
+        )
+    }
+
+    pub fn list_service_upgrade_paths(&self) -> Result<Vec<ServiceUpgradePath>> {
+        Ok(
+            service_upgrade_path::table
+                .order_by(service_upgrade_path::name.asc())
+                .load(&mut *self.conn.borrow_mut())?
+        )
+    }
+}
+
+/// Applies any pending application database migrations. Initializes the
+/// database if it does not already exist.
+pub fn apply_db_migrations(conn: &mut SqliteConnection) -> Result<()> {
+    conn.batch_execute("
+        PRAGMA journal_mode = WAL;          -- better write-concurrency
+        PRAGMA synchronous = NORMAL;        -- fsync only in critical moments
+        PRAGMA wal_autocheckpoint = 1000;   -- write WAL changes back every 1000 pages, for an in average 1MB WAL file. May affect readers if number is increased
+        PRAGMA wal_checkpoint(TRUNCATE);    -- free some space by truncating possibly massive WAL files from the last run.
+        PRAGMA busy_timeout = 250;          -- sleep if the database is busy
+        PRAGMA foreign_keys = ON;           -- enforce foreign keys
+    ")?;
+
+    let has_pending_migrations =
+        MigrationHarness::has_pending_migration(conn, DB_MIGRATIONS)
+            .or_else(|e| bail!("failed to determine database migration state: {:?}", e))?;
+
+    if has_pending_migrations {
+        info!("there are pending database migrations - updating the database");
+
+        MigrationHarness::run_pending_migrations(conn, DB_MIGRATIONS)
+            .or_else(|e| bail!("failed to run database migrations: {:?}", e))?;
+
+        info!("database migrations have been applied successfully");
+    }
+
+    Ok(())
+}
