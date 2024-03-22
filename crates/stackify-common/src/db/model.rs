@@ -43,8 +43,9 @@ pub struct Environment {
 pub struct ServiceType {
     pub id: i32,
     pub name: String,
-    pub minimum_epoch_id: Option<i32>,
-    pub maximum_epoch_id: Option<i32>,
+    pub allow_minimum_epoch: bool,
+    pub allow_maximum_epoch: bool,
+    pub allow_git_target: bool,
 }
 
 #[derive(
@@ -58,6 +59,7 @@ pub struct ServiceVersion {
     pub version: String,
     pub minimum_epoch_id: Option<i32>,
     pub maximum_epoch_id: Option<i32>,
+    pub git_target: Option<String>
 }
 
 #[derive(

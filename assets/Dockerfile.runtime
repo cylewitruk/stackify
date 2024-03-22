@@ -1,0 +1,22 @@
+# ------------------------------------------------------------------------------
+# Build stage for Stacks Core dependencies and build environment
+# ------------------------------------------------------------------------------
+FROM debian:bookworm-slim as runtime
+ARG USER_ID
+ARG GROUP_ID
+
+RUN apt update \
+    && apt upgrade -y \
+    && apt install -y procps sqlite3 jq
+
+# Create our non-root user & group ('stacks')
+RUN groupadd -r -g ${GROUP_ID} stacks \
+    && useradd -r -m --uid ${GROUP_ID} -g ${GROUP_ID} stacks \
+    && install -d -m 0755 -o stacks -g stacks \
+        /src \
+        /stacks \
+        /stacks/logs \
+        /stacks/bitcoin \
+        /stacks/conf
+
+WORKDIR /home/stacks

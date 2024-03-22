@@ -28,8 +28,9 @@ table! {
     service_type (id) {
         id -> Integer,
         name -> Text,
-        minimum_epoch_id -> Nullable<Integer>,
-        maximum_epoch_id -> Nullable<Integer>,
+        allow_minimum_epoch -> Bool,
+        allow_maximum_epoch -> Bool,
+        allow_git_target -> Bool
     }
 }
 
@@ -40,6 +41,7 @@ table! {
         version -> Text,
         minimum_epoch_id -> Nullable<Integer>,
         maximum_epoch_id -> Nullable<Integer>,
+        git_target -> Nullable<Text>
     }
 }
 

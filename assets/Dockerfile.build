@@ -1,0 +1,45 @@
+ARG USER_ID
+ARG GROUP_ID
+
+# ------------------------------------------------------------------------------
+# Build stage for Stacks Core dependencies and build environment
+# ------------------------------------------------------------------------------
+FROM rust:1.76-slim-bookworm as build-base
+ARG USER_ID
+ARG GROUP_ID
+ARG BITCOIN_VERSION
+
+# Update and install packages
+RUN apt update \
+    && apt upgrade -y \
+    && apt install -y build-essential libclang-dev git wget tree \
+        jq libssl-dev pkg-config libfontconfig-dev libsqlite3-dev \
+        gcc-multilib clang mold libsecp256k1-1 libsecp256k1-dev \
+        procps
+
+RUN rustup component add rustfmt
+
+# Create our non-root user & group ('stacks')
+RUN groupadd -r -g ${GROUP_ID} stacks \
+    && useradd -r -m --uid ${GROUP_ID} -g ${GROUP_ID} stacks \
+    && install -d -m 0755 -o stacks -g stacks \
+        /src \
+        /target \
+        /out
+
+USER stacks
+COPY --chown=stacks:stacks ./cargo-config.toml /home/stacks/.cargo/config.toml
+
+RUN mkdir ~/repos \
+    && cd ~/repos \
+    && git clone https://github.com/stacks-network/stacks-core.git \
+    && git clone https://github.com/stacks-network/sbtc.git \
+    && git clone https://github.com/hirosystems/clarinet.git --recursive \
+    && touch ~/stacks-core-deps
+
+ENV CARGO_INCREMENTAL 0
+ENV SCCACHE_DIRECT true
+ENV SCCACHE_DIR /sccache
+ENV CARGO_TARGET_DIR /target
+
+WORKDIR /home/stacks

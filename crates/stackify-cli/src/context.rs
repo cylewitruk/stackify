@@ -14,6 +14,8 @@ pub struct CliContext {
     /// The directory where Stackify stores binaries. Defaults to
     /// `$HOME/.stackify/bin`
     pub bin_dir: PathBuf,
+    /// The temporary directory for Stackify. Defaults to `/tmp/stackify`.
+    pub tmp_dir: PathBuf,
     /// The database file for Stackify. Defaults to `$HOME/.stackify/stackify.db`
     pub db_file: PathBuf,
     /// Instance of Stackify's application database.

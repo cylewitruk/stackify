@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use clap::Parser;
 use color_eyre::eyre::{eyre, Result};
 use context::CliContext;
@@ -15,7 +17,7 @@ fn main() -> Result<()> {
     match Cli::try_parse() {
         Ok(cli) => match cli.command {
             Commands::Build(args) => {
-                cli::build::exec(context, args)?;
+                cli::build::exec(&context, args)?;
             }
             Commands::Environment(args) => {
                 cli::env::exec(&context, args)?;
@@ -58,6 +60,8 @@ fn initialize() -> Result<CliContext> {
     std::fs::create_dir_all(&config_dir)?;
     let config_file = config_dir.join("config.toml");
     let db_file = config_dir.join("stackify.db");
+    let tmp_dir = config_dir.join("tmp");
+    std::fs::create_dir_all(&tmp_dir)?;
     let data_dir = config_dir.join("data");
     std::fs::create_dir_all(&data_dir)?;
     let bin_dir = config_dir.join("bin");
@@ -77,6 +81,7 @@ fn initialize() -> Result<CliContext> {
         config_file,
         data_dir,
         bin_dir,
+        tmp_dir,
         db_file,
         db: app_db,
         user_id: uid,

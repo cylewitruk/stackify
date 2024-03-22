@@ -4,6 +4,7 @@ pub mod db;
 #[cfg(test)]
 pub mod tests;
 pub mod util;
+pub mod download;
 
 use std::fmt::Display;
 

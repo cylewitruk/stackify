@@ -3,7 +3,12 @@ use std::io::Write;
 
 use bollard::container::{Config, CreateContainerOptions};
 use bollard::{
-    container::UploadToContainerOptions, image::{BuildImageOptions, BuilderVersion}, network::{CreateNetworkOptions, ListNetworksOptions}, secret::Ipam, Docker, API_DEFAULT_VERSION
+    container::UploadToContainerOptions, 
+    image::{BuildImageOptions, BuilderVersion}, 
+    network::{CreateNetworkOptions, ListNetworksOptions}, 
+    secret::Ipam, 
+    Docker, 
+    API_DEFAULT_VERSION
 };
 use bytes::Bytes;
 use color_eyre::eyre::{eyre, Result};
@@ -15,7 +20,12 @@ use tokio::runtime::Runtime;
 use crate::util::random_hex;
 use crate::EnvironmentName;
 
-use super::{BuildInfo, BuildStackifyArtifacts, ContainerService, DockerNetwork, DockerVersion, Label, NewStacksNetworkResult, Progress, StackifyImage, StacksLabel, TarAppend, STACKIFY_CARGO_CONFIG, STACKIFY_DOCKERFILE};
+use super::{
+    BuildInfo, BuildStackifyBuildImage, BuildStackifyRuntimeImage, ContainerService, 
+    DockerNetwork, DockerVersion, Label, NewStacksNetworkResult, Progress, 
+    StackifyImage, StacksLabel, TarAppend, 
+    STACKIFY_CARGO_CONFIG, STACKIFY_BUILD_DOCKERFILE, STACKIFY_RUN_DOCKERFILE
+};
 
 /// A Docker client for Stackify which also includes a Tokio runtime for
 /// sync-wrapping async functions.
@@ -144,11 +154,11 @@ impl StackifyDocker {
         })
     }
 
-    /// Builds the Stackify images and binaries.
-    pub fn build_stackify_artifacts(&self, build: BuildStackifyArtifacts) -> Result<impl Stream<Item = Result<BuildInfo>> + Unpin + '_> {
+    /// Builds the Stackify build image.
+    pub fn build_stackify_build_image(&self, build: BuildStackifyBuildImage) -> Result<impl Stream<Item = Result<BuildInfo>> + Unpin + '_> {
 
         let mut tar = tar::Builder::new(Vec::new());
-        tar.append_data2("Dockerfile", STACKIFY_DOCKERFILE.as_bytes())?;
+        tar.append_data2("Dockerfile.build", STACKIFY_BUILD_DOCKERFILE.as_bytes())?;
         tar.append_data2("cargo-config.toml", STACKIFY_CARGO_CONFIG.as_bytes())?;
         let archive = tar.into_inner()?;
 
@@ -158,7 +168,7 @@ impl StackifyDocker {
 
         // docker build --tag stacks.local/runtime:latest --build-arg USER_ID=1000 --build-arg GROUP_ID=1000 --build-arg BITCOIN_VERSION=26.0 --target runtime .
 
-        let image = "stackify-runtime".to_string();
+        let image = "stackify-build".to_string();
 
         let build_args: HashMap<String, String> = [
             ("USER_ID".to_string(), build.user_id.to_string()),
@@ -176,7 +186,7 @@ impl StackifyDocker {
             .collect::<HashMap<_, _>>();
 
         let opts = BuildImageOptions {
-            dockerfile: "Dockerfile".to_string(),
+            dockerfile: "Dockerfile.build".to_string(),
             t: image.clone(),
             session: Some(random_hex(8)),
             pull: true,
@@ -213,19 +223,75 @@ impl StackifyDocker {
                 }
             })
         ));
+    }
 
-            // while let Some(Ok(bollard::models::BuildInfo {
-            //     aux: Some(BuildInfoAux::BuildKit(inner)),
-            //     ..
-            // })) = stream.next().await
-            // {
-            //     inner.vertexes.iter().for_each(|v| {
-            //         println!("{}: {}", v.digest.chars().take(16).collect::<String>(), v.name);
-            //         if !v.error.is_empty() {
-            //             println!("Error: {:?}", v.error);
-            //         }
-            //     });
-            // }
+    /// Builds the Stackify build image.
+    pub fn build_stackify_runtime_image(&self, build: BuildStackifyRuntimeImage) -> Result<impl Stream<Item = Result<BuildInfo>> + Unpin + '_> {
+
+        let mut tar = tar::Builder::new(Vec::new());
+        tar.append_data2("Dockerfile.runtime", STACKIFY_RUN_DOCKERFILE.as_bytes())?;
+        let archive = tar.into_inner()?;
+
+        let mut c = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
+        c.write_all(&archive).unwrap();
+        let compressed = c.finish().unwrap();
+
+        // docker build --tag stacks.local/runtime:latest --build-arg USER_ID=1000 --build-arg GROUP_ID=1000 --build-arg BITCOIN_VERSION=26.0 --target runtime .
+
+        let image = "stackify-runtime".to_string();
+
+        let build_args: HashMap<String, String> = [
+            ("USER_ID".to_string(), build.user_id.to_string()),
+            ("GROUP_ID".to_string(), build.group_id.to_string())
+        ]
+            .iter()
+            .cloned()
+            .collect();
+
+        let labels = vec![
+            StacksLabel(Label::Stackify, String::new()).into()
+        ]
+            .into_iter()
+            .collect::<HashMap<_, _>>();
+
+        let opts = BuildImageOptions {
+            dockerfile: "Dockerfile.runtime".to_string(),
+            t: image.clone(),
+            session: Some(random_hex(8)),
+            pull: true,
+            buildargs: build_args,
+            labels,
+            version: BuilderVersion::BuilderV1,
+            rm: true,
+            ..Default::default()
+        };
+
+        let stream = self.docker
+            .build_image(
+                opts, 
+                None, 
+                Some(compressed.into())
+            );
+
+        return Ok(Box::pin(
+            stream
+            .map(|msg| {
+                match msg {
+                    Ok(info) => {
+                        Ok(BuildInfo {
+                            message: info.stream.unwrap_or_else(|| "".to_string()),
+                            error: info.error,
+                            progress: info.progress_detail.map(|p| {
+                                Progress::new(p.current.unwrap() as u32, p.total.unwrap() as u32)
+                            })
+                        })
+                    },
+                    Err(e) => {
+                        Err(e.into())
+                    }
+                }
+            })
+        ));
     }
 
     pub fn get_docker_version(&self) -> Result<DockerVersion> {

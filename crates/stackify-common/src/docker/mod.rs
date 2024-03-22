@@ -8,7 +8,8 @@ pub mod stackify_docker;
 #[cfg(test)]
 pub mod tests;
 
-pub const STACKIFY_DOCKERFILE: &str = include_str!("../../../../assets/Dockerfile");
+pub const STACKIFY_BUILD_DOCKERFILE: &str = include_str!("../../../../assets/Dockerfile.build");
+pub const STACKIFY_RUN_DOCKERFILE: &str = include_str!("../../../../assets/Dockerfile.runtime");
 pub const STACKIFY_CARGO_CONFIG: &str = include_str!("../../../../assets/cargo-config.toml");
 
 #[derive(Debug)]
@@ -140,10 +141,15 @@ pub struct DockerNetwork {
 }
 
 #[derive(Debug)]
-pub struct BuildStackifyArtifacts {
+pub struct BuildStackifyBuildImage {
     pub user_id: u32,
     pub group_id: u32,
     pub bitcoin_version: String
+}
+
+pub struct BuildStackifyRuntimeImage {
+    pub user_id: u32,
+    pub group_id: u32
 }
 
 pub struct BuildInfo {

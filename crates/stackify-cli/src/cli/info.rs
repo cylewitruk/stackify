@@ -1,9 +1,9 @@
-use std::{collections::HashMap, fmt::Debug};
+use std::fmt::Debug;
 
 use clap::Args;
 use color_eyre::{eyre::{eyre, Result}, owo_colors::OwoColorize};
-use comfy_table::{Cell, CellAlignment, Color, ColumnConstraint, Table, Width};
-use console::{style, Alignment};
+use comfy_table::{Cell, CellAlignment, ColumnConstraint, Table, Width};
+use console::style;
 use regex::Regex;
 
 use crate::context::CliContext;
@@ -32,7 +32,7 @@ pub struct InfoArgs {
         default_value = "false",
         required = false,
     )]
-    service_types: bool
+    services: bool
 }
 
 pub fn exec(ctx: &CliContext, args: InfoArgs) -> Result<()> {
@@ -40,19 +40,22 @@ pub fn exec(ctx: &CliContext, args: InfoArgs) -> Result<()> {
         format!("Stackify CLI v{}", env!("CARGO_PKG_VERSION"))
             .fg_rgb::<255, 165, 0>());
     println!("");
-    println!("{}", style("Stackify Status:").bold());
-    println!(" ‣ Environments: {}", ctx.db.list_environments()?.len());
-    println!(" ‣ Docker Images: {}", ctx.docker.list_stackify_images()?.len());
+    println!("{}", style("Stackify Status:").bold().white());
+    println!("  ‣ Environments: {}", ctx.db.list_environments()?.len());
+    println!("  ‣ Docker Images: {}", ctx.docker.list_stackify_images()?.len());
 
     if args.docker {
+        println!("");
         exec_display_docker_info(ctx)?;
     }
 
     if args.epochs {
+        println!("");
         exec_list_epochs(ctx)?;
     }
     
-    if args.service_types {
+    if args.services {
+        println!("");
         exec_list_service_types(ctx)?;
     }
 
@@ -62,10 +65,10 @@ pub fn exec(ctx: &CliContext, args: InfoArgs) -> Result<()> {
 fn exec_display_docker_info(ctx: &CliContext) -> Result<()> {
     let docker_version = ctx.docker.get_docker_version()?;
 
-    println!("{}", style("Docker Information").bold());
-    println!(" ‣ Version: {}", docker_version.version);
-    println!(" ‣ API Version: {}", docker_version.api_version);
-    println!(" ‣ Min API Version: {}", docker_version.min_api_version);
+    println!("{}", style("Docker Information").bold().white());
+    println!("  ‣ Version: {}", docker_version.version);
+    println!("  ‣ API Version: {}", docker_version.api_version);
+    println!("  ‣ Min API Version: {}", docker_version.min_api_version);
     println!("");
 
     println!("{}", "Stackify Images".bold());
@@ -121,11 +124,84 @@ fn exec_display_docker_info(ctx: &CliContext) -> Result<()> {
 }
 
 fn exec_list_service_types(ctx: &CliContext) -> Result<()> {
+    let epochs = ctx.db.list_epochs()?;
     let service_types = ctx.db.list_service_types()?;
+    let service_versions = ctx.db.list_service_versions()?;
+    let service_upgrade_paths = ctx.db.list_service_upgrade_paths()?;
 
-    println!("{}", style("The following service types are available:").bold());
-    for service_type in service_types {
-        println!("  ‣ {}", service_type.name);
+    println!("{}", style("Supported Services:").bold().white());
+    for service_type in service_types.iter() {
+        println!("  ‣ {}", style(&service_type.name).magenta().bold());
+        let versions = service_versions
+            .iter()
+            .filter(|v| v.service_type_id == service_type.id)
+            .collect::<Vec<_>>();
+        for i in 0..versions.len() {
+            let version = versions[i];
+            // println!("    ᛭ {} {}", 
+            //     style("Version").dim(), 
+            //     style(&version.version).bold()
+            // );
+            println!("    {} {}", style("Version").white(), style(&version.version).cyan().bold());
+
+            if version.git_target.is_some() {
+                let git_target = version.git_target.as_ref().unwrap();
+                let split = git_target.split(":").collect::<Vec<_>>();
+                let git_type = match split[0] {
+                    "tag" => format!("{}", style("Git tag:").dim()),
+                    "branch" => format!("{}", style("Git branch:").dim()),
+                    "commit" => format!("{}", style("Git commit:").dim()),
+                    _ => "Unknown".into()
+                };
+                
+                println!("      {} {} {}", 
+                    style("☉").blue(), 
+                    style(git_type).dim(), 
+                    split[1].bold());
+            }
+
+            if version.minimum_epoch_id.is_some() {
+                let epoch = epochs
+                    .iter()
+                    .find(|e| e.id == version.minimum_epoch_id.unwrap())
+                    .ok_or(eyre!("Failed to find epoch"))?;
+                println!("      {} {} {}", style("▼").green(), style("Minimum epoch:").dim(), style(&epoch.name).bold());
+            }
+
+            if version.maximum_epoch_id.is_some() {
+                let epoch = epochs
+                    .iter()
+                    .find(|e| e.id == version.maximum_epoch_id.unwrap())
+                    .ok_or(eyre!("Failed to find epoch"))?;
+                println!("      {} {} {}", style("▲").red(), style("Maximum epoch:").dim(), style(&epoch.name).bold());
+            }
+            
+            let upgrade_paths = service_upgrade_paths
+                .iter()
+                .filter(|p| p.from_service_version_id == version.id)
+                .collect::<Vec<_>>();
+            for path in upgrade_paths {
+                let to_service_version = service_versions
+                    .iter()
+                    .find(|v| v.id == path.to_service_version_id)
+                    .ok_or(eyre!("Failed to find service version"))?;
+                let to_service_type = service_types
+                    .iter()
+                    .find(|t| t.id == to_service_version.service_type_id)
+                    .ok_or(eyre!("Failed to find service type"))?;
+                println!("      {} {} {} ({})", 
+                    style("⤑").green(), 
+                    style("Upgradable to:").dim(), 
+                    style(&to_service_type.name).bold(), 
+                    style(&to_service_version.version).green()
+                );
+            }
+
+            if i < versions.len() - 1 {
+                println!("");
+            }
+        }
+        println!("");
     }
     Ok(())
 }

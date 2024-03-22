@@ -1,11 +1,15 @@
 use std::time::Duration;
 
 use clap::Args;
-use color_eyre::{eyre::Result, owo_colors::OwoColorize};
+use color_eyre::Result;
+use console::style;
 use futures_util::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
 use regex::Regex;
-use stackify_common::docker::BuildStackifyArtifacts;
+use stackify_common::{
+    docker::BuildStackifyBuildImage, docker::BuildStackifyRuntimeImage, 
+    download::{download_bitcoin_core_binaries, download_dasel_binary}
+};
 
 use crate::context::CliContext;
 
@@ -20,27 +24,69 @@ pub struct BuildArgs {
     pub bitcoin_version: String
 }
 
-pub fn exec(ctx: CliContext, args: BuildArgs) -> Result<()> {
-    let build = BuildStackifyArtifacts {
-        user_id: ctx.user_id,
-        group_id: ctx.group_id,
-        bitcoin_version: args.bitcoin_version,
-    };
+pub fn exec(ctx: &CliContext, args: BuildArgs) -> Result<()> {
+    println!("Preparing Stackify artifacts...");
 
-    let regex = Regex::new(r#"^Step (\d+)\/(\d+) :(.*)$"#)?;
+    download_bitcoin(&ctx, &args.bitcoin_version)?;
 
+    download_dasel(&ctx)?;
+
+    build_build_image(ctx, &args.bitcoin_version)?;
+
+    build_runtime_image(ctx)?;
+    
+
+    Ok(())
+}
+
+fn new_progressbar(template: &str, message: &str) -> ProgressBar {
     let pb = ProgressBar::new_spinner();
     pb.enable_steady_tick(Duration::from_millis(200));
     pb.set_style(
-        ProgressStyle::with_template("{spinner:.dim.bold} docker: {wide_msg}")
+        ProgressStyle::with_template(template)
             .unwrap()
             .tick_chars("/|\\- "),
     );
-    
-    println!("Building stackify artifacts...");
-    let start = std::time::Instant::now();
+    pb.set_message(message.to_string());
+    pb
+}
 
-    let stream = ctx.docker.build_stackify_artifacts(build)?;
+fn download_bitcoin(ctx: &CliContext, version: &str) -> Result<()> {
+    let pb = new_progressbar("{spinner:.dim.bold} download: {wide_msg}", "Downloading bitcoin core binaries...");
+    download_bitcoin_core_binaries(version, &ctx.tmp_dir, &ctx.bin_dir)?;
+    pb.finish_and_clear();
+    println!(
+        "{} Bitcoin Core binaries",
+        style("✔️").green());
+
+    Ok(())
+}
+
+fn download_dasel(ctx: &CliContext) -> Result<()> {
+    let pb = new_progressbar("{spinner:.dim.bold} download: {wide_msg}", "Downloading dasel...");
+    download_dasel_binary("2.7.", &ctx.bin_dir)?;
+    pb.finish_and_clear();
+    println!(
+        "{} Dasel",
+        style("✔️").green()
+    );
+    Ok(())
+}
+
+fn build_build_image(ctx: &CliContext, bitcoin_version: &str) -> Result<()> {
+    let build = BuildStackifyBuildImage {
+        user_id: ctx.user_id,
+        group_id: ctx.group_id,
+        bitcoin_version: bitcoin_version.into(),
+    };
+
+    let regex = Regex::new(r#"^Step (\d+)\/(\d+) :(.*)$"#)?;
+    let pb = new_progressbar(
+        "{spinner:.dim.bold} docker build: {wide_msg}", 
+        "Starting..."
+    );
+
+    let stream = ctx.docker.build_stackify_build_image(build)?;
 
     tokio::runtime::Runtime::new()?.block_on(async {
         stream
@@ -51,7 +97,7 @@ pub fn exec(ctx: CliContext, args: BuildArgs) -> Result<()> {
                             let step = captures.get(1).unwrap().as_str();
                             let total = captures.get(2).unwrap().as_str();
                             let msg = captures.get(3).unwrap().as_str();
-                            pb.set_message(format!("Step {}/{}: {}", step, total, msg));
+                            pb.set_message(format!("[{}/{}]: {}", step, total, msg));
                         });
                     },
                     Err(e) => eprintln!("Error: {}", e),
@@ -59,9 +105,51 @@ pub fn exec(ctx: CliContext, args: BuildArgs) -> Result<()> {
             })
             .await
     });
-
     pb.finish_and_clear();
-    println!("{} Build completed in {:?}s", "✔️".green(), start.elapsed().as_secs());
+    println!(
+        "{} Docker build image",
+        style("✔️").green()
+    );
+
+    Ok(())
+}
+
+fn build_runtime_image(ctx: &CliContext) -> Result<()> {
+    let build = BuildStackifyRuntimeImage {
+        user_id: ctx.user_id,
+        group_id: ctx.group_id,
+    };
+
+    let regex = Regex::new(r#"^Step (\d+)\/(\d+) :(.*)$"#)?;
+    let pb = new_progressbar(
+        "{spinner:.dim.bold} docker build: {wide_msg}", 
+        "Starting..."
+    );
+
+    let stream = ctx.docker.build_stackify_runtime_image(build)?;
+
+    tokio::runtime::Runtime::new()?.block_on(async {
+        stream
+            .for_each(|result| async {
+                match result {
+                    Ok(info) => {
+                        regex.captures(&info.message).map(|captures| {
+                            let step = captures.get(1).unwrap().as_str();
+                            let total = captures.get(2).unwrap().as_str();
+                            let msg = captures.get(3).unwrap().as_str();
+                            pb.set_message(format!("[{}/{}]: {}", step, total, msg));
+                        });
+                    },
+                    Err(e) => eprintln!("Error: {}", e),
+                }
+            })
+            .await
+    });
+    pb.finish_and_clear();
+    println!(
+        "{} Docker runtime image",
+        style("✔️").green()
+    );
 
     Ok(())
 }
