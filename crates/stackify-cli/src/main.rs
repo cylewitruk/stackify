@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use clap::Parser;
 use color_eyre::eyre::{eyre, Result};
 use context::CliContext;
@@ -10,6 +8,8 @@ use crate::cli::{Cli, Commands};
 
 mod cli;
 mod context;
+mod util;
+mod git;
 
 fn main() -> Result<()> {
     let context = initialize()?;

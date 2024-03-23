@@ -63,10 +63,12 @@ impl AppDb {
                 .filter(service::environment_id.eq(environment_id))
                 .load::<i32>(&mut *self.conn.borrow_mut())?;
 
-            diesel::delete(service_upgrade::table.filter(service_upgrade::service_id.eq_any(service_ids)))
+            diesel::delete(environment_service_action::table
+                .filter(environment_service_action::service_id.eq_any(service_ids)))
                 .execute(&mut *self.conn.borrow_mut())?;
 
-            diesel::delete(service::table.filter(service::environment_id.eq(environment_id)))
+            diesel::delete(service::table
+                    .filter(service::environment_id.eq(environment_id)))
                 .execute(&mut *self.conn.borrow_mut())?;
         }
         

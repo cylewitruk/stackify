@@ -4,6 +4,7 @@ table! {
     epoch (id) {
         id -> Integer,
         name -> Text,
+        default_block_height -> Integer,
     }
 }
 
@@ -25,12 +26,22 @@ table! {
 }
 
 table! {
+    environment_epoch (id) {
+        id -> Integer,
+        environment_id -> Integer,
+        epoch_id -> Integer,
+        starts_at_block_height -> Integer,
+        ends_at_block_height -> Nullable<Integer>,
+    }
+}
+
+table! {
     service_type (id) {
         id -> Integer,
         name -> Text,
         allow_minimum_epoch -> Bool,
         allow_maximum_epoch -> Bool,
-        allow_git_target -> Bool
+        allow_git_target -> Bool,
     }
 }
 
@@ -41,7 +52,7 @@ table! {
         version -> Text,
         minimum_epoch_id -> Nullable<Integer>,
         maximum_epoch_id -> Nullable<Integer>,
-        git_target -> Nullable<Text>
+        git_target -> Nullable<Text>,
     }
 }
 
@@ -71,10 +82,43 @@ table! {
 }
 
 table! {
-    service_upgrade (id) {
+    service_action_type (id) {
         id -> Integer,
-        service_id -> Integer,
-        service_upgrade_path_id -> Integer,
-        at_block_height -> Integer,
+        name -> Text,
+        requires_running_service -> Bool,
+        requires_network -> Bool,
     }
 }
+
+table! {
+    service_action_type_constraint (id) {
+        id -> Integer,
+        service_action_id -> Integer,
+        allowed_after_service_action_id -> Nullable<Integer>,
+    }
+}
+
+table! {
+    environment_service_action (id) {
+        id -> Integer,
+        environment_id -> Integer,
+        service_id -> Integer,
+        service_action_type_id -> Integer,
+        at_block_height -> Integer,
+        data -> Nullable<Text>,
+    }
+}
+
+allow_tables_to_appear_in_same_query!(
+    epoch,
+    environment_status,
+    environment,
+    environment_epoch,
+    service_type,
+    service_version,
+    service_upgrade_path,
+    service,
+    service_action_type,
+    service_action_type_constraint,
+    environment_service_action,
+);

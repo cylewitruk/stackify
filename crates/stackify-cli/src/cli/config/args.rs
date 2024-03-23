@@ -11,13 +11,34 @@ pub enum ConfigSubCommands {
     Import(ImportArgs),
     /// Export Stackify configuration, which can be imported later. This is
     /// useful for sharing configurations between different machines.
-    Export(ExportArgs)
+    Export(ExportArgs),
+    /// Commands for working with the services (i.e. Bitcoin nodes, Stacks nodes, etc.)
+    /// and their configurations.
+    Services(ServicesArgs),
 }
 
 #[derive(Debug, Args)]
 pub struct ConfigArgs {
     #[command(subcommand)]
     pub commands: ConfigSubCommands,
+}
+
+#[derive(Debug, Args)]
+pub struct ServicesArgs {
+    #[command(subcommand)]
+    pub subcommands: ServiceSubCommands,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum ServiceSubCommands {
+    /// Add a new service to the configuration.
+    Add,
+    /// Remove a service from the configuration.
+    Remove,
+    /// List all services in the configuration.
+    List,
+    /// Display detailed information about a service.
+    Show
 }
 
 #[derive(Debug, Args)]
@@ -50,20 +71,4 @@ pub struct ExportArgs {
         long = "services"
     )]
     services: bool,
-}
-
-pub fn exec(ctx: &CliContext, args: ConfigArgs) -> Result<()> {
-    match args.commands {
-        ConfigSubCommands::Reset => exec_reset(ctx),
-        ConfigSubCommands::Import(_) => todo!(),
-        ConfigSubCommands::Export(_) => todo!(),
-    }
-    
-}
-
-fn exec_reset(ctx: &CliContext) -> Result<()> {
-    if ctx.config_dir.ends_with(".stackify") {
-        std::fs::remove_dir_all(ctx.config_dir.clone()).unwrap();
-    }
-    Ok(())
 }

@@ -5,7 +5,7 @@ use color_eyre::eyre::Result;
 
 use self::build::BuildArgs;
 use self::clean::CleanArgs;
-use self::config::ConfigArgs;
+use self::config::args::ConfigArgs;
 use self::env::args::EnvArgs;
 use self::info::InfoArgs;
 
@@ -17,7 +17,6 @@ pub mod env;
 pub mod network;
 pub mod show;
 pub mod info;
-pub mod util;
 
 pub mod clap_verbosity_flag;
 pub mod clap_color_flag;
