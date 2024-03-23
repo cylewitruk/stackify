@@ -21,6 +21,8 @@ pub mod info;
 pub mod clap_verbosity_flag;
 pub mod clap_color_flag;
 
+pub const PAD_WIDTH: usize = 40;
+
 /// Command
 #[derive(Debug, Parser)]
 #[command(
@@ -29,7 +31,8 @@ pub mod clap_color_flag;
     about,
     long_about = None,
     styles=styles(),
-    color = ColorChoice::Always
+    max_term_width = 100,
+    next_line_help = true,
 )]
 pub struct Cli {
     #[command(subcommand)]

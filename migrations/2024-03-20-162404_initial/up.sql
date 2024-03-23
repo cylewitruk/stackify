@@ -215,3 +215,29 @@ CREATE TABLE environment_service_action (
     FOREIGN KEY (service_id) REFERENCES service (id),
     FOREIGN KEY (service_action_type_id) REFERENCES service_action_type (id)
 );
+
+CREATE TABLE environment_container (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    environment_id INTEGER NOT NULL,
+    container_id TEXT NOT NULL,
+    service_id INTEGER NOT NULL,
+    service_version_id INTEGER NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    UNIQUE (environment_id, container_id),
+    FOREIGN KEY (environment_id) REFERENCES environment (id),
+    FOREIGN KEY (service_id) REFERENCES service (id),
+    FOREIGN KEY (service_version_id) REFERENCES service_version (id)
+);
+
+CREATE TABLE environment_container_action_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    environment_container_id INTEGER NOT NULL,
+    service_action_type_id INTEGER NOT NULL,
+    at_block_height INTEGER NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    data TEXT NULL,
+
+    FOREIGN KEY (environment_container_id) REFERENCES environment_container (id),
+    FOREIGN KEY (service_action_type_id) REFERENCES service_action_type (id)
+);

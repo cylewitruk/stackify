@@ -1,6 +1,6 @@
-use std::path::Path;
+use std::{collections::HashMap, path::Path};
 
-use color_eyre::eyre::Result;
+use color_eyre::eyre::{eyre, Result};
 
 use crate::EnvironmentName;
 
@@ -147,6 +147,14 @@ pub struct BuildStackifyBuildImage {
     pub bitcoin_version: String
 }
 
+pub struct StackifyContainer {
+    pub id: String,
+    pub name: String,
+    pub labels: HashMap<String, String>,
+    pub state: ContainerState,
+    pub status_readable: String
+}
+
 pub struct BuildStackifyRuntimeImage {
     pub user_id: u32,
     pub group_id: u32
@@ -157,6 +165,17 @@ pub struct BuildInfo {
     pub error: Option<String>,
     /// Progress tuple (current, total).
     pub progress: Option<Progress>
+}
+
+#[derive(Debug, Default)]
+pub struct ListStackifyContainerOpts {
+    pub environment_name: Option<EnvironmentName>,
+    pub running: Option<bool>
+}
+
+pub struct CreateContainerResult {
+    pub id: String,
+    pub warnings: Vec<String>
 }
 
 pub struct Progress {
@@ -198,4 +217,32 @@ pub struct StackifyImage {
     pub tags: Vec<String>,
     pub container_count: i64,
     pub size: i64
+}
+
+pub enum ContainerState {
+    Created,
+    Running,
+    Paused,
+    Restarting,
+    Removing,
+    Exited,
+    Dead
+}
+
+impl ContainerState {
+    pub fn parse(s: &str) -> Result<ContainerState> {
+        let state = match s {
+            "created" => ContainerState::Created,
+            "running" => ContainerState::Running,
+            "paused" => ContainerState::Paused,
+            "restarting" => ContainerState::Restarting,
+            "removing" => ContainerState::Removing,
+            "exited" => ContainerState::Exited,
+            "dead" => ContainerState::Dead,
+            _ => {
+                return Err(eyre!("Unknown container state: {}", s));
+            }
+        };
+        Ok(state)
+    }
 }

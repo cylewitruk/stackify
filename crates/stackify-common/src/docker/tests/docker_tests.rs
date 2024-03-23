@@ -25,7 +25,7 @@ pub fn can_create_and_drop_network() {
     let env_name = random_environment_name();
     let network_name = "stackify-".to_string() + env_name.as_str();
 
-    let result = docker.create_stacks_network(&env_name)
+    let result = docker.create_stackify_network(&env_name)
         .expect("Failed to create network");
 
     assert_eq!(result.name, network_name);
@@ -44,12 +44,12 @@ pub fn can_create_and_drop_network() {
 }
 
 #[test]
-pub fn can_delete_all_stacks_networks() {
+pub fn can_delete_all_stackify_networks() {
     let docker = get_docker();
 
     for _ in 0..5 {
         let env_name = random_environment_name();
-        docker.create_stacks_network(&env_name)
+        docker.create_stackify_network(&env_name)
             .expect("Failed to create network");
     }
 

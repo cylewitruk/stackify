@@ -109,6 +109,28 @@ table! {
     }
 }
 
+table! {
+    environment_container (id) {
+        id -> Integer,
+        environment_id -> Integer,
+        container_id -> Text,
+        service_id -> Integer,
+        service_version_id -> Integer,
+        created_at -> Timestamp,
+    }
+}
+
+table! {
+    environment_container_action_log (id) {
+        id -> Integer,
+        environment_container_id -> Integer,
+        service_action_type_id -> Integer,
+        at_block_height -> Integer,
+        created_at -> Timestamp,
+        data -> Nullable<Text>,
+    }
+}
+
 allow_tables_to_appear_in_same_query!(
     epoch,
     environment_status,

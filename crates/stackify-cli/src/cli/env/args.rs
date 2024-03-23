@@ -12,14 +12,37 @@ pub enum EnvSubCommands {
     #[clap(visible_alias = "ls")]
     List(ListArgs),
     /// Create a new environment.
+    #[clap(visible_alias = "new")]
     Create(CreateArgs),
-    /// Remove an environment.
+    /// Displays detailed information about the specified environment.
+    Inspect(InspectArgs),
+    /// Removes the specified environment and all associated resources. This
+    /// action is irreversible.
     #[clap(visible_alias = "rm")]
     Delete(DeleteArgs),
-    /// Starts an environment using its current configuration.
+    /// Starts the specified environment using its current configuration.
     Start(StartArgs),
-    /// Stops a currently running environment.
+    /// Stops the specified environment.
     Stop(StopArgs),
+    /// Stops the specified environment if it is running and removes all
+    /// associated resources, without actually deleting the environment.
+    Down(DownArgs),
+}
+
+#[derive(Debug, Args)]
+pub struct DownArgs {
+    #[arg(required = true)]
+    pub env_name: String,
+}
+
+#[derive(Debug, Args)]
+pub struct InspectArgs {
+    /// The name of the environment to inspect.
+    #[arg(
+        required = true,
+        value_name = "NAME"
+    )]
+    pub env_name: String,
 }
 
 #[derive(Debug, Args)]
@@ -34,21 +57,12 @@ pub enum ListSubCommands {
 
 #[derive(Debug, Args)]
 pub struct CreateArgs {
-    /// The name of the argument to create.
-    #[arg(
-        short = 'n',
-        long,
-        required = true,
-    )]
-    pub name: String,
-    /// How quickly (in seconds) new Bitcoin blocks are mined in this environment.
-    #[arg(
-        short = 'b',
-        long,
-        default_value = "30"
-    
-    )]
-    pub bitcoin_block_speed: u32
+    /// The name of the environment to create.
+    #[arg(required = true)]
+    pub env_name : Option<String>,
+    /// The speed at which blocks are mined in the Bitcoin network.
+    #[arg(required = false, short, long, default_value = "30", value_name = "SECONDS")]
+    pub bitcoin_block_speed: u32 
 }
 
 #[derive(Debug, Args)]
@@ -56,8 +70,12 @@ pub struct DeleteArgs {}
 
 #[derive(Debug, Args)]
 pub struct StartArgs {
+    #[arg(required = true)]
     pub env_name: String,
 }
 
 #[derive(Debug, Args)]
-pub struct StopArgs {}
+pub struct StopArgs {
+    #[arg(required = true)]
+    pub env_name: String,
+}

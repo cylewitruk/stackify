@@ -1,5 +1,11 @@
 use stackify_common::db::model::{Epoch, ServiceType, ServiceUpgradePath, ServiceVersion};
 
+pub mod git;
+pub mod print;
+mod progressbar;
+
+pub use progressbar::new_progressbar;
+
 pub trait FindById<T> {
     fn find_by_id(&self, id: i32) -> Option<&T>;
     fn find_by_id_opt(&self, id: Option<i32>) -> Option<&T> {

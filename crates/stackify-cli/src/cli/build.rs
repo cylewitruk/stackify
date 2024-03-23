@@ -11,7 +11,7 @@ use stackify_common::{
     download::{download_bitcoin_core_binaries, download_dasel_binary}
 };
 
-use crate::context::CliContext;
+use crate::{context::CliContext, util::new_progressbar};
 
 #[derive(Debug, Args)]
 pub struct BuildArgs {
@@ -37,18 +37,6 @@ pub fn exec(ctx: &CliContext, args: BuildArgs) -> Result<()> {
     
 
     Ok(())
-}
-
-fn new_progressbar(template: &str, message: &str) -> ProgressBar {
-    let pb = ProgressBar::new_spinner();
-    pb.enable_steady_tick(Duration::from_millis(200));
-    pb.set_style(
-        ProgressStyle::with_template(template)
-            .unwrap()
-            .tick_chars("/|\\- "),
-    );
-    pb.set_message(message.to_string());
-    pb
 }
 
 fn download_bitcoin(ctx: &CliContext, version: &str) -> Result<()> {
@@ -82,7 +70,7 @@ fn build_build_image(ctx: &CliContext, bitcoin_version: &str) -> Result<()> {
 
     let regex = Regex::new(r#"^Step (\d+)\/(\d+) :(.*)$"#)?;
     let pb = new_progressbar(
-        "{spinner:.dim.bold} docker build: {wide_msg}", 
+        "{spinner:.dim.bold} build image: {wide_msg}", 
         "Starting..."
     );
 
@@ -122,7 +110,7 @@ fn build_runtime_image(ctx: &CliContext) -> Result<()> {
 
     let regex = Regex::new(r#"^Step (\d+)\/(\d+) :(.*)$"#)?;
     let pb = new_progressbar(
-        "{spinner:.dim.bold} docker build: {wide_msg}", 
+        "{spinner:.dim.bold} runtime image: {wide_msg}", 
         "Starting..."
     );
 

@@ -21,10 +21,7 @@ use crate::util::random_hex;
 use crate::EnvironmentName;
 
 use super::{
-    BuildInfo, BuildStackifyBuildImage, BuildStackifyRuntimeImage, ContainerService, 
-    DockerNetwork, DockerVersion, Label, NewStacksNetworkResult, Progress, 
-    StackifyImage, StacksLabel, TarAppend, 
-    STACKIFY_CARGO_CONFIG, STACKIFY_BUILD_DOCKERFILE, STACKIFY_RUN_DOCKERFILE
+    BuildInfo, BuildStackifyBuildImage, BuildStackifyRuntimeImage, ContainerService, ContainerState, CreateContainerResult, DockerNetwork, DockerVersion, Label, ListStackifyContainerOpts, NewStacksNetworkResult, Progress, StackifyContainer, StackifyImage, StacksLabel, TarAppend, STACKIFY_BUILD_DOCKERFILE, STACKIFY_CARGO_CONFIG, STACKIFY_RUN_DOCKERFILE
 };
 
 /// A Docker client for Stackify which also includes a Tokio runtime for
@@ -96,7 +93,7 @@ impl StackifyDocker {
     pub fn create_environment_container(
         &self, 
         environment_name: &EnvironmentName
-    ) -> Result<()> {
+    ) -> Result<CreateContainerResult> {
         let container_name = format!("stackify-env-{}", environment_name);
         let opts = CreateContainerOptions {
             name: container_name.clone(),
@@ -124,7 +121,53 @@ impl StackifyDocker {
         self.runtime.block_on(async {
             let container = self.docker.create_container(Some(opts), config)
                 .await?;
+            Ok(CreateContainerResult {
+                id: container.id,
+                warnings: container.warnings
+            })
+        })
+    }
+
+    pub fn rm_container(&self, container_id: &str) -> Result<()> {
+        self.runtime.block_on(async {
+            self.docker.remove_container(container_id, None).await?;
             Ok(())
+        })
+    }
+
+    pub fn stop_container(&self, container_id: &str) -> Result<()> {
+        self.runtime.block_on(async {
+            self.docker.stop_container(container_id, None).await?;
+            Ok(())
+        })
+    }
+
+    pub fn list_stackify_containers(&self, opts: ListStackifyContainerOpts) -> Result<Vec<StackifyContainer>> {
+        let mut filters = HashMap::new();
+        if let Some(env) = opts.environment_name {
+            filters.insert("label".to_string(), vec![Label::EnvironmentName.to_string(), env.to_string()]);
+        }
+
+        let opts = bollard::container::ListContainersOptions {
+            all: if opts.running.is_some() { !opts.running.unwrap() } else { true },
+            filters,
+            ..Default::default()
+        };
+
+        self.runtime.block_on(async {
+            let containers = self.docker.list_containers(Some(opts)).await?;
+            Ok(containers.iter().map(|c| {
+                let state = ContainerState::parse(&c.state.clone().unwrap_or_default())
+                    .expect("Failed to parse container state.");
+
+                StackifyContainer {
+                    id: c.id.clone().unwrap(),
+                    name: c.names.clone().unwrap().join(", "),
+                    labels: c.labels.clone().unwrap_or_default(),
+                    state,
+                    status_readable: c.status.clone().unwrap_or_default()
+                }
+            }).collect::<Vec<_>>())
         })
     }
 
@@ -360,7 +403,7 @@ impl StackifyDocker {
         })
     }
 
-    pub fn create_stacks_network(
+    pub fn create_stackify_network(
         &self, 
         environment_name: &EnvironmentName
     ) -> Result<NewStacksNetworkResult> {

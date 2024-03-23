@@ -22,7 +22,7 @@ hex = "0.4.3"
 env_logger = "0.11.3"
 log = "0.4.20"
 # CLI
-clap = { version = "4.5.3", features = ["default", "derive"] }
+clap = { version = "4.5.3", features = ["default", "derive", "wrap_help"] }
 clap_complete = "4.5.1"
 shellwords = "1.1.0"
 anstyle = "1.0.6"

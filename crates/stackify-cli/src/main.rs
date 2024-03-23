@@ -9,7 +9,6 @@ use crate::cli::{Cli, Commands};
 mod cli;
 mod context;
 mod util;
-mod git;
 
 fn main() -> Result<()> {
     let context = initialize()?;

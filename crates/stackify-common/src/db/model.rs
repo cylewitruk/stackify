@@ -143,3 +143,31 @@ pub struct EnvironmentServiceAction {
     pub at_block_height: i32,
     pub data: Option<String>,
 }
+
+#[derive(
+    Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, 
+    QueryableByName
+)]
+#[table_name = "environment_container"]
+pub struct EnvironmentContainer {
+    pub id: i32,
+    pub environment_id: i32,
+    pub container_id: String,
+    pub service_id: i32,
+    pub service_version_id: i32,
+    pub created_at: PrimitiveDateTime,
+}
+
+#[derive(
+    Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, 
+    QueryableByName
+)]
+#[table_name = "environment_container_action_log"]
+pub struct EnvironmentContainerActionLog {
+    pub id: i32,
+    pub environment_container_id: i32,
+    pub service_action_type_id: i32,
+    pub at_block_height: i32,
+    pub created_at: PrimitiveDateTime,
+    pub data: Option<String>,
+}

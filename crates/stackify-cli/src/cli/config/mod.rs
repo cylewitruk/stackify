@@ -2,7 +2,7 @@ use color_eyre::{eyre::eyre, owo_colors::OwoColorize, Result};
 use console::style;
 use stackify_common::db::model::{Epoch, ServiceType, ServiceUpgradePath, ServiceVersion};
 
-use crate::{context::CliContext, git::{GitTarget, TargetType}, util::*};
+use crate::{context::CliContext, util::git::{GitTarget, TargetType}, util::*};
 
 use self::args::{ConfigArgs, ConfigSubCommands};
 
