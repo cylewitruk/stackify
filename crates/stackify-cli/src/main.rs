@@ -14,22 +14,24 @@ fn main() -> Result<()> {
     let context = initialize()?;
 
     match Cli::try_parse() {
-        Ok(cli) => match cli.command {
-            Commands::Build(args) => {
-                cli::build::exec(&context, args)?;
-            }
-            Commands::Environment(args) => {
-                cli::env::exec(&context, args)?;
-            }
-            Commands::Info(args) => {
-                cli::info::exec(&context, args)?;
-            }
-            Commands::Clean(args) => {
-                println!("Clean");
-                cli::clean::exec(&context, args)?;
-            }
-            Commands::Config(args) => {
-                cli::config::exec(&context, args)?;
+        Ok(cli) =>{
+            match cli.command {
+                Commands::Build(args) => {
+                    cli::build::exec(&context, args)?;
+                }
+                Commands::Environment(args) => {
+                    cli::env::exec(&context, args)?;
+                }
+                Commands::Info(args) => {
+                    cli::info::exec(&context, args)?;
+                }
+                Commands::Clean(args) => {
+                    println!("Clean");
+                    cli::clean::exec(&context, args)?;
+                }
+                Commands::Config(args) => {
+                    cli::config::exec(&context, args)?;
+                }
             }
         },
         Err(e) => {

@@ -1,5 +1,6 @@
 use clap::builder::styling::{AnsiColor, Effects, Styles};
 use clap::{command, Parser, Subcommand};
+use clap_complete::Shell;
 use clap_verbosity_flag::Verbosity;
 use color_eyre::eyre::Result;
 
@@ -25,18 +26,22 @@ pub const PAD_WIDTH: usize = 40;
 
 /// Command
 #[derive(Debug, Parser)]
-#[command(
+#[clap(
     author = "Cyle Witruk (https://github.com/cylewitruk)", 
     version,
     about,
     long_about = None,
     styles=styles(),
-    max_term_width = 100,
-    next_line_help = true,
+    max_term_width = 100
 )]
+
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,
+
+    /// Generate completion scripts for the specified shell.
+    #[clap(long, value_parser, help_heading = "Other")]
+    pub completion: Option<Shell>,
 
     #[command(flatten)]
     pub verbosity: Verbosity,
@@ -66,7 +71,7 @@ pub enum Commands {
     /// Cleans up resources created/used by stackify.
     Clean(CleanArgs),
     /// Commands for interacting with the stackify global configuration.
-    Config(ConfigArgs),
+    Config(ConfigArgs)
 }
 
 fn styles() -> Styles {

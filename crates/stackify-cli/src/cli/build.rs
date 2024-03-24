@@ -5,6 +5,7 @@ use color_eyre::Result;
 use console::style;
 use flate2::bufread::GzDecoder;
 use futures_util::StreamExt;
+use inquire::Confirm;
 use regex::Regex;
 use stackify_common::{
     docker::{BuildStackifyBuildImage, BuildStackifyRuntimeImage}, download::download_file, util::truncate
@@ -67,7 +68,20 @@ pub struct BuildArgs {
 }
 
 pub fn exec(ctx: &CliContext, args: BuildArgs) -> Result<()> {
-    println!("Preparing Stackify artifacts...");
+    let disk_space_usage = match args.pre_compile {
+        true => "~9GB",
+        false => "~2.3GB"
+    };
+
+    let confirm = Confirm::new("This operation can take a while and consume a lot of disk space. Are you sure you want to continue?")
+        .with_default(false)
+        .with_help_message(&format!("Estimated disk space usage: {}", disk_space_usage))
+        .prompt()?;
+
+    if !confirm {
+        println!("Aborted.");
+        return Ok(());
+    }
 
     if !args.build_only {
         // Download and extract Bitcoin Core and copy 'bitcoin-cli' and 'bitcoind' 

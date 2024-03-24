@@ -6,7 +6,7 @@ use super::schema::*;
     Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, 
     QueryableByName
 )]
-#[table_name = "epoch"]
+#[diesel(table_name = epoch)]
 pub struct Epoch {
     pub id: i32,
     pub name: String,
@@ -17,7 +17,7 @@ pub struct Epoch {
     Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, 
     QueryableByName
 )]
-#[table_name = "environment_status"]
+#[diesel(table_name = environment_status)]
 pub struct EnvironmentStatus {
     pub id: i32,
     pub name: String,
@@ -27,7 +27,7 @@ pub struct EnvironmentStatus {
     Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, 
     QueryableByName
 )]
-#[table_name = "environment"]
+#[diesel(table_name = environment)]
 pub struct Environment {
     pub id: i32,
     pub name: String,
@@ -40,7 +40,7 @@ pub struct Environment {
     Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, 
     QueryableByName
 )]
-#[table_name = "environment_epoch"]
+#[diesel(table_name = environment_epoch)]
 pub struct EnvironmentEpoch {
     pub id: i32,
     pub environment_id: i32,
@@ -53,7 +53,7 @@ pub struct EnvironmentEpoch {
     Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, 
     QueryableByName
 )]
-#[table_name = "service_type"]
+#[diesel(table_name = service_type)]
 pub struct ServiceType {
     pub id: i32,
     pub name: String,
@@ -66,7 +66,7 @@ pub struct ServiceType {
     Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, 
     QueryableByName
 )]
-#[table_name = "service_version"]
+#[diesel(table_name = service_version)]
 pub struct ServiceVersion {
     pub id: i32,
     pub service_type_id: i32,
@@ -80,7 +80,7 @@ pub struct ServiceVersion {
     Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, 
     QueryableByName
 )]
-#[table_name = "service_upgrade_path"]
+#[diesel(table_name = service_upgrade_path)]
 pub struct ServiceUpgradePath {
     pub id: i32,
     pub name: String,
@@ -95,7 +95,7 @@ pub struct ServiceUpgradePath {
     Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, 
     QueryableByName
 )]
-#[table_name = "service"]
+#[diesel(table_name = service)]
 pub struct Service {
     pub id: i32,
     pub name: String,
@@ -111,7 +111,7 @@ pub struct Service {
     Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, 
     QueryableByName
 )]
-#[table_name = "service_action_type"]
+#[diesel(table_name = service_action_type)]
 pub struct ServiceActionType {
     pub id: i32,
     pub name: String,
@@ -123,7 +123,7 @@ pub struct ServiceActionType {
     Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, 
     QueryableByName
 )]
-#[table_name = "service_action_type_constraint"]
+#[diesel(table_name = service_action_type_constraint)]
 pub struct ServiceActionTypeConstraint {
     pub id: i32,
     pub service_action_id: i32,
@@ -134,7 +134,7 @@ pub struct ServiceActionTypeConstraint {
     Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, 
     QueryableByName
 )]
-#[table_name = "environment_service_action"]
+#[diesel(table_name = environment_service_action)]
 pub struct EnvironmentServiceAction {
     pub id: i32,
     pub environment_id: i32,
@@ -148,7 +148,7 @@ pub struct EnvironmentServiceAction {
     Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, 
     QueryableByName
 )]
-#[table_name = "environment_container"]
+#[diesel(table_name = environment_container)]
 pub struct EnvironmentContainer {
     pub id: i32,
     pub environment_id: i32,
@@ -162,7 +162,7 @@ pub struct EnvironmentContainer {
     Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, 
     QueryableByName
 )]
-#[table_name = "environment_container_action_log"]
+#[diesel(table_name = environment_container_action_log)]
 pub struct EnvironmentContainerActionLog {
     pub id: i32,
     pub environment_container_id: i32,
