@@ -116,7 +116,7 @@ fn exec_stop(ctx: &CliContext, args: args::StopArgs) -> Result<()> {
         print!("Stopping container: {:PAD_WIDTH$}", container.name);
         match ctx.docker.stop_container(&container.id) {
             Ok(_) => print_ok(None),
-            Err(e) => print_fail(None)
+            Err(_) => print_fail(None)
         }
     }
 

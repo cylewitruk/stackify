@@ -13,7 +13,7 @@ pub fn exec(ctx: &CliContext, args: ConfigArgs) -> Result<()> {
         ConfigSubCommands::Reset => exec_reset(ctx),
         ConfigSubCommands::Import(_) => todo!(),
         ConfigSubCommands::Export(_) => todo!(),
-        ConfigSubCommands::Services(args) => exec_list_services(ctx),
+        ConfigSubCommands::Services(_) => exec_list_services(ctx),
     }
 }
 

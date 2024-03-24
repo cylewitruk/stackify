@@ -1,4 +1,4 @@
-use std::{borrow::Cow, fmt::Write, sync::Arc, time::Duration};
+use std::{borrow::Cow, fmt::Write, time::Duration};
 
 use color_eyre::Result;
 use console::style;
@@ -126,6 +126,7 @@ impl PbWrapper {
 }
 
 /// Progress methods.
+#[allow(dead_code)]
 impl PbWrapper {
     pub fn set_length(&self, size: u64) {
         self.pb.set_length(size);

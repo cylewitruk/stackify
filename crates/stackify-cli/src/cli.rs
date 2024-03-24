@@ -1,5 +1,5 @@
 use clap::builder::styling::{AnsiColor, Effects, Styles};
-use clap::{command, ColorChoice, Parser, Subcommand};
+use clap::{command, Parser, Subcommand};
 use clap_verbosity_flag::Verbosity;
 use color_eyre::eyre::Result;
 

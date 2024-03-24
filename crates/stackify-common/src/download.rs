@@ -1,4 +1,4 @@
-use std::{fmt::Debug, fs::{self, File, Permissions}, io::{copy, BufReader, Cursor, Write}, os::unix::fs::PermissionsExt, path::{Path, PathBuf}, sync::Arc, time::Duration};
+use std::{fmt::Debug, fs::{self, File, Permissions}, io::{copy, BufReader, Write}, os::unix::fs::PermissionsExt, path::{Path, PathBuf}, time::Duration};
 
 use reqwest::{header, Client, Url};
 use tar::Archive;

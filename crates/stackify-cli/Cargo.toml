@@ -39,6 +39,7 @@ console = { workspace = true }
 #crossterm = { workspace = true }
 #ratatui = { workspace = true }
 comfy-table = { workspace = true }
+inquire = "0.7.3"
 indicatif = { version = "0.17.8", features = ["improved_unicode"] }
 anstyle = { workspace = true }
 colorchoice = "1.0.0"

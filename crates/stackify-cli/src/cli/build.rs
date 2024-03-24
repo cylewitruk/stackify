@@ -1,16 +1,15 @@
-use std::{borrow::Cow, fs::File, future::IntoFuture, io::BufReader};
+use std::{borrow::Cow, fs::File, io::BufReader};
 
 use clap::Args;
-use color_eyre::{eyre::Error, owo_colors::OwoColorize, Result, Report};
+use color_eyre::Result;
 use console::style;
 use flate2::bufread::GzDecoder;
-use futures_util::{Future, FutureExt, Stream, StreamExt};
+use futures_util::StreamExt;
 use regex::Regex;
 use stackify_common::{
-    docker::{BuildInfo, BuildStackifyBuildImage, BuildStackifyRuntimeImage}, download::{download_dasel_binary, download_file}, util::truncate
+    docker::{BuildStackifyBuildImage, BuildStackifyRuntimeImage}, download::download_file, util::truncate
 };
 use tar::Archive;
-use tokio::runtime::Runtime;
 
 use crate::{context::CliContext, util::{new_progressbar, print::print_bytes, progressbar::PbWrapper}};
 

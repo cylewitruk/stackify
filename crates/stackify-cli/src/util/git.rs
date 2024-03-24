@@ -1,5 +1,3 @@
-use color_eyre::{Result, eyre::eyre};
-
 pub enum TargetType {
     Tag,
     Branch,
@@ -12,20 +10,6 @@ pub struct GitTarget {
 }
 
 impl GitTarget {
-    pub fn from_str(s: &str) -> Result<Self> {
-        let split = s.split(":").collect::<Vec<_>>();
-        let target_type = match split[0] {
-            "tag" => TargetType::Tag,
-            "branch" => TargetType::Branch,
-            "commit" => TargetType::Commit,
-            _ => return Err(eyre!("Unknown git target type")),
-        };
-        Ok(Self {
-            target_type,
-            target: split[1].to_string(),
-        })
-    }
-
     pub fn parse<T: AsRef<str>>(s: T) -> Option<GitTarget> {
         let s = s.as_ref();
         let split = s.split(":").collect::<Vec<_>>();

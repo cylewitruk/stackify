@@ -1,7 +1,4 @@
 use clap::{Args, Subcommand};
-use color_eyre::eyre::Result;
-
-use crate::context::CliContext;
 
 #[derive(Debug, Subcommand)]
 pub enum ConfigSubCommands {

@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use color_eyre::owo_colors::OwoColorize;
 
 pub fn print_ok(extra: Option<&str>) {
