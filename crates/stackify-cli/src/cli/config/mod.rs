@@ -1,4 +1,4 @@
-use color_eyre::{eyre::eyre, owo_colors::OwoColorize, Result};
+use color_eyre::{eyre::eyre, Result};
 use console::style;
 use stackify_common::db::model::{Epoch, ServiceType, ServiceUpgradePath, ServiceVersion};
 

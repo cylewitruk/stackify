@@ -7,35 +7,52 @@ edition = "2021"
 name = "stackify"
 path = "src/main.rs"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
-clap = { workspace = true }
-clap_complete = { workspace = true }
-color-eyre = { workspace = true }
-thiserror = { workspace = true }
-tokio = { workspace = true }
-bollard = { workspace = true }
-log = { workspace = true }
-env_logger = { workspace = true }
+# Util
+rand = { workspace = true }
+time  = { workspace = true }
 libc = { workspace = true }
 signal-hook = { workspace = true }
 tempfile = { workspace = true }
 pathdiff = { workspace = true }
-time  = { workspace = true }
-shellwords = { workspace = true }
-rand = { workspace = true }
+home = { workspace = true }
+dyn-fmt = "0.4.0"
+regex = { workspace = true }
+
+# Error Handling
+color-eyre = { workspace = true }
+thiserror = { workspace = true }
+
+# Async
+tokio = { workspace = true }
+futures-util = { workspace = true }
+
+# Docker
+bollard = { workspace = true }
+
+# Logging
+log = { workspace = true }
+env_logger = { workspace = true }
+
+# Console/Terminal/CLI
 console = { workspace = true }
 #crossterm = { workspace = true }
 #ratatui = { workspace = true }
 comfy-table = { workspace = true }
-indicatif = "0.17.8"
+indicatif = { version = "0.17.8", features = ["improved_unicode"] }
+anstyle = { workspace = true }
+colorchoice = "1.0.0"
+clap = { workspace = true }
+clap_complete = { workspace = true }
+shellwords = { workspace = true }
+
+# Database
 diesel = { workspace = true }
 diesel_migrations = { workspace = true }
+
+# Local deps
 stackify-common = { path = "../stackify-common" }
-anstyle = { workspace = true }
-home = { workspace = true }
-colorchoice = "1.0.0"
-dyn-fmt = "0.4.0"
-futures-util = { workspace = true }
-regex = { workspace = true }
+
+# Compression/Archiving
+flate2 = { workspace = true }
+tar = { workspace = true }

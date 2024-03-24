@@ -1,29 +1,93 @@
-use std::{fmt::Debug, fs::{self, File, Permissions}, io::{copy, BufReader, Cursor, Write}, os::unix::fs::PermissionsExt, path::Path};
+use std::{fmt::Debug, fs::{self, File, Permissions}, io::{copy, BufReader, Cursor, Write}, os::unix::fs::PermissionsExt, path::{Path, PathBuf}, sync::Arc, time::Duration};
 
+use reqwest::{header, Client, Url};
 use tar::Archive;
-use color_eyre::eyre::Result;
+use color_eyre::eyre::{eyre, Result};
 use flate2::bufread::GzDecoder;
-use flate2::bufread::MultiGzDecoder;
-use flate2::bufread::ZlibDecoder;
-use flate2::bufread::DeflateDecoder;
+use tokio::runtime::Runtime;
 
-pub fn download_bitcoin_core_binaries<P: AsRef<Path> + Debug>(version: &str, tmp_dir: &P, dest_dir: &P) -> Result<()> {
-    let filename = format!("bitcoin-{version}-x86_64-linux-gnu.tar.gz");
-    let url = format!("https://bitcoincore.org/bin/bitcoin-core-{version}/{filename}");
+pub fn download_file<P: AsRef<Path> + Debug>(
+    url_str: &str,
+    tmp_dir: &P,
+    dl_start: impl FnOnce(u64),
+    mut dl_chunk: impl FnMut(u64, u64),
+) -> Result<PathBuf> {
+    let url = Url::parse(&url_str)?;
+    let filename = url.path_segments()
+        .unwrap()
+        .last()
+        .expect("Could not determine filename.");
+
     let tmp_file_path = tmp_dir.as_ref().join(filename);
-    {
+
+    let download_size = get_download_size(url)?;
+    dl_start(download_size);
+
+    Runtime::new()?.block_on(async {
         let mut tmp_file = File::create(&tmp_file_path)?;
-        let response = reqwest::blocking::get(&url)?;
-        let mut content = Cursor::new(response.bytes()?);
-        copy(&mut content, &mut tmp_file)?;
+
+        let client = Client::builder()
+            .timeout(Duration::from_secs(500))
+            .build()?;
+
+        let request = client.get(url_str);
+        let mut download = request.send().await?;
+        while let Some(chunk) = download.chunk().await? {
+            dl_chunk(chunk.len() as u64, download_size);
+            tmp_file.write(&chunk)?;
+        }
+
         tmp_file.flush()?;
-    }
+        Ok::<(), color_eyre::Report>(())
+    })?;
+
+    Ok(tmp_file_path)
+}
+
+pub fn download_bitcoin_core_binaries<P: AsRef<Path> + Debug>(
+    version: &str,
+    tmp_dir: &P,
+    dest_dir: &P,
+    dl_start: impl FnOnce(u64),
+    mut dl_chunk: impl FnMut(u64, u64),
+    dl_finished: impl FnOnce()
+) -> Result<()> {
+    let rt = Runtime::new()?;
+
+    let filename = format!("bitcoin-{version}-x86_64-linux-gnu.tar.gz");
+    let url_str = format!("https://bitcoincore.org/bin/bitcoin-core-{version}/{filename}");
+
+    let url = Url::parse(&url_str)?;
+
+    let tmp_file_path = tmp_dir.as_ref().join(filename);
+
+    let download_size = get_download_size(url)?;
+    dl_start(download_size);
+
+    rt.block_on(async {
+        let mut tmp_file = File::create(&tmp_file_path)?;
+
+        let client = Client::builder()
+            .timeout(Duration::from_secs(500))
+            .build()?;
+
+        let request = client.get(&url_str);
+        let mut download = request.send().await?;
+        while let Some(chunk) = download.chunk().await? {
+            dl_chunk(chunk.len() as u64, download_size);
+            tmp_file.write(&chunk)?;
+        }
+
+        tmp_file.flush()?;
+        dl_finished();
+        Ok::<(), color_eyre::Report>(())
+    })?;
     
     let tmp_file = File::open(&tmp_file_path)?;
     let gz = GzDecoder::new(BufReader::new(tmp_file));
 
     //let tmp_dir = tempfile::tempdir()?;
-    tar::Archive::new(gz).unpack(&tmp_dir)?;
+    Archive::new(gz).unpack(&tmp_dir)?;
 
     let bin_dir = tmp_dir.as_ref()
         .join(format!("bitcoin-{version}"))
@@ -56,7 +120,7 @@ pub fn download_dasel_binary<P: AsRef<Path>>(version: &str, dest_dir: P) -> Resu
     Ok(())
 }
 
-fn inner_copy<P: AsRef<Path>>(src: &P, dest: &P) -> Result<()> {
+pub fn inner_copy<P: AsRef<Path>>(src: &P, dest: &P) -> Result<()> {
     let mut src_file = std::fs::File::open(src)?;
     let mut dest_file = std::fs::File::create(dest)?;
 
@@ -65,9 +129,36 @@ fn inner_copy<P: AsRef<Path>>(src: &P, dest: &P) -> Result<()> {
     Ok(())   
 }
 
-fn set_executable<P: AsRef<Path>>(path: &P) -> Result<()> {
+pub fn set_executable<P: AsRef<Path>>(path: &P) -> Result<()> {
     let perm = Permissions::from_mode(0o744);
     let file = File::open(path)?;
     file.set_permissions(perm)?;
     Ok(())
+}
+
+// Help from https://github.com/benkay86/async-applied/blob/master/indicatif-reqwest-tokio/src/bin/indicatif-reqwest-tokio-single.rs
+fn get_download_size(url: Url) -> Result<u64> {
+    let client = reqwest::blocking::Client::new();
+    // We need to determine the file size before we download so we can create a ProgressBar
+    // A Header request for the CONTENT_LENGTH header gets us the file size
+    let download_size = {
+        let resp = client.head(url.as_str()).send()?;
+        if resp.status().is_success() {
+            resp.headers() // Gives is the HeaderMap
+                .get(header::CONTENT_LENGTH) // Gives us an Option containing the HeaderValue
+                .and_then(|ct_len| ct_len.to_str().ok()) // Unwraps the Option as &str
+                .and_then(|ct_len| ct_len.parse().ok()) // Parses the Option as u64
+                .unwrap_or(0) // Fallback to 0
+        } else {
+            // We return an Error if something goes wrong here
+            return Err(eyre!(
+                "Couldn't download URL: {}. Error: {:?}",
+                url,
+                resp.status(),
+            )
+            .into());
+        }
+    };
+
+    Ok(download_size as u64)
 }

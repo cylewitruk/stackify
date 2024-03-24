@@ -11,11 +11,9 @@ ARG BITCOIN_VERSION
 
 # Update and install packages
 RUN apt update \
-    && apt upgrade -y \
+#    && apt upgrade -y \
     && apt install -y build-essential libclang-dev git wget tree \
-        jq libssl-dev pkg-config libfontconfig-dev libsqlite3-dev \
-        gcc-multilib clang mold libsecp256k1-1 libsecp256k1-dev \
-        procps
+        clang mold
 
 RUN rustup component add rustfmt
 
@@ -30,16 +28,27 @@ RUN groupadd -r -g ${GROUP_ID} stacks \
 USER stacks
 COPY --chown=stacks:stacks ./cargo-config.toml /home/stacks/.cargo/config.toml
 
-RUN mkdir ~/repos \
-    && cd ~/repos \
-    && git clone https://github.com/stacks-network/stacks-core.git \
-    && git clone https://github.com/stacks-network/sbtc.git \
-    && git clone https://github.com/hirosystems/clarinet.git --recursive \
-    && touch ~/stacks-core-deps
+RUN mkdir ~/repos
 
-ENV CARGO_INCREMENTAL 0
-ENV SCCACHE_DIRECT true
-ENV SCCACHE_DIR /sccache
+# Clone 'stacks-core'
+RUN cd ~/repos \
+    && git clone https://github.com/stacks-network/stacks-core.git
+# Build 'stacks-node' from 'stacks-core' to cache dependencies.
+RUN cd ~/repos/stacks-core \
+    && cargo build --profile docker --package stacks-node --bin stacks-node \
+    && cd ..
+# Clone 'sbtc'.
+RUN cd ~/repos \
+    git clone https://github.com/stacks-network/sbtc.git
+# Clone 'clarinet'.
+RUN cd ~/repos \
+    && git clone https://github.com/hirosystems/clarinet.git --recursive 
+# Build the 'clarinet' binary to cache dependencies.
+RUN cd ~/repos/clarinet \
+    && git submodule update --recursive --init \
+    && cargo build --profile docker && cd ..
+
+ENV CARGO_INCREMENTAL 1
 ENV CARGO_TARGET_DIR /target
 
 WORKDIR /home/stacks

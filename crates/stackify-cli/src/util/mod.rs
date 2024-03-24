@@ -2,7 +2,7 @@ use stackify_common::db::model::{Epoch, ServiceType, ServiceUpgradePath, Service
 
 pub mod git;
 pub mod print;
-mod progressbar;
+pub mod progressbar;
 
 pub use progressbar::new_progressbar;
 

@@ -21,6 +21,6 @@ hex = { workspace = true }
 tar = { workspace = true }
 tempfile = { workspace = true }
 bytes = "1.5.0"
-flate2 = "1.0.28"
+flate2 = { workspace = true }
 futures-util = { workspace = true }
 reqwest = { workspace = true }
