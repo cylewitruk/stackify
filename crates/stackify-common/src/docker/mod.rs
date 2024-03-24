@@ -171,7 +171,7 @@ pub struct BuildInfo {
 #[derive(Debug, Default)]
 pub struct ListStackifyContainerOpts {
     pub environment_name: Option<EnvironmentName>,
-    pub running: Option<bool>
+    pub only_running: Option<bool>
 }
 
 pub struct CreateContainerResult {
@@ -220,6 +220,7 @@ pub struct StackifyImage {
     pub size: i64
 }
 
+#[derive(Debug, PartialEq, Eq)]
 pub enum ContainerState {
     Created,
     Running,
@@ -245,5 +246,20 @@ impl ContainerState {
             }
         };
         Ok(state)
+    }
+}
+
+pub fn make_filters() -> HashMap<String, Vec<String>> {
+    return HashMap::new();
+}
+
+pub trait AddLabelFilter {
+    fn add_label_filter(&mut self, label: Label, value: &str) -> &mut Self;
+}
+
+impl AddLabelFilter for HashMap<String, Vec<String>> {
+    fn add_label_filter(&mut self, label: Label, value: &str) -> &mut Self {
+        self.insert("label".into(), vec![format!("{}={}", label, value)]);
+        self
     }
 }

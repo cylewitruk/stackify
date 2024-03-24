@@ -97,6 +97,13 @@ table! {
         allowed_after_service_action_id -> Nullable<Integer>,
     }
 }
+table! {
+    environment_service (id) {
+        id -> Integer,
+        environment_id -> Integer,
+        service_version_id -> Integer,
+    }
+}
 
 table! {
     environment_service_action (id) {

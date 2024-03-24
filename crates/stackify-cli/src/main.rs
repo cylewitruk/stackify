@@ -1,4 +1,4 @@
-use clap::Parser;
+use clap::{CommandFactory, Parser};
 use color_eyre::eyre::{eyre, Result};
 use context::CliContext;
 use diesel::{Connection, SqliteConnection};
@@ -16,8 +16,8 @@ fn main() -> Result<()> {
     match Cli::try_parse() {
         Ok(cli) =>{
             match cli.command {
-                Commands::Build(args) => {
-                    cli::build::exec(&context, args)?;
+                Commands::Initialize(args) => {
+                    cli::init::exec(&context, args)?;
                 }
                 Commands::Environment(args) => {
                     cli::env::exec(&context, args)?;
@@ -31,6 +31,9 @@ fn main() -> Result<()> {
                 }
                 Commands::Config(args) => {
                     cli::config::exec(&context, args)?;
+                }
+                Commands::Completions { shell } => {
+                    shell.generate(&mut Cli::command(), &mut std::io::stdout());
                 }
             }
         },

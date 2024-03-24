@@ -1,6 +1,6 @@
 use std::{borrow::Cow, fmt::Write, time::Duration};
 
-use color_eyre::Result;
+use color_eyre::{owo_colors::OwoColorize, Result};
 use console::style;
 use futures_util::Future;
 use indicatif::{ProgressBar, ProgressState, ProgressStyle};
@@ -179,6 +179,15 @@ impl PbWrapper {
         println!("{} {}", 
             style("✔️").green(), 
             self.title
+        );
+    }
+
+    pub fn finish_success_with_meta(&self, meta: &str) {
+        self.pb.finish_and_clear();
+        println!("{} {} {}", 
+            style("✔️").green(), 
+            self.title,
+            meta.dimmed()
         );
     }
 

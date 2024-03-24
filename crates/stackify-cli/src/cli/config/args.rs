@@ -58,7 +58,6 @@ pub struct ExportArgs {
     )]
     environment: String,
     #[arg(
-        short,
         long,
         alias = "all-envs"
     )]

@@ -17,6 +17,7 @@ use log::debug;
 use rand::{thread_rng, Rng};
 use tokio::runtime::Runtime;
 
+use crate::docker::{make_filters, AddLabelFilter};
 use crate::util::random_hex;
 use crate::EnvironmentName;
 
@@ -142,20 +143,27 @@ impl StackifyDocker {
         })
     }
 
-    pub fn list_stackify_containers(&self, opts: ListStackifyContainerOpts) -> Result<Vec<StackifyContainer>> {
-        let mut filters = HashMap::new();
-        if let Some(env) = opts.environment_name {
-            filters.insert("label".to_string(), vec![Label::EnvironmentName.to_string(), env.to_string()]);
+    /// Lists all containers with the label "local.stackify".
+    /// By default, this method will only return RUNNING containers. To get all
+    /// containers, set `only_running` to `false`.
+    pub fn list_stackify_containers(&self, args: ListStackifyContainerOpts) -> Result<Vec<StackifyContainer>> {
+        let mut filters = make_filters();
+        if let Some(env) = args.environment_name {
+            filters.add_label_filter(Label::EnvironmentName, &env.to_string());
         }
 
         let opts = bollard::container::ListContainersOptions {
-            all: if opts.running.is_some() { !opts.running.unwrap() } else { true },
+            all: if args.only_running.is_some() { !args.only_running.unwrap() } else { true },
+            //filters,
             filters,
             ..Default::default()
         };
 
+        eprintln!("opts: {:?}", opts);
+
         self.runtime.block_on(async {
             let containers = self.docker.list_containers(Some(opts)).await?;
+            eprintln!("containers: {:?}", containers);
             Ok(containers.iter().map(|c| {
                 let state = ContainerState::parse(&c.state.clone().unwrap_or_default())
                     .expect("Failed to parse container state.");

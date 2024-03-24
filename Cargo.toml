@@ -18,6 +18,7 @@ libc = "0.2.153"
 home = "0.5.9"
 regex = "1.10.3"
 hex = "0.4.3"
+lazy_static = "1.4.0"
 # Compression/Archiving
 flate2 = "1.0.28"
 tar = "0.4.40"

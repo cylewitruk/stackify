@@ -134,6 +134,17 @@ pub struct ServiceActionTypeConstraint {
     Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, 
     QueryableByName
 )]
+#[diesel(table_name = environment_service)]
+pub struct EnvironmentService {
+    pub id: i32,
+    pub environment_id: i32,
+    pub service_version_id: i32,
+}
+
+#[derive(
+    Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, 
+    QueryableByName
+)]
 #[diesel(table_name = environment_service_action)]
 pub struct EnvironmentServiceAction {
     pub id: i32,

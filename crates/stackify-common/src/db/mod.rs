@@ -74,6 +74,24 @@ impl AppDb {
         
         Ok(())
     }
+
+    pub fn list_environment_services(&self, name: &str) -> Result<Vec<EnvironmentService>> {
+        let environment_id: Option<i32> = environment::table
+            .select(environment::id)
+            .filter(environment::name.eq(name))
+            .first::<i32>(&mut *self.conn.borrow_mut())
+            .optional()?;
+
+        if let Some(environment_id) = environment_id {
+            Ok(
+                environment_service::table
+                    .filter(environment_service::environment_id.eq(environment_id))
+                    .get_results::<EnvironmentService>(&mut *self.conn.borrow_mut())?
+            )
+        } else {
+            bail!("environment not found")
+        }
+    }
 }
 
 impl AppDb {

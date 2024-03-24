@@ -8,7 +8,7 @@ pub mod download;
 
 use std::fmt::Display;
 
-use color_eyre::eyre::{eyre, Result};
+use color_eyre::eyre::{bail, eyre, Result};
 use regex::Regex;
 
 pub use docker::stackify_docker::StackifyDocker;
@@ -26,7 +26,7 @@ impl EnvironmentName {
         // This is the Regex used by Docker for names.
         let regex = Regex::new("[a-z0-9]+(?:[._-]{1,2}[a-z0-9]+)*")?;
         if !regex.is_match(name) {
-            return Err(eyre!("Invalid environment name."));
+            bail!(format!("The environment name '{}' is invalid.", name));
         }
         
         Ok(Self {

@@ -21,7 +21,7 @@ use crate::{context::CliContext, util::{new_progressbar, print::print_bytes, pro
     args = ["download_only", "build_only"],
     multiple = false
 )]
-pub struct BuildArgs {
+pub struct InitArgs {
     /// Specify the Bitcoin Core version to download.
     #[arg(
         long,
@@ -67,7 +67,7 @@ pub struct BuildArgs {
     pub build_only: bool
 }
 
-pub fn exec(ctx: &CliContext, args: BuildArgs) -> Result<()> {
+pub fn exec(ctx: &CliContext, args: InitArgs) -> Result<()> {
     let disk_space_usage = match args.pre_compile {
         true => "~9GB",
         false => "~2.3GB"

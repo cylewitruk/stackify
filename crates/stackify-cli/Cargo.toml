@@ -18,6 +18,7 @@ pathdiff = { workspace = true }
 home = { workspace = true }
 dyn-fmt = "0.4.0"
 regex = { workspace = true }
+lazy_static = { workspace = true }
 
 # Error Handling
 color-eyre = { workspace = true }
@@ -45,6 +46,7 @@ anstyle = { workspace = true }
 colorchoice = "1.0.0"
 clap = { workspace = true }
 clap_complete = { workspace = true }
+clap_complete_command = "0.5.1"
 shellwords = { workspace = true }
 
 # Database
