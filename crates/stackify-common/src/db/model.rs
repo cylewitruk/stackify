@@ -73,7 +73,8 @@ pub struct ServiceVersion {
     pub version: String,
     pub minimum_epoch_id: Option<i32>,
     pub maximum_epoch_id: Option<i32>,
-    pub git_target: Option<String>
+    pub git_target: Option<String>,
+    pub cli_name: String,
 }
 
 #[derive(

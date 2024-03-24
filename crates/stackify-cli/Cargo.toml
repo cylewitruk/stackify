@@ -19,6 +19,7 @@ home = { workspace = true }
 dyn-fmt = "0.4.0"
 regex = { workspace = true }
 lazy_static = { workspace = true }
+convert_case = "0.6.0"
 
 # Error Handling
 color-eyre = { workspace = true }

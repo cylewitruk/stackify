@@ -15,3 +15,18 @@ pub fn truncate(s: &str, max_chars: usize) -> &str {
         Some((idx, _)) => &s[..idx],
     }
 }
+
+pub fn to_alphanumeric_snake(s: &str) -> String {
+    let mut out = String::new();
+    for char in s.chars() {
+        if char.is_alphanumeric() {
+            out += &char.to_ascii_lowercase().to_string();
+        } else {
+            if out.chars().last().unwrap() != '-' {
+                out += "-";
+            }
+        }
+    }
+
+    out
+}

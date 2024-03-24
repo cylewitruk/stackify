@@ -35,7 +35,7 @@ pub enum ServiceSubCommands {
     /// List all services in the configuration.
     List,
     /// Display detailed information about a service.
-    Show
+    Inspect
 }
 
 #[derive(Debug, Args)]

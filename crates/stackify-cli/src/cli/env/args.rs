@@ -12,7 +12,7 @@ pub enum EnvSubCommands {
     #[clap(visible_alias = "ls")]
     List(ListArgs),
     /// Create a new environment.
-    #[clap(visible_alias = "new")]
+    #[clap(visible_aliases = ["new", "add"])]
     Create(CreateArgs),
     /// Builds the specified environment, compiling the necessary binaries for
     /// the services if needed and creating the Docker containers which will be
@@ -35,29 +35,104 @@ pub enum EnvSubCommands {
     /// Stops the specified environment if it is running and removes all
     /// associated resources, without actually deleting the environment.
     Down(DownArgs),
+    /// Commands for managing environments' services.
+    #[clap(visible_aliases = ["svc"])]
     Service(ServiceArgs)
 }
 
 #[derive(Debug, Args)]
 pub struct ServiceArgs {
-
+    #[command(subcommand)]
+    pub commands: ServiceSubCommands,
 }
 
 #[derive(Debug, Subcommand)]
 pub enum ServiceSubCommands {
     Add(ServiceAddArgs),
     #[clap(visible_aliases = ["rm", "del"])]
-    Remove(ServiceRemoveArgs)
+    Remove(ServiceRemoveArgs),
+    Inspect(ServiceInspectArgs),
+    List(ServiceListArgs)
+}
+
+#[derive(Debug, Args)]
+pub struct ServiceInspectArgs {
+    /// The name of the service of which to inspect.
+    #[arg(
+        required = true,
+        value_name = "NAME"
+    )]
+    pub svc_name: String,
+
+    /// The name of the environment to which the service belongs. You can omit
+    /// this argument if the service is unique across all environments, otherwise
+    /// you will receive an error.
+    #[arg(
+        required = false,
+        value_name = "NAME",
+        short = 'e',
+        long = "environment",
+        visible_alias = "env"
+    )]
+    pub env_name: String
 }
 
 #[derive(Debug, Args)]
 pub struct ServiceAddArgs {
+    /// The name of the service to add. For more information on the available
+    /// services, see the `stackify config services` command.
+    #[arg(
+        required = true,
+        value_name = "NAME"
+    )]
+    pub svc_name: String,
 
+    /// Indicates whether or not an interactive prompt should be used for providing
+    /// the required information for this command (recommended!). This flag is
+    /// set by default.
+    #[arg(
+        required = false,
+        short = 'i',
+        default_value = "true"
+    )]
+    pub interactive: bool,
+
+    /// The name of the environment to which the service should be added.
+    #[arg(
+        required = true,
+        value_name = "NAME",
+        short = 'e',
+        long = "environment",
+        visible_alias = "env"
+    )]
+    pub env_name: String,
+
+    
 }
 
 #[derive(Debug, Args)]
 pub struct ServiceRemoveArgs {
+    /// The name of the environment from which the service should be removed.
+    /// You can omit this argument if the service is unique across all environments,
+    /// otherwise you will receive an error.
+    #[arg(
+        required = false,
+        value_name = "NAME",
+        short = 'e',
+        long = "environment",
+        visible_alias = "env"
+    )]
+    pub env_name: String
+}
 
+#[derive(Debug, Args)]
+pub struct ServiceListArgs {
+    /// The name of the environment to list services for.
+    #[arg(
+        required = true,
+        value_name = "NAME"
+    )]
+    pub env_name: String,
 }
 
 #[derive(Debug, Args)]

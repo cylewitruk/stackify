@@ -53,6 +53,7 @@ table! {
         minimum_epoch_id -> Nullable<Integer>,
         maximum_epoch_id -> Nullable<Integer>,
         git_target -> Nullable<Text>,
+        cli_name -> Text
     }
 }
 
