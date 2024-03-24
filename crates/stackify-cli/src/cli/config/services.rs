@@ -1,25 +1,36 @@
 use color_eyre::eyre::{eyre, Result};
 use console::style;
-use stackify_common::db::model::{Epoch, ServiceType, ServiceUpgradePath, ServiceVersion};
+use stackify_common::{db::model::{Epoch, ServiceType, ServiceUpgradePath, ServiceVersion}, util::to_alphanumeric_snake, EnvironmentName};
 
-use crate::{context::CliContext, util::{git::{GitTarget, TargetType}, FilterByServiceType, FilterByServiceVersion, FindById}};
+use crate::{cli::env::service, context::CliContext, util::{git::{GitTarget, TargetType}, FilterByServiceType, FilterByServiceVersion, FindByCliName, FindById}};
 
-use super::args::{ServiceSubCommands, ServicesArgs};
+use super::args::{AddServiceVersionArgs, RemoveServiceVersionArgs, ServiceSubCommands, ServicesArgs};
 
 pub fn exec_services(ctx: &CliContext, args: ServicesArgs) -> Result<()> {
     match args.subcommands {
         ServiceSubCommands::List => exec_list_services(ctx),
-        ServiceSubCommands::Add => exec_add_service(ctx),
-        ServiceSubCommands::Remove => exec_remove_service(ctx),
+        ServiceSubCommands::AddVersion(inner_args) => 
+            exec_add_service_version(ctx, inner_args),
+        ServiceSubCommands::RemoveVersion(inner_args) => 
+            exec_remove_service_version(ctx, inner_args),
         ServiceSubCommands::Inspect => exec_inspect_service(ctx),
     }
 }
 
-pub fn exec_add_service(ctx: &CliContext) -> Result<()> {
+pub fn exec_add_service_version(ctx: &CliContext, args: AddServiceVersionArgs) -> Result<()> {
+    let cli_name = to_alphanumeric_snake(&args.svc_name);
+
+    let svc_versions = ctx.db.list_service_versions()?;
+    if svc_versions.find_by_cli_name(&cli_name).is_some() {
+        return Err(eyre!("A service version with the name '{}' already exists", cli_name));
+    }
+
     Ok(())
 }
 
-pub fn exec_remove_service(ctx: &CliContext) -> Result<()> {
+pub fn exec_remove_service_version(ctx: &CliContext, args: RemoveServiceVersionArgs) -> Result<()> {
+    let cli_name = to_alphanumeric_snake(&args.svc_name);
+
     Ok(())
 }
 
@@ -118,7 +129,7 @@ fn print_git_target(target: &GitTarget) {
         TargetType::Branch => format!("{}", style("(git branch)").dim()),
         TargetType::Commit => format!("{}", style("(git commit)").dim()),
     };
-    
+
     println!("    {} {} {} {}", 
         style("┆").dim(),
         style("☉").bright().blue(),

@@ -17,12 +17,23 @@ pub trait FindById<T> {
     }
 }
 
+pub trait FindByCliName<T> {
+    fn find_by_cli_name(&self, cli_name: &str) -> Option<&T>;
+}
+
 pub trait FilterByServiceType<T> {
     fn filter_by_service_type(&self, service_type_id: i32) -> Vec<&T>;
 }
 
 pub trait FilterByServiceVersion<T> {
     fn filter_by_service_version(&self, service_version_id: i32) -> Vec<&T>;
+}
+
+impl FindByCliName<ServiceVersion> for Vec<ServiceVersion> {
+    fn find_by_cli_name(&self, cli_name: &str) -> Option<&ServiceVersion> {
+        self.iter()
+            .find(|v| v.cli_name == cli_name)
+    }
 }
 
 impl FilterByServiceType<ServiceVersion> for Vec<ServiceVersion> {

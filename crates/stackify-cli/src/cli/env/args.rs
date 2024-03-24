@@ -120,7 +120,7 @@ pub struct ServiceRemoveArgs {
         value_name = "NAME",
         short = 'e',
         long = "environment",
-        visible_alias = "env"
+        visible_alias = "env",
     )]
     pub env_name: String
 }

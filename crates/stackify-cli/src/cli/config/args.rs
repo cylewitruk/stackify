@@ -28,14 +28,50 @@ pub struct ServicesArgs {
 
 #[derive(Debug, Subcommand)]
 pub enum ServiceSubCommands {
-    /// Add a new service to the configuration.
-    Add,
-    /// Remove a service from the configuration.
-    Remove,
-    /// List all services in the configuration.
+    /// Add a new service version to the available service versions.
+    #[clap(visible_aliases = ["add", "new"])]
+    AddVersion(AddServiceVersionArgs),
+    /// Remove a service version from the available service versions. This
+    /// command will fail if the calculated service + version name is already
+    /// in use.
+    #[clap(visible_alias = "rm")]
+    RemoveVersion(RemoveServiceVersionArgs),
+    /// List all available services and their versions, plus their detailed
+    /// information.
+    #[clap(visible_alias = "ls")]
     List,
-    /// Display detailed information about a service.
+    /// Display detailed information about a service and its versions.
+    #[clap(visible_alias = "insp")]
     Inspect
+}
+
+#[derive(Debug, Args)]
+pub struct AddServiceVersionArgs {
+    #[arg(
+        short = 's',
+        long = "service",
+        visible_alias = "svc",
+        required = true,
+        value_name = "SERVICE"
+    )]
+    pub svc_name: String,
+
+    /// The version of the service to add, for example: `0.21.0`, '
+    #[arg(
+        required = true,
+        value_name = "NAME"
+    )]
+    pub name: String,
+
+}
+
+#[derive(Debug, Args)]
+pub struct RemoveServiceVersionArgs {
+    #[arg(
+        required = true,
+        value_name = "SERVICE"
+    )]
+    pub svc_name: String
 }
 
 #[derive(Debug, Args)]
@@ -45,7 +81,7 @@ pub struct ImportArgs {
         long,
         required = true
     )]
-    file: String,
+    pub file: String,
 }
 
 #[derive(Debug, Args)]

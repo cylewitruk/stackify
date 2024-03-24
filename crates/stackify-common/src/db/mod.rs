@@ -10,10 +10,12 @@ use diesel_migrations::MigrationHarness;
 use log::info;
 
 use self::model::*;
+use self::opts::NewServiceVersionOpts;
 use self::schema::*;
 
 pub mod model;
 pub mod schema;
+pub mod opts;
 
 pub const DB_MIGRATIONS: EmbeddedMigrations = embed_migrations!("../../migrations");
 
@@ -94,6 +96,7 @@ impl AppDb {
     }
 }
 
+/// Configuration
 impl AppDb {
     pub fn list_services(&self) -> Result<Vec<Service>> {
         Ok(
@@ -132,6 +135,21 @@ impl AppDb {
             service_upgrade_path::table
                 .order_by(service_upgrade_path::name.asc())
                 .load(&mut *self.conn.borrow_mut())?
+        )
+    }
+
+    pub fn new_service_version(&self, opts: NewServiceVersionOpts) -> Result<ServiceVersion> {
+        Ok(
+            diesel::insert_into(service_version::table)
+                .values((
+                    service_version::service_type_id.eq(opts.service_type_id),
+                    service_version::version.eq(&opts.version),
+                    service_version::cli_name.eq(&opts.cli_name),
+                    service_version::git_target.eq(opts.git_target.as_deref()),
+                    service_version::minimum_epoch_id.eq(opts.minimum_epoch_id),
+                    service_version::maximum_epoch_id.eq(opts.maximum_epoch_id)
+                ))
+                .get_result::<ServiceVersion>(&mut *self.conn.borrow_mut())?
         )
     }
 }
