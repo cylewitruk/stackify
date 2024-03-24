@@ -60,7 +60,10 @@ fn initialize() -> Result<CliContext> {
     let config_file = config_dir.join("config.toml");
     let db_file = config_dir.join("stackify.db");
     let tmp_dir = config_dir.join("tmp");
-    std::fs::create_dir_all(&tmp_dir)?;
+    if tmp_dir.exists() {
+        std::fs::remove_dir_all(&tmp_dir)?;
+    }
+    std::fs::create_dir(&tmp_dir)?;
     let data_dir = config_dir.join("data");
     std::fs::create_dir_all(&data_dir)?;
     let bin_dir = config_dir.join("bin");

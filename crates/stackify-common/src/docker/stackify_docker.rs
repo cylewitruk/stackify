@@ -216,7 +216,8 @@ impl StackifyDocker {
         let build_args: HashMap<String, String> = [
             ("USER_ID".to_string(), build.user_id.to_string()),
             ("GROUP_ID".to_string(), build.group_id.to_string()),
-            ("BITCOIN_VERSION".to_string(), build.bitcoin_version.to_string())
+            ("BITCOIN_VERSION".to_string(), build.bitcoin_version.to_string()),
+            ("PRE_COMPILE".to_string(), build.pre_compile.to_string())
         ]
             .iter()
             .cloned()

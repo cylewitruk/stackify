@@ -1,49 +1,90 @@
-use std::{fs::File, io::BufReader};
+use std::{borrow::Cow, fs::File, future::IntoFuture, io::BufReader};
 
 use clap::Args;
-use color_eyre::Result;
+use color_eyre::{eyre::Error, owo_colors::OwoColorize, Result, Report};
 use console::style;
 use flate2::bufread::GzDecoder;
-use futures_util::StreamExt;
+use futures_util::{Future, FutureExt, Stream, StreamExt};
 use regex::Regex;
 use stackify_common::{
-    docker::{BuildStackifyBuildImage, BuildStackifyRuntimeImage}, download::{download_dasel_binary, download_file}
+    docker::{BuildInfo, BuildStackifyBuildImage, BuildStackifyRuntimeImage}, download::{download_dasel_binary, download_file}, util::truncate
 };
 use tar::Archive;
+use tokio::runtime::Runtime;
 
 use crate::{context::CliContext, util::{new_progressbar, print::print_bytes, progressbar::PbWrapper}};
 
 #[derive(Debug, Args)]
+#[group(
+    id = "mode", 
+    required = false, 
+    args = ["download_only", "build_only"],
+    multiple = false
+)]
 pub struct BuildArgs {
+    /// Specify the Bitcoin Core version to download.
     #[arg(
         long,
         default_value = "26.0",
         required = false,
     )]
     pub bitcoin_version: String,
+
+    /// Specify the Dasel version to download.
     #[arg(
         long,
         default_value = "2.7.0",
         required = false,
     )]
     pub dasel_version: String,
+
+    /// Specifies whether or not Cargo projects should be initalized (pre-compiled) 
+    /// in the build image. This ensures that all dependencies are already compiled,
+    /// but results in a much larger image (c.a. 9GB vs 2.5GB). The trade-off is between size
+    /// vs. build speed. If you plan on building new runtime binaries often, this
+    /// may be a good option.
+    #[arg(
+        long,
+        default_value = "false",
+        required = false,
+    )]
+    pub pre_compile: bool,
+    /// Only download runtime binaries, do not build the images.
+    #[arg(
+        long,
+        default_value = "false",
+        required = false,
+        group = "mode"
+    )]
+    pub download_only: bool,
+    /// Only build the images, do not download runtime binaries.
+    #[arg(
+        long,
+        default_value = "false",
+        required = false,
+        group = "mode"
+    )]
+    pub build_only: bool
 }
 
 pub fn exec(ctx: &CliContext, args: BuildArgs) -> Result<()> {
     println!("Preparing Stackify artifacts...");
 
-    // Download and extract Bitcoin Core and copy 'bitcoin-cli' and 'bitcoind' 
-    // to the bin directory.
-    download_and_extract_bitcoin_core(ctx, &args.bitcoin_version)?;
+    if !args.build_only {
+        // Download and extract Bitcoin Core and copy 'bitcoin-cli' and 'bitcoind' 
+        // to the bin directory.
+        download_and_extract_bitcoin_core(ctx, &args.bitcoin_version)?;
 
-    // Download Dasel (a jq-like tool for working with json,yaml,toml,xml,etc.).
-    download_dasel(ctx, &args.dasel_version)?;
-    
+        // Download Dasel (a jq-like tool for working with json,yaml,toml,xml,etc.).
+        download_dasel(ctx, &args.dasel_version)?;
+    }
 
-    build_build_image(ctx, &args.bitcoin_version)?;
+    if !args.download_only {
+        // Build the build image.
+        build_build_image(ctx, &args.bitcoin_version, args.pre_compile)?;
 
-    build_runtime_image(ctx)?;
-    
+        build_runtime_image(ctx)?;
+    }
 
     Ok(())
 }
@@ -64,7 +105,7 @@ fn download_dasel(ctx: &CliContext, version: &str) -> Result<()> {
                 &ctx.tmp_dir,
                 |size| {
                     download_size = size;
-                    pb.set_total_size(size);
+                    pb.set_length(size);
                     pb.set_message(format!("downloading... {}b", print_bytes(size))
                     )
                 },
@@ -101,7 +142,7 @@ fn download_and_extract_bitcoin_core(ctx: &CliContext, version: &str) -> Result<
         bitcoin_archive_filename);
 
     // Download the file.
-    PbWrapper::new_progressbar(u64::MAX, "Bitcoin Core")
+    PbWrapper::new_download_bar(u64::MAX, "Bitcoin Core")
         .exec(|pb| {
             let mut download_size = 0;
             let mut progress = 0;
@@ -111,7 +152,7 @@ fn download_and_extract_bitcoin_core(ctx: &CliContext, version: &str) -> Result<
                 &ctx.tmp_dir, 
                 |size| {
                     download_size = size;
-                    pb.set_total_size(size);
+                    pb.set_length(size);
                     pb.set_message(format!("downloading... {}b", print_bytes(size)))
                 },
                 |chunk, total| {
@@ -155,45 +196,45 @@ fn download_and_extract_bitcoin_core(ctx: &CliContext, version: &str) -> Result<
         })
 }
 
-fn build_build_image(ctx: &CliContext, bitcoin_version: &str) -> Result<()> {
+fn build_build_image(ctx: &CliContext, bitcoin_version: &str, pre_compile: bool) -> Result<()> {
     let build = BuildStackifyBuildImage {
         user_id: ctx.user_id,
         group_id: ctx.group_id,
         bitcoin_version: bitcoin_version.into(),
+        pre_compile
     };
 
     let regex = Regex::new(r#"^Step (\d+)\/(\d+) :(.*)$"#)?;
-    let pb = new_progressbar(
-        "{spinner:.dim.bold} build image: {wide_msg}", 
-        "Starting..."
-    );
-
     let stream = ctx.docker.build_stackify_build_image(build)?;
+
+    let pb = PbWrapper::new_progress_bar(0, "Stackify build image");
 
     tokio::runtime::Runtime::new()?.block_on(async {
         stream
             .for_each(|result| async {
                 match result {
                     Ok(info) => {
-                        regex.captures(&info.message).map(|captures| {
-                            let step = captures.get(1).unwrap().as_str();
-                            let total = captures.get(2).unwrap().as_str();
+                        if let Some(captures) = regex.captures(&info.message) {
+                            let step: u64 = captures.get(1).unwrap().as_str().parse().unwrap();
+                            let total: u64 = captures.get(2).unwrap().as_str().parse().unwrap();
                             let msg = captures.get(3).unwrap().as_str();
-                            pb.set_message(format!("[{}/{}]: {}", step, total, msg));
-                        });
+                            if pb.get_length() == Some(0) {
+                                pb.set_length(total);
+                            }
+                            pb.inc(step - pb.get_position());
+                            pb.set_message(Cow::Owned(truncate(msg, 70).to_owned()));
+                        }
                     },
                     Err(e) => eprintln!("Error: {}", e),
                 }
             })
             .await
     });
-    pb.finish_and_clear();
-    println!(
-        "{} Docker build image",
-        style("✔️").green()
-    );
+
+    pb.finish_success();
 
     Ok(())
+    
 }
 
 fn build_runtime_image(ctx: &CliContext) -> Result<()> {

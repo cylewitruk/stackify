@@ -1,6 +1,3 @@
-ARG USER_ID
-ARG GROUP_ID
-
 # ------------------------------------------------------------------------------
 # Build stage for Stacks Core dependencies and build environment
 # ------------------------------------------------------------------------------
@@ -8,6 +5,9 @@ FROM rust:1.76-slim-bookworm as build-base
 ARG USER_ID
 ARG GROUP_ID
 ARG BITCOIN_VERSION
+ARG PRE_COMPILE="false"
+
+ENV PRE_COMPILE=${PRE_COMPILE}
 
 # Update and install packages
 RUN apt update \
@@ -35,7 +35,7 @@ RUN cd ~/repos \
     && git clone https://github.com/stacks-network/stacks-core.git
 # Build 'stacks-node' from 'stacks-core' to cache dependencies.
 RUN cd ~/repos/stacks-core \
-    && cargo build --profile docker --package stacks-node --bin stacks-node \
+    && if [ "$PRE_COMPILE" = "true" ]; then cargo build --profile docker --package stacks-node --bin stacks-node; fi \
     && cd ..
 # Clone 'sbtc'.
 RUN cd ~/repos \
@@ -46,7 +46,7 @@ RUN cd ~/repos \
 # Build the 'clarinet' binary to cache dependencies.
 RUN cd ~/repos/clarinet \
     && git submodule update --recursive --init \
-    && cargo build --profile docker && cd ..
+    && if [ "$PRE_COMPILE" = "true" ]; then cargo build --profile docker && cd ..; fi
 
 ENV CARGO_INCREMENTAL 1
 ENV CARGO_TARGET_DIR /target

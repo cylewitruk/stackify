@@ -8,3 +8,10 @@ pub fn random_hex(byte_len: usize) -> String {
         .map(|b| format!("{:02x}", b))
         .collect::<String>()
 }
+
+pub fn truncate(s: &str, max_chars: usize) -> &str {
+    match s.char_indices().nth(max_chars) {
+        None => s,
+        Some((idx, _)) => &s[..idx],
+    }
+}

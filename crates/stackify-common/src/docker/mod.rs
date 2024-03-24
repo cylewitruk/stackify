@@ -144,7 +144,8 @@ pub struct DockerNetwork {
 pub struct BuildStackifyBuildImage {
     pub user_id: u32,
     pub group_id: u32,
-    pub bitcoin_version: String
+    pub bitcoin_version: String,
+    pub pre_compile: bool
 }
 
 pub struct StackifyContainer {
