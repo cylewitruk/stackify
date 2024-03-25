@@ -1,3 +1,9 @@
+pub mod api;
+pub mod models;
+pub mod errors;
+
 fn main() {
-    println!("Hello, world!");
+    rocket::build()
+        .mount("/api", api::routes())
+        .launch();
 }

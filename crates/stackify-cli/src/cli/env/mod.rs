@@ -15,6 +15,7 @@ use super::{error, info};
 
 pub mod args;
 pub mod service;
+pub mod build;
 
 pub fn exec(ctx: &CliContext, args: EnvArgs) -> Result<()> {
     match args.commands {
@@ -25,7 +26,7 @@ pub fn exec(ctx: &CliContext, args: EnvArgs) -> Result<()> {
         args::EnvSubCommands::Stop(inner_args) => exec_stop(ctx, inner_args),
         args::EnvSubCommands::Inspect(inner_args) => exec_inspect(ctx, inner_args),
         args::EnvSubCommands::Down(inner_args) => exec_down(ctx, inner_args),
-        args::EnvSubCommands::Build(inner_args) => exec_build(ctx, inner_args),
+        args::EnvSubCommands::Build(inner_args) => build::exec(ctx, inner_args),
         args::EnvSubCommands::Service(inner_args) => exec_service(ctx, inner_args),
     }
 }
@@ -178,23 +179,6 @@ fn exec_down(ctx: &CliContext, args: args::DownArgs) -> Result<()> {
             .exec(|_| {
                 ctx.docker.rm_container(&container.id)
             })?;
-    }
-
-    Ok(())
-}
-
-fn exec_build(ctx: &CliContext, args: args::BuildArgs) -> Result<()> {
-    let env_name = EnvironmentName::new(&args.env_name)?;
-
-    // Check if the environment has any services defined. If not, return an error.
-    let env = ctx.db.list_environment_services(env_name.as_ref())?;
-    if env.is_empty() {
-        println!("{} The '{}' environment has no services defined, so there is nothing to start.\n",
-            *ERROR,
-            env_name);
-        println!("Please define at least one service before starting the environment.");
-        println!("See the {} command for more information.", style("stackify env service").white().bold());
-        return Ok(());
     }
 
     Ok(())

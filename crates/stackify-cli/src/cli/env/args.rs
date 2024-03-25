@@ -48,10 +48,16 @@ pub struct ServiceArgs {
 
 #[derive(Debug, Subcommand)]
 pub enum ServiceSubCommands {
+    /// Adds a new service to the specified environment.
     Add(ServiceAddArgs),
     #[clap(visible_aliases = ["rm", "del"])]
+    /// Remove a service from the specified environment.
     Remove(ServiceRemoveArgs),
+    #[clap(visible_aliases = ["insp", "show"])]
+    /// Displays detailed information about the specified service.
     Inspect(ServiceInspectArgs),
+    /// Displays a list of services for the specified environment.
+    #[clap(visible_alias = "ls")]
     List(ServiceListArgs)
 }
 
