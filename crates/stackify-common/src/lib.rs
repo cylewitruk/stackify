@@ -10,6 +10,7 @@ use std::fmt::Display;
 
 use color_eyre::eyre::{bail, Result};
 use regex::Regex;
+use serde::{Deserialize, Serialize};
 
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -76,6 +77,7 @@ impl TryFrom<String> for EnvironmentName {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ServiceType {
     BitcoinMiner = 0,
     BitcoinFollower = 1,
@@ -103,4 +105,11 @@ impl ServiceType {
             _ => bail!("Invalid service type value: {}", value)
         }
     }
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
+pub enum ServiceState {
+    Running = 1,
+    Stopped = 2,
+    Error = 3
 }

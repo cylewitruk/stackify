@@ -23,14 +23,7 @@ table! {
         version -> Text,
         expected_service_state_id -> Integer,
         actual_service_state_id -> Integer,
-    }
-}
-
-table! {
-    connection_info (id) {
-        id -> Integer,
-        service_type_id -> Integer,
-        host -> Text,
+        host -> Nullable<Text>,
         p2p_port -> Nullable<Integer>,
         rpc_port -> Nullable<Integer>,
         rpc_username -> Nullable<Text>,

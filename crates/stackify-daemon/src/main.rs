@@ -1,8 +1,5 @@
-use std::sync::Arc;
 
 use color_eyre::Result;
-use db::DaemonDb;
-use diesel::{Connection, SqliteConnection};
 
 pub mod api;
 pub mod errors;
@@ -12,8 +9,10 @@ pub mod control;
 #[tokio::main]
 async fn main() -> Result<()> {
 
+    let db_path = "~/.stackify/stackifyd.db";
+
     let monitor = 
-        control::Monitor::new("~/.stackify/stackifyd.db")?;
+        control::Monitor::new(db_path)?;
     let (monitor, channel) = monitor.start()?;
 
     rocket::build()

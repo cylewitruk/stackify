@@ -2,6 +2,8 @@ use std::collections::HashMap;
 
 use serde::{Serialize, Deserialize};
 
+use crate::ServiceState;
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GetStatusResponse {
     pub status: Status,
@@ -13,13 +15,6 @@ pub enum Status {
     Ok,
     Degraded,
     Error
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub enum ServiceState {
-    Running = 1,
-    Stopped = 2,
-    Error = 3
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]

@@ -28,14 +28,7 @@ pub struct Service {
     pub version: String,
     pub expected_service_state_id: i32,
     pub actual_service_state_id: i32,
-}
-
-#[derive(Queryable, Insertable)]
-#[diesel(table_name = connection_info)]
-pub struct ConnectionInfo {
-    pub id: i32,
-    pub service_type_id: i32,
-    pub host: String,
+    pub host: Option<String>,
     pub p2p_port: Option<i32>,
     pub rpc_port: Option<i32>,
     pub rpc_username: Option<String>,

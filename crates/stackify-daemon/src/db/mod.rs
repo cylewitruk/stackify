@@ -22,13 +22,13 @@ impl DaemonDb {
 
 impl DaemonDb {
     /// Inserts a new log entry into the local database.
-    pub fn insert_log_entry(&self, service: Service, level: &str, message: &str) -> Result<model::Log> {
+    pub fn insert_log_entry(&self, service_id: i32, level: &str, message: &str) -> Result<model::Log> {
         Ok(
             diesel::insert_into(schema::log::table)
                 .values((
                     schema::log::message.eq(message),
                     schema::log::level.eq(level),
-                    schema::log::service_id.eq(service as i32),
+                    schema::log::service_id.eq(service_id),
                 ))
                 .get_result::<model::Log>(&mut *self.conn.borrow_mut())?
         )
@@ -49,13 +49,6 @@ impl DaemonDb {
             schema::log::table
                 .filter(schema::log::id.gt(id))
                 .load::<model::Log>(&mut *self.conn.borrow_mut())?
-        )
-    }
-
-    pub fn list_connection_info(&self) -> Result<Vec<model::ConnectionInfo>> {
-        Ok(
-            schema::connection_info::table
-                .load::<model::ConnectionInfo>(&mut *self.conn.borrow_mut())?
         )
     }
 
