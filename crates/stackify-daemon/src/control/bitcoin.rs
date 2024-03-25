@@ -18,16 +18,17 @@ impl Monitor {
             let child = Command::new("/home/stacks/start-bitcoind-miner.sh")
                 .spawn()?;
             data.child = Some(child);
+            data.last_state = ServiceState::Running;
         }
 
         Ok(())
     }
 
-    pub fn local_bitcoin_follower(&self, service: &model::Service, data: &mut MonitorData) -> Result<()> {
+    pub fn local_bitcoin_follower(&self, _service: &model::Service, _data: &mut MonitorData) -> Result<()> {
         todo!()
     }
 
-    pub fn remote_bitcoin_node(&self, service: &model::Service, data: &mut MonitorData) -> Result<()> {
+    pub fn remote_bitcoin_node(&self, _service: &model::Service, _data: &mut MonitorData) -> Result<()> {
         todo!()
     }
 }

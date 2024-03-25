@@ -1,5 +1,6 @@
 use std::{thread::{self, JoinHandle}, time::Duration};
 use diesel::{Connection, SqliteConnection};
+use log::{debug, info};
 use stackify_common::{ServiceState, ServiceType};
 use tokio::sync::mpsc::{channel, Sender};
 use tokio::process::Child;
@@ -7,7 +8,6 @@ use tokio::process::Child;
 use color_eyre::{owo_colors::OwoColorize, Result};
 
 use crate::db::DaemonDb;
-use crate::db::model;
 
 pub mod bitcoin;
 pub mod stacks_node;
@@ -35,6 +35,7 @@ pub struct Monitor {
 pub struct MonitorData {
     child: Option<Child>,
     service_type: ServiceType,
+    last_state: ServiceState,
     expected_state: ServiceState,
     version: String
 }
@@ -86,59 +87,58 @@ impl Monitor {
     /// service type.
     fn monitor_task(&mut self) -> Result<()> {
         let services = self.db.list_services()?;
-        if self.data.is_none() {
-            return Ok(());
-        }
 
-        let mut data = self.data.take();
-
-        if let Some(ref mut data) = data {
+        if let Some(mut data) = self.data.take() {
             for service in services {
                 match ServiceType::from_i32(service.service_type_id)? {
                     ServiceType::BitcoinMiner => {
                         if service.is_local {
-                            self.local_bitcoin_miner(&service, data)?;
+                            self.local_bitcoin_miner(&service, &mut data)?;
                         } else {
-                            self.remote_bitcoin_node(&service, data)?;
+                            self.remote_bitcoin_node(&service, &mut data)?;
                         }
                     },
                     ServiceType::BitcoinFollower => {
                         if service.is_local {
-                            self.local_bitcoin_follower(&service, data)?;
+                            self.local_bitcoin_follower(&service, &mut data)?;
                         } else {
-                            self.remote_bitcoin_node(&service, data)?;
+                            self.remote_bitcoin_node(&service, &mut data)?;
                         }
                     },
                     ServiceType::StacksMiner => {
                         if service.is_local {
-                            self.local_stacks_miner(&service, data)?;
+                            self.local_stacks_miner(&service, &mut data)?;
                         } else {
-                            self.remote_stacks_node(&service, data)?;
+                            self.remote_stacks_node(&service, &mut data)?;
                         }
                     },
                     ServiceType::StacksFollower => {
                         if service.is_local {
-                            self.local_stacks_follower(&service, data)?;
+                            self.local_stacks_follower(&service, &mut data)?;
                         } else {
-                            self.remote_stacks_node(&service, data)?;
+                            self.remote_stacks_node(&service, &mut data)?;
                         }
                     },
                     ServiceType::StacksSigner => {
                         if service.is_local {
-                            self.local_stacks_signer(&service, data)?;
+                            self.local_stacks_signer(&service, &mut data)?;
                         } else {
-                            self.remote_stacks_signer(&service, data)?;
+                            self.remote_stacks_signer(&service, &mut data)?;
                         }
                     },
                     ServiceType::StacksStackerSelf | ServiceType::StacksStackerPool => {
-                        self.local_stacks_stacker(&service, data)?;
+                        self.local_stacks_stacker(&service, &mut data)?;
                     },
                     ServiceType::StackifyDaemon | ServiceType::StackifyEnvironment => {},
                 }
             }
+            self.data = Some(data);
+        } else {
+            debug!("Monitor has not yet been initialized, returning.");
+            return Ok(());
         }
 
-        self.data = data;
+        
 
         Ok(())
     }
