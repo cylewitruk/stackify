@@ -68,8 +68,7 @@ impl FilterByMinMaxEpoch<ServiceUpgradePath> for Vec<ServiceUpgradePath> {
 
 impl FindByCliName<ServiceVersion> for Vec<ServiceVersion> {
     fn find_by_cli_name(&self, cli_name: &str) -> Option<&ServiceVersion> {
-        self.iter()
-            .find(|v| v.cli_name == cli_name)
+        self.iter().find(|v| v.cli_name == cli_name)
     }
 }
 
@@ -91,35 +90,30 @@ impl FilterByServiceVersion<ServiceUpgradePath> for &[ServiceUpgradePath] {
 
 impl FindById<ServiceType> for Vec<ServiceType> {
     fn find_by_id(&self, id: i32) -> Option<&ServiceType> {
-        self.iter()
-            .find(|t| t.id == id)
+        self.iter().find(|t| t.id == id)
     }
 }
 
 impl FindById<ServiceType> for &[ServiceType] {
     fn find_by_id(&self, id: i32) -> Option<&ServiceType> {
-        self.iter()
-            .find(|t| t.id == id)
+        self.iter().find(|t| t.id == id)
     }
 }
 
-impl FindById<Epoch> for Vec<Epoch>{
+impl FindById<Epoch> for Vec<Epoch> {
     fn find_by_id(&self, id: i32) -> Option<&Epoch> {
-        self.iter()
-            .find(|t| t.id == id)
+        self.iter().find(|t| t.id == id)
     }
 }
 
 impl FindById<ServiceVersion> for Vec<ServiceVersion> {
     fn find_by_id(&self, id: i32) -> Option<&ServiceVersion> {
-        self.iter()
-            .find(|t| t.id == id)
+        self.iter().find(|t| t.id == id)
     }
 }
 
 impl FindById<ServiceVersion> for &[ServiceVersion] {
     fn find_by_id(&self, id: i32) -> Option<&ServiceVersion> {
-        self.iter()
-            .find(|t| t.id == id)
+        self.iter().find(|t| t.id == id)
     }
 }

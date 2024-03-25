@@ -34,5 +34,5 @@ pub struct Service {
     pub rpc_port: Option<i32>,
     pub rpc_username: Option<String>,
     pub rpc_password: Option<String>,
-    pub is_local: bool
+    pub is_local: bool,
 }

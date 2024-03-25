@@ -1,19 +1,15 @@
-
 use color_eyre::Result;
 
 pub mod api;
-pub mod errors;
-pub mod db;
 pub mod control;
+pub mod db;
+pub mod errors;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-
     let db_path = "~/.stackify/stackifyd.db";
 
-    let monitor = 
-        control::Monitor::new(db_path)?;
-    let channel = monitor.start().await?;
+    let _channel = control::Monitor::new(db_path).start().await?;
 
     rocket::build()
         .mount("/api", api::routes())

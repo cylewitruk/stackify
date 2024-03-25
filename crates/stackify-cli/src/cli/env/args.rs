@@ -37,7 +37,7 @@ pub enum EnvSubCommands {
     Down(DownArgs),
     /// Commands for managing environments' services.
     #[clap(visible_aliases = ["svc"])]
-    Service(ServiceArgs)
+    Service(ServiceArgs),
 }
 
 #[derive(Debug, Args)]
@@ -58,16 +58,13 @@ pub enum ServiceSubCommands {
     Inspect(ServiceInspectArgs),
     /// Displays a list of services for the specified environment.
     #[clap(visible_alias = "ls")]
-    List(ServiceListArgs)
+    List(ServiceListArgs),
 }
 
 #[derive(Debug, Args)]
 pub struct ServiceInspectArgs {
     /// The name of the service of which to inspect.
-    #[arg(
-        required = true,
-        value_name = "NAME"
-    )]
+    #[arg(required = true, value_name = "NAME")]
     pub svc_name: String,
 
     /// The name of the environment to which the service belongs. You can omit
@@ -80,27 +77,20 @@ pub struct ServiceInspectArgs {
         long = "environment",
         visible_alias = "env"
     )]
-    pub env_name: String
+    pub env_name: String,
 }
 
 #[derive(Debug, Args)]
 pub struct ServiceAddArgs {
     /// The name of the service to add. For more information on the available
     /// services, see the `stackify config services` command.
-    #[arg(
-        required = true,
-        value_name = "NAME"
-    )]
+    #[arg(required = true, value_name = "NAME")]
     pub svc_name: String,
 
     /// Indicates whether or not an interactive prompt should be used for providing
     /// the required information for this command (recommended!). This flag is
     /// set by default.
-    #[arg(
-        required = false,
-        short = 'i',
-        default_value = "true"
-    )]
+    #[arg(required = false, short = 'i', default_value = "true")]
     pub interactive: bool,
 
     /// The name of the environment to which the service should be added.
@@ -112,8 +102,6 @@ pub struct ServiceAddArgs {
         visible_alias = "env"
     )]
     pub env_name: String,
-
-    
 }
 
 #[derive(Debug, Args)]
@@ -126,52 +114,39 @@ pub struct ServiceRemoveArgs {
         value_name = "NAME",
         short = 'e',
         long = "environment",
-        visible_alias = "env",
+        visible_alias = "env"
     )]
-    pub env_name: String
+    pub env_name: String,
 }
 
 #[derive(Debug, Args)]
 pub struct ServiceListArgs {
     /// The name of the environment to list services for.
-    #[arg(
-        required = true,
-        value_name = "NAME"
-    )]
+    #[arg(required = true, value_name = "NAME")]
     pub env_name: String,
 }
 
 #[derive(Debug, Args)]
 pub struct BuildArgs {
-    #[arg(
-        required = true, 
-        value_name = "NAME"
-    )]
+    #[arg(required = true, value_name = "NAME")]
     pub env_name: String,
 }
 
 #[derive(Debug, Args)]
 pub struct DownArgs {
-    #[arg(
-        required = true, 
-        value_name = "NAME"
-    )]
+    #[arg(required = true, value_name = "NAME")]
     pub env_name: String,
 }
 
 #[derive(Debug, Args)]
 pub struct InspectArgs {
     /// The name of the environment to inspect.
-    #[arg(
-        required = true,
-        value_name = "NAME"
-    )]
+    #[arg(required = true, value_name = "NAME")]
     pub env_name: String,
 }
 
 #[derive(Debug, Args)]
-pub struct ListArgs {
-}
+pub struct ListArgs {}
 
 #[derive(Debug, Subcommand)]
 pub enum ListSubCommands {
@@ -183,10 +158,16 @@ pub enum ListSubCommands {
 pub struct CreateArgs {
     /// The name of the environment to create.
     #[arg(required = true, value_name = "NAME")]
-    pub env_name : String,
+    pub env_name: String,
     /// The speed at which blocks are mined in the Bitcoin network.
-    #[arg(required = false, short, long, default_value = "30", value_name = "SECONDS")]
-    pub bitcoin_block_speed: u32 
+    #[arg(
+        required = false,
+        short,
+        long,
+        default_value = "30",
+        value_name = "SECONDS"
+    )]
+    pub bitcoin_block_speed: u32,
 }
 
 #[derive(Debug, Args)]

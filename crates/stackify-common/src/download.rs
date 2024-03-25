@@ -1,9 +1,16 @@
-use std::{fmt::Debug, fs::{self, File, Permissions}, io::{copy, BufReader, Write}, os::unix::fs::PermissionsExt, path::{Path, PathBuf}, time::Duration};
+use std::{
+    fmt::Debug,
+    fs::{self, File, Permissions},
+    io::{copy, BufReader, Write},
+    os::unix::fs::PermissionsExt,
+    path::{Path, PathBuf},
+    time::Duration,
+};
 
-use reqwest::{header, Client, Url};
-use tar::Archive;
 use color_eyre::eyre::{eyre, Result};
 use flate2::bufread::GzDecoder;
+use reqwest::{header, Client, Url};
+use tar::Archive;
 use tokio::runtime::Runtime;
 
 pub fn download_file<P: AsRef<Path> + Debug>(
@@ -13,7 +20,8 @@ pub fn download_file<P: AsRef<Path> + Debug>(
     mut dl_chunk: impl FnMut(u64, u64),
 ) -> Result<PathBuf> {
     let url = Url::parse(&url_str)?;
-    let filename = url.path_segments()
+    let filename = url
+        .path_segments()
         .unwrap()
         .last()
         .expect("Could not determine filename.");
@@ -50,7 +58,7 @@ pub fn download_bitcoin_core_binaries<P: AsRef<Path> + Debug>(
     dest_dir: &P,
     dl_start: impl FnOnce(u64),
     mut dl_chunk: impl FnMut(u64, u64),
-    dl_finished: impl FnOnce()
+    dl_finished: impl FnOnce(),
 ) -> Result<()> {
     let rt = Runtime::new()?;
 
@@ -82,14 +90,15 @@ pub fn download_bitcoin_core_binaries<P: AsRef<Path> + Debug>(
         dl_finished();
         Ok::<(), color_eyre::Report>(())
     })?;
-    
+
     let tmp_file = File::open(&tmp_file_path)?;
     let gz = GzDecoder::new(BufReader::new(tmp_file));
 
     //let tmp_dir = tempfile::tempdir()?;
     Archive::new(gz).unpack(&tmp_dir)?;
 
-    let bin_dir = tmp_dir.as_ref()
+    let bin_dir = tmp_dir
+        .as_ref()
         .join(format!("bitcoin-{version}"))
         .join("bin");
 
@@ -101,7 +110,7 @@ pub fn download_bitcoin_core_binaries<P: AsRef<Path> + Debug>(
     inner_copy(&bitcoind_src, &bitcoind_dest)?;
 
     fs::remove_dir_all(&tmp_dir)?;
-    
+
     set_executable(&bitcoin_cli_dest)?;
     set_executable(&bitcoind_dest)?;
 
@@ -109,12 +118,14 @@ pub fn download_bitcoin_core_binaries<P: AsRef<Path> + Debug>(
 }
 
 pub fn download_dasel_binary<P: AsRef<Path>>(version: &str, dest_dir: P) -> Result<()> {
-    let url = format!("https://github.com/TomWright/dasel/releases/download/v{version}/dasel_linux_amd64");
+    let url = format!(
+        "https://github.com/TomWright/dasel/releases/download/v{version}/dasel_linux_amd64"
+    );
     let dest = dest_dir.as_ref().join("dasel");
     let mut dest_file = std::fs::File::create(&dest)?;
     let response = reqwest::blocking::get(&url)?;
     copy(&mut response.text()?.as_bytes(), &mut dest_file)?;
-    
+
     set_executable(&dest)?;
 
     Ok(())
@@ -126,7 +137,7 @@ pub fn inner_copy<P: AsRef<Path>>(src: &P, dest: &P) -> Result<()> {
 
     copy(&mut src_file, &mut dest_file)?;
 
-    Ok(())   
+    Ok(())
 }
 
 pub fn set_executable<P: AsRef<Path>>(path: &P) -> Result<()> {
@@ -151,12 +162,9 @@ fn get_download_size(url: Url) -> Result<u64> {
                 .unwrap_or(0) // Fallback to 0
         } else {
             // We return an Error if something goes wrong here
-            return Err(eyre!(
-                "Couldn't download URL: {}. Error: {:?}",
-                url,
-                resp.status(),
-            )
-            .into());
+            return Err(
+                eyre!("Couldn't download URL: {}. Error: {:?}", url, resp.status(),).into(),
+            );
         }
     };
 

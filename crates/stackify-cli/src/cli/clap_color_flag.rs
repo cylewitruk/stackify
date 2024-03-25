@@ -1,5 +1,4 @@
 #![allow(dead_code)]
-
 // Taken from https://crates.io/crates/clap-color-flag
 
 //! Control color with a `--color` flag for your CLI

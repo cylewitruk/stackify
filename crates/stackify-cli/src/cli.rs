@@ -8,33 +8,32 @@ use color_eyre::eyre::Result;
 use console::{style, StyledObject};
 use lazy_static::lazy_static;
 
-use self::init::InitArgs;
 use self::clean::CleanArgs;
 use self::config::args::ConfigArgs;
 use self::env::args::EnvArgs;
 use self::info::InfoArgs;
+use self::init::InitArgs;
 
 // Top-level command handlers
-pub mod init;
 pub mod clean;
 pub mod config;
 pub mod env;
+pub mod info;
+pub mod init;
 pub mod network;
 pub mod show;
-pub mod info;
 
-pub mod clap_verbosity_flag;
 pub mod clap_color_flag;
+pub mod clap_verbosity_flag;
 
 pub const PAD_WIDTH: usize = 40;
 
-
 lazy_static! {
-    pub static ref INFO: StyledObject<&'static str>  = style("Info").blue().bold();
-    pub static ref WARN: StyledObject<&'static str>  = style("Warning").yellow().bold();
+    pub static ref INFO: StyledObject<&'static str> = style("Info").blue().bold();
+    pub static ref WARN: StyledObject<&'static str> = style("Warning").yellow().bold();
     pub static ref ERROR: StyledObject<&'static str> = style("Error").red().bold();
-    pub static ref SUCCESS: StyledObject<&'static str>  = style("Success").green().bold();
-    pub static ref FINISHED: StyledObject<&'static str>  = style("Finished").green().bold();
+    pub static ref SUCCESS: StyledObject<&'static str> = style("Success").green().bold();
+    pub static ref FINISHED: StyledObject<&'static str> = style("Finished").green().bold();
 }
 
 #[allow(dead_code)]
@@ -61,7 +60,6 @@ pub fn success(msg: impl AsRef<str> + Display) {
 pub fn finished(msg: &str) {
     println!("{} {}", *FINISHED, msg);
 }
-
 
 const ABOUT: &str = r#"  ____  _             _    _  __       
 / ___|| |_ __ _  ___| | _(_)/ _|_   _ 
@@ -124,7 +122,7 @@ pub enum Commands {
         /// The shell to generate the completions for
         #[arg(value_enum)]
         shell: clap_complete_command::Shell,
-    }
+    },
 }
 
 fn styles() -> Styles {

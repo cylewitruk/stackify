@@ -1,11 +1,8 @@
-use time::PrimitiveDateTime;
-use diesel::prelude::*;
 use super::schema::*;
+use diesel::prelude::*;
+use time::PrimitiveDateTime;
 
-#[derive(
-    Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, 
-    QueryableByName
-)]
+#[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, QueryableByName)]
 #[diesel(table_name = epoch)]
 pub struct Epoch {
     pub id: i32,
@@ -13,20 +10,14 @@ pub struct Epoch {
     pub default_block_height: i32,
 }
 
-#[derive(
-    Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, 
-    QueryableByName
-)]
+#[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, QueryableByName)]
 #[diesel(table_name = environment_status)]
 pub struct EnvironmentStatus {
     pub id: i32,
     pub name: String,
 }
 
-#[derive(
-    Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, 
-    QueryableByName
-)]
+#[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, QueryableByName)]
 #[diesel(table_name = environment)]
 pub struct Environment {
     pub id: i32,
@@ -36,10 +27,7 @@ pub struct Environment {
     pub bitcoin_block_speed: i32,
 }
 
-#[derive(
-    Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, 
-    QueryableByName
-)]
+#[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, QueryableByName)]
 #[diesel(table_name = environment_epoch)]
 pub struct EnvironmentEpoch {
     pub id: i32,
@@ -49,10 +37,7 @@ pub struct EnvironmentEpoch {
     pub ends_at_block_height: Option<i32>,
 }
 
-#[derive(
-    Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, 
-    QueryableByName
-)]
+#[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, QueryableByName)]
 #[diesel(table_name = service_type)]
 pub struct ServiceType {
     pub id: i32,
@@ -62,10 +47,7 @@ pub struct ServiceType {
     pub allow_git_target: bool,
 }
 
-#[derive(
-    Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, 
-    QueryableByName
-)]
+#[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, QueryableByName)]
 #[diesel(table_name = service_version)]
 pub struct ServiceVersion {
     pub id: i32,
@@ -77,10 +59,7 @@ pub struct ServiceVersion {
     pub cli_name: String,
 }
 
-#[derive(
-    Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, 
-    QueryableByName
-)]
+#[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, QueryableByName)]
 #[diesel(table_name = service_upgrade_path)]
 pub struct ServiceUpgradePath {
     pub id: i32,
@@ -92,10 +71,7 @@ pub struct ServiceUpgradePath {
     pub maximum_epoch_id: Option<i32>,
 }
 
-#[derive(
-    Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, 
-    QueryableByName
-)]
+#[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, QueryableByName)]
 #[diesel(table_name = service)]
 pub struct Service {
     pub id: i32,
@@ -108,10 +84,7 @@ pub struct Service {
     pub stop_at_block_height: Option<i32>,
 }
 
-#[derive(
-    Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, 
-    QueryableByName
-)]
+#[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, QueryableByName)]
 #[diesel(table_name = service_action_type)]
 pub struct ServiceActionType {
     pub id: i32,
@@ -120,10 +93,7 @@ pub struct ServiceActionType {
     pub requires_network: bool,
 }
 
-#[derive(
-    Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, 
-    QueryableByName
-)]
+#[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, QueryableByName)]
 #[diesel(table_name = service_action_type_constraint)]
 pub struct ServiceActionTypeConstraint {
     pub id: i32,
@@ -131,10 +101,7 @@ pub struct ServiceActionTypeConstraint {
     pub allowed_after_service_action_id: Option<i32>,
 }
 
-#[derive(
-    Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, 
-    QueryableByName
-)]
+#[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, QueryableByName)]
 #[diesel(table_name = environment_service)]
 pub struct EnvironmentService {
     pub id: i32,
@@ -142,10 +109,7 @@ pub struct EnvironmentService {
     pub service_version_id: i32,
 }
 
-#[derive(
-    Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, 
-    QueryableByName
-)]
+#[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, QueryableByName)]
 #[diesel(table_name = environment_service_action)]
 pub struct EnvironmentServiceAction {
     pub id: i32,
@@ -156,10 +120,7 @@ pub struct EnvironmentServiceAction {
     pub data: Option<String>,
 }
 
-#[derive(
-    Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, 
-    QueryableByName
-)]
+#[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, QueryableByName)]
 #[diesel(table_name = environment_container)]
 pub struct EnvironmentContainer {
     pub id: i32,
@@ -170,10 +131,7 @@ pub struct EnvironmentContainer {
     pub created_at: PrimitiveDateTime,
 }
 
-#[derive(
-    Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, 
-    QueryableByName
-)]
+#[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, QueryableByName)]
 #[diesel(table_name = environment_container_action_log)]
 pub struct EnvironmentContainerActionLog {
     pub id: i32,

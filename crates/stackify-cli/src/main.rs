@@ -9,34 +9,32 @@ use crate::cli::{Cli, Commands};
 
 mod cli;
 mod context;
-mod util;
 mod db;
+mod util;
 
 fn main() -> Result<()> {
     let context = initialize()?;
 
     match Cli::try_parse() {
-        Ok(cli) =>{
-            match cli.command {
-                Commands::Initialize(args) => {
-                    cli::init::exec(&context, args)?;
-                }
-                Commands::Environment(args) => {
-                    cli::env::exec(&context, args)?;
-                }
-                Commands::Info(args) => {
-                    cli::info::exec(&context, args)?;
-                }
-                Commands::Clean(args) => {
-                    println!("Clean");
-                    cli::clean::exec(&context, args)?;
-                }
-                Commands::Config(args) => {
-                    cli::config::exec(&context, args)?;
-                }
-                Commands::Completions { shell } => {
-                    shell.generate(&mut Cli::command(), &mut std::io::stdout());
-                }
+        Ok(cli) => match cli.command {
+            Commands::Initialize(args) => {
+                cli::init::exec(&context, args)?;
+            }
+            Commands::Environment(args) => {
+                cli::env::exec(&context, args)?;
+            }
+            Commands::Info(args) => {
+                cli::info::exec(&context, args)?;
+            }
+            Commands::Clean(args) => {
+                println!("Clean");
+                cli::clean::exec(&context, args)?;
+            }
+            Commands::Config(args) => {
+                cli::config::exec(&context, args)?;
+            }
+            Commands::Completions { shell } => {
+                shell.generate(&mut Cli::command(), &mut std::io::stdout());
             }
         },
         Err(e) => {
@@ -59,8 +57,7 @@ fn initialize() -> Result<CliContext> {
         gid = libc::getegid();
     }
 
-    let home_dir = home::home_dir()
-        .ok_or_else(|| eyre!("Failed to get home directory."))?;
+    let home_dir = home::home_dir().ok_or_else(|| eyre!("Failed to get home directory."))?;
 
     let config_dir = home_dir.join(".stackify");
     std::fs::create_dir_all(&config_dir)?;
@@ -76,8 +73,8 @@ fn initialize() -> Result<CliContext> {
     let bin_dir = config_dir.join("bin");
     std::fs::create_dir_all(&bin_dir)?;
 
-    let mut connection = SqliteConnection::establish(&db_file.to_string_lossy())
-        .map_err(|e| eyre!(e))?;
+    let mut connection =
+        SqliteConnection::establish(&db_file.to_string_lossy()).map_err(|e| eyre!(e))?;
 
     apply_db_migrations(&mut connection)?;
 
@@ -95,7 +92,7 @@ fn initialize() -> Result<CliContext> {
         db: app_db,
         user_id: uid,
         group_id: gid,
-        docker
+        docker,
     };
 
     Ok(context)

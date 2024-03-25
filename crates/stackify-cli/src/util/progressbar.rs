@@ -20,13 +20,13 @@ pub fn new_progressbar(template: &str, message: &str) -> ProgressBar {
 pub enum PbType {
     Spinner,
     DownloadBar,
-    ProgressBar
+    ProgressBar,
 }
 
 pub struct PbWrapper {
     pb: ProgressBar,
     title: Cow<'static, str>,
-    pb_type: PbType
+    pb_type: PbType,
 }
 
 impl PbWrapper {
@@ -48,7 +48,7 @@ impl PbWrapper {
         Self {
             pb,
             title,
-            pb_type: PbType::DownloadBar
+            pb_type: PbType::DownloadBar,
         }
     }
 
@@ -70,7 +70,7 @@ impl PbWrapper {
         Self {
             pb,
             title,
-            pb_type: PbType::ProgressBar
+            pb_type: PbType::ProgressBar,
         }
     }
 
@@ -80,16 +80,14 @@ impl PbWrapper {
         let pb = ProgressBar::new_spinner();
         pb.enable_steady_tick(Duration::from_millis(200));
         pb.set_style(
-            ProgressStyle::with_template(
-                &format!("{{spinner:.cyan}} {}: {{wide_msg}}", &title))
-                .unwrap()
-                //.tick_chars("/|\\- "),
+            ProgressStyle::with_template(&format!("{{spinner:.cyan}} {}: {{wide_msg}}", &title))
+                .unwrap(), //.tick_chars("/|\\- "),
         );
 
         Self {
             pb,
             title,
-            pb_type: PbType::Spinner
+            pb_type: PbType::Spinner,
         }
     }
 }
@@ -99,7 +97,7 @@ impl PbWrapper {
 impl PbWrapper {
     pub fn replace_with_spinner(&mut self) {
         self.pb.finish_and_clear();
-        
+
         let pbw = Self::new_spinner(self.title.clone());
 
         self.pb = pbw.pb;
@@ -108,7 +106,7 @@ impl PbWrapper {
 
     pub fn replace_with_download_bar(&mut self, size: u64) {
         self.pb.finish_and_clear();
-        
+
         let pbw = Self::new_download_bar(size, self.title.clone());
 
         self.pb = pbw.pb;
@@ -117,7 +115,7 @@ impl PbWrapper {
 
     pub fn replace_with_progress_bar(&mut self, size: u64) {
         self.pb.finish_and_clear();
-        
+
         let pbw = Self::new_progress_bar(size, self.title.clone());
 
         self.pb = pbw.pb;
@@ -168,51 +166,38 @@ impl PbWrapper {
         self.pb.finish_and_clear();
         match result {
             Ok(_) => println!("{} {}", style("✔️").green(), self.title),
-            Err(_) => println!("{} {}", style("⨯").red(), self.title)
+            Err(_) => println!("{} {}", style("⨯").red(), self.title),
         };
-    
+
         result
     }
 
     pub fn finish_success(&self) {
         self.pb.finish_and_clear();
-        println!("{} {}", 
-            style("✔️").green(), 
-            self.title
-        );
+        println!("{} {}", style("✔️").green(), self.title);
     }
 
     pub fn finish_success_with_meta(&self, meta: &str) {
         self.pb.finish_and_clear();
-        println!("{} {} {}", 
-            style("✔️").green(), 
-            self.title,
-            meta.dimmed()
-        );
+        println!("{} {} {}", style("✔️").green(), self.title, meta.dimmed());
     }
 
     pub fn finish_fail(&self) {
         self.pb.finish_and_clear();
-        println!("{} {}", 
-            style("⨯").red(), 
-            self.title
-        );
+        println!("{} {}", style("⨯").red(), self.title);
     }
 
-    pub async fn exec_async<T, Fut>(
-        &mut self, 
-        f: impl FnOnce(&mut PbWrapper) -> Fut
-    ) -> Result<T> 
+    pub async fn exec_async<T, Fut>(&mut self, f: impl FnOnce(&mut PbWrapper) -> Fut) -> Result<T>
     where
-        Fut: Future<Output = Result<T>>
+        Fut: Future<Output = Result<T>>,
     {
         let result = f(self).await;
         self.pb.finish_and_clear();
         match result {
             Ok(_) => println!("{} {}", style("✔️").green(), self.title),
-            Err(_) => println!("{} {}", style("⨯").red(), self.title)
+            Err(_) => println!("{} {}", style("⨯").red(), self.title),
         };
-    
+
         result
     }
 

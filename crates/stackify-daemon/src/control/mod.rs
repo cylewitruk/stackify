@@ -1,11 +1,9 @@
-use std::path::PathBuf;
-use std::time::Duration;
 use diesel::{Connection, SqliteConnection};
 use log::*;
 use stackify_common::{ServiceState, ServiceType};
-use tokio::sync::mpsc::{channel, Sender};
+use std::time::Duration;
 use tokio::process::Child;
-use tokio::task::JoinHandle;
+use tokio::sync::mpsc::{channel, Sender};
 
 use color_eyre::{eyre::bail, owo_colors::OwoColorize, Result};
 
@@ -21,14 +19,13 @@ pub mod stacks_stacker;
 /// running in other containers). The [`Monitor`] is capable of monitoring at
 /// most one service of each type at a time -- if multiple local services need to
 /// be monitored than multiple [`Monitor`] instances should be created.
-/// 
+///
 /// Note that the Diesel [`SqliteConnection`] is not thread-safe, so each [`Monitor`]
 /// will create its own connection to the database and use it for all operations.
 /// TODO: This could be alleviated by running the SqliteConnection in its own
 /// thread and using a channel to communicate with it.
 pub struct Monitor {
     db_path: String,
-    data: Option<MonitorData>
 }
 
 /// Data struct which holds the state of the monitoring process for a single
@@ -39,68 +36,88 @@ pub struct MonitorData {
     service_type: ServiceType,
     last_state: ServiceState,
     expected_state: ServiceState,
-    version: String
+    version: String,
 }
 
-pub struct MonitorMsg {
-    service_type: ServiceType,
-    expected_state: ServiceState
+/// Enum representing the actions that the monitor can take via its mpsc channel.
+pub enum MonitorAction {
+    Start {
+        service_type: ServiceType,
+        version: String,
+        desired_state: ServiceState,
+    },
+    Stop,
 }
 
+/// Context struct which holds the database connection and the current monitoring
+/// data for the monitor.
 pub struct MonitorContext {
     pub db: DaemonDb,
-    pub data: Option<MonitorData>
+    pub data: Option<MonitorData>,
 }
 
 impl Monitor {
     /// Create a new Monitor instance for monitoring at most one local service and
     /// any number of remote services.
-    pub fn new<P: AsRef<str> + ?Sized>(db_path: &P) -> Result<Self> {
-        Ok(Self { 
+    pub fn new<P: AsRef<str> + ?Sized>(db_path: &P) -> Self {
+        Self {
             db_path: db_path.as_ref().to_owned(),
-            data: None
-        })
+        }
     }
 
     /// Consumes the Monitor and starts the monitoring thread, returning its
     /// JoinHandle and a Sender to signal the thread to stop.
-    pub async fn start(self: Self) -> Result<Sender<MonitorMsg>> {
-        let (sender, mut receiver) = channel::<MonitorMsg>(10);
+    pub async fn start(self: Self) -> Result<Sender<MonitorAction>> {
+        let (sender, mut receiver) = channel::<MonitorAction>(10);
 
         tokio::spawn(async move {
             info!("monitoring thread started.");
             info!("opening local database at {}", self.db_path);
-            let db_conn = SqliteConnection::establish(&self.db_path)
-                .unwrap_or_else(|e| {
-                    error!("{}: {}", "Error".red(), e);
-                    panic!("failed to establish database connection");
-                });
+            let db_conn = SqliteConnection::establish(&self.db_path).unwrap_or_else(|e| {
+                error!("{}: {}", "Error".red(), e);
+                panic!("failed to establish database connection");
+            });
             let db = DaemonDb::new(db_conn);
 
-            let mut context = MonitorContext {
-                db,
-                data: None
-            };
+            let mut context = MonitorContext { db, data: None };
 
-            
             info!("beginning monitoring loop");
             loop {
                 trace!("Monitoring loop...");
 
                 // Check to see if we've received any messages.
                 match receiver.try_recv() {
-                    Ok(_) => {
-                        println!("Received stop signal.");
-                        break;
-                    }
+                    Ok(msg) => match msg {
+                        MonitorAction::Start {
+                            service_type,
+                            version,
+                            desired_state,
+                        } => {
+                            info!("Received start message for service type {:?} with version {} and desired state {:?}", 
+                                service_type,
+                                version,
+                                desired_state
+                            );
+
+                            context.data = Some(MonitorData {
+                                child: None,
+                                service_type,
+                                last_state: ServiceState::Stopped,
+                                expected_state: desired_state,
+                                version,
+                            });
+                        }
+                        MonitorAction::Stop => {
+                            info!("Received stop message, stopping monitoring thread.");
+                            break;
+                        }
+                    },
                     Err(_) => {}
                 }
 
                 // Call the monitor task and log any errors.
-                self.monitor_task(&mut context).await
-                    .unwrap_or_else(|e| {
-                        error!("{}: {}", "Error".red(), e);
-                        
+                self.monitor_task(&mut context).await.unwrap_or_else(|e| {
+                    error!("{}: {}", "Error".red(), e);
                 });
 
                 // Pause for a second.
@@ -130,39 +147,39 @@ impl Monitor {
                         } else {
                             self.remote_bitcoin_node(&service, &mut data)?;
                         }
-                    },
+                    }
                     ServiceType::BitcoinFollower => {
                         if service.is_local {
                             self.local_bitcoin_follower(&service, &mut data)?;
                         } else {
                             self.remote_bitcoin_node(&service, &mut data)?;
                         }
-                    },
+                    }
                     ServiceType::StacksMiner => {
                         if service.is_local {
                             self.local_stacks_miner(&service, &mut data)?;
                         } else {
                             self.remote_stacks_node(&service, &mut data)?;
                         }
-                    },
+                    }
                     ServiceType::StacksFollower => {
                         if service.is_local {
                             self.local_stacks_follower(&service, &mut data)?;
                         } else {
                             self.remote_stacks_node(&service, &mut data)?;
                         }
-                    },
+                    }
                     ServiceType::StacksSigner => {
                         if service.is_local {
                             self.local_stacks_signer(&service, &mut data)?;
                         } else {
                             self.remote_stacks_signer(&service, &mut data)?;
                         }
-                    },
+                    }
                     ServiceType::StacksStackerSelf | ServiceType::StacksStackerPool => {
                         self.local_stacks_stacker(&service, &mut data)?;
-                    },
-                    ServiceType::StackifyDaemon | ServiceType::StackifyEnvironment => {},
+                    }
+                    ServiceType::StackifyDaemon | ServiceType::StackifyEnvironment => {}
                 }
             }
             ctx.data = Some(data);

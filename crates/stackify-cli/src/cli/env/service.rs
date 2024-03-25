@@ -3,7 +3,10 @@ use stackify_common::EnvironmentName;
 
 use crate::context::CliContext;
 
-use super::args::{ServiceAddArgs, ServiceArgs, ServiceInspectArgs, ServiceListArgs, ServiceRemoveArgs, ServiceSubCommands};
+use super::args::{
+    ServiceAddArgs, ServiceArgs, ServiceInspectArgs, ServiceListArgs, ServiceRemoveArgs,
+    ServiceSubCommands,
+};
 
 pub fn exec_service(ctx: &CliContext, args: ServiceArgs) -> Result<()> {
     match args.commands {
@@ -15,7 +18,7 @@ pub fn exec_service(ctx: &CliContext, args: ServiceArgs) -> Result<()> {
         }
         ServiceSubCommands::Inspect(inner_args) => {
             exec_inspect(ctx, inner_args)?;
-        },
+        }
         ServiceSubCommands::List(inner_args) => {
             exec_list(ctx, inner_args)?;
         }

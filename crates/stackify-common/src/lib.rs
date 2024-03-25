@@ -1,17 +1,16 @@
 pub mod docker;
 
+pub mod api;
+pub mod download;
 #[cfg(test)]
 pub mod tests;
 pub mod util;
-pub mod download;
-pub mod api;
 
 use std::fmt::Display;
 
 use color_eyre::eyre::{bail, Result};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct EnvironmentName {
@@ -26,7 +25,7 @@ impl EnvironmentName {
         if !regex.is_match(name) {
             bail!(format!("The environment name '{}' is invalid.", name));
         }
-        
+
         Ok(Self {
             name: name.to_string(),
         })
@@ -87,7 +86,7 @@ pub enum ServiceType {
     StacksStackerSelf = 5,
     StacksStackerPool = 6,
     StackifyEnvironment = 7,
-    StackifyDaemon = 8
+    StackifyDaemon = 8,
 }
 
 impl ServiceType {
@@ -102,7 +101,7 @@ impl ServiceType {
             6 => Ok(Self::StacksStackerPool),
             7 => Ok(Self::StackifyEnvironment),
             8 => Ok(Self::StackifyDaemon),
-            _ => bail!("Invalid service type value: {}", value)
+            _ => bail!("Invalid service type value: {}", value),
         }
     }
 }
@@ -111,5 +110,5 @@ impl ServiceType {
 pub enum ServiceState {
     Running = 1,
     Stopped = 2,
-    Error = 3
+    Error = 3,
 }

@@ -11,7 +11,7 @@ pub fn routes() -> Vec<rocket::Route> {
 pub async fn get_status() -> std::result::Result<Json<GetStatusResponse>, ApiError> {
     let response = GetStatusResponse {
         status: Status::Ok,
-        services: Default::default()
+        services: Default::default(),
     };
 
     Ok(Json(response))
@@ -33,6 +33,8 @@ pub async fn restart_service() -> std::result::Result<Json<()>, ApiError> {
 }
 
 #[post("/update-config", data = "<_req>")]
-pub async fn update_config(_req: Json<UpdateConfigRequest>) -> std::result::Result<Json<()>, ApiError> {
+pub async fn update_config(
+    _req: Json<UpdateConfigRequest>,
+) -> std::result::Result<Json<()>, ApiError> {
     Ok(Json(()))
 }

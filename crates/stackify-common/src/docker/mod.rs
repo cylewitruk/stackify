@@ -15,13 +15,12 @@ pub const STACKIFY_CARGO_CONFIG: &str = include_str!("../../../../assets/cargo-c
 #[derive(Debug)]
 pub struct NewStacksNetworkResult {
     pub id: String,
-    pub name: String
+    pub name: String,
 }
 
 #[derive(Debug)]
 pub struct NewStacksNodeContainer<'a> {
     _environment_name: &'a EnvironmentName,
-    
 }
 
 pub enum ContainerService {
@@ -31,7 +30,7 @@ pub enum ContainerService {
     StacksFollower,
     StacksSigner,
     StacksSelfStacker,
-    StacksPoolStacker
+    StacksPoolStacker,
 }
 
 impl std::fmt::Display for ContainerService {
@@ -43,7 +42,7 @@ impl std::fmt::Display for ContainerService {
             ContainerService::StacksFollower => write!(f, "{}", "Stacks Follower"),
             ContainerService::StacksSigner => write!(f, "{}", "Stacks Signer"),
             ContainerService::StacksSelfStacker => write!(f, "{}", "Stacks Stacker (Self)"),
-            ContainerService::StacksPoolStacker => write!(f, "{}", "Stacks Stacker (Pool)")
+            ContainerService::StacksPoolStacker => write!(f, "{}", "Stacks Stacker (Pool)"),
         }
     }
 }
@@ -57,7 +56,7 @@ impl ContainerService {
             3 => Some(Self::StacksSigner),
             4 => Some(Self::StacksSelfStacker),
             5 => Some(Self::StacksPoolStacker),
-            _ => None
+            _ => None,
         }
     }
 
@@ -69,7 +68,7 @@ impl ContainerService {
             Self::StacksFollower => 2,
             Self::StacksSigner => 3,
             Self::StacksSelfStacker => 4,
-            Self::StacksPoolStacker => 5
+            Self::StacksPoolStacker => 5,
         }
     }
 
@@ -81,7 +80,7 @@ impl ContainerService {
             Self::StacksFollower => "stacks-follower".to_string(),
             Self::StacksSigner => "stacks-signer".to_string(),
             Self::StacksSelfStacker => "stacks-self-stacker".to_string(),
-            Self::StacksPoolStacker => "stacks-pool-stacker".to_string()
+            Self::StacksPoolStacker => "stacks-pool-stacker".to_string(),
         }
     }
 }
@@ -100,7 +99,7 @@ pub enum Label {
     EnvironmentName,
     Service,
     NodeVersion,
-    IsLeader
+    IsLeader,
 }
 
 impl std::fmt::Display for Label {
@@ -110,16 +109,19 @@ impl std::fmt::Display for Label {
             Label::EnvironmentName => write!(f, "{}", "local.stackify.environment"),
             Label::Service => write!(f, "{}", "local.stackify.service"),
             Label::NodeVersion => write!(f, "{}", "local.stackify.node_version"),
-            Label::IsLeader => write!(f, "{}", "local.stackify.is_leader")
+            Label::IsLeader => write!(f, "{}", "local.stackify.is_leader"),
         }
     }
 }
 
 #[derive(Debug)]
-pub struct StacksLabel<T>(Label, T) where T: Into<String>;
+pub struct StacksLabel<T>(Label, T)
+where
+    T: Into<String>;
 
-impl<T> Into<(String, T)> for StacksLabel<T> 
-where T: Into<String>
+impl<T> Into<(String, T)> for StacksLabel<T>
+where
+    T: Into<String>,
 {
     fn into(self) -> (String, T) {
         (self.0.to_string(), self.1)
@@ -131,13 +133,13 @@ pub struct DockerVersion {
     pub version: String,
     pub api_version: String,
     pub min_api_version: String,
-    pub components: Vec<String>
+    pub components: Vec<String>,
 }
 
 #[derive(Debug)]
 pub struct DockerNetwork {
     pub id: String,
-    pub name: String
+    pub name: String,
 }
 
 #[derive(Debug)]
@@ -145,7 +147,7 @@ pub struct BuildStackifyBuildImage {
     pub user_id: u32,
     pub group_id: u32,
     pub bitcoin_version: String,
-    pub pre_compile: bool
+    pub pre_compile: bool,
 }
 
 pub struct StackifyContainer {
@@ -153,43 +155,40 @@ pub struct StackifyContainer {
     pub name: String,
     pub labels: HashMap<String, String>,
     pub state: ContainerState,
-    pub status_readable: String
+    pub status_readable: String,
 }
 
 pub struct BuildStackifyRuntimeImage {
     pub user_id: u32,
-    pub group_id: u32
+    pub group_id: u32,
 }
 
 pub struct BuildInfo {
     pub message: String,
     pub error: Option<String>,
     /// Progress tuple (current, total).
-    pub progress: Option<Progress>
+    pub progress: Option<Progress>,
 }
 
 #[derive(Debug, Default)]
 pub struct ListStackifyContainerOpts {
     pub environment_name: Option<EnvironmentName>,
-    pub only_running: Option<bool>
+    pub only_running: Option<bool>,
 }
 
 pub struct CreateContainerResult {
     pub id: String,
-    pub warnings: Vec<String>
+    pub warnings: Vec<String>,
 }
 
 pub struct Progress {
     pub current: u32,
-    pub total: u32
+    pub total: u32,
 }
 
 impl Progress {
     pub fn new(current: u32, total: u32) -> Self {
-        Self {
-            current,
-            total
-        }
+        Self { current, total }
     }
 
     pub fn percent(&self) -> u32 {
@@ -197,7 +196,7 @@ impl Progress {
     }
 }
 
-pub trait TarAppend{
+pub trait TarAppend {
     fn append_data2<P: AsRef<Path>>(&mut self, path: P, data: &[u8]) -> Result<()>;
 }
 
@@ -217,7 +216,7 @@ pub struct StackifyImage {
     pub id: String,
     pub tags: Vec<String>,
     pub container_count: i64,
-    pub size: i64
+    pub size: i64,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -228,7 +227,7 @@ pub enum ContainerState {
     Restarting,
     Removing,
     Exited,
-    Dead
+    Dead,
 }
 
 impl ContainerState {

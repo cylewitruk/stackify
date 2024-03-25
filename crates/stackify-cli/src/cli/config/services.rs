@@ -1,19 +1,27 @@
+use crate::db::model::{Epoch, ServiceType, ServiceUpgradePath, ServiceVersion};
 use color_eyre::eyre::{eyre, Result};
 use console::style;
-use crate::db::model::{Epoch, ServiceType, ServiceUpgradePath, ServiceVersion};
 use stackify_common::util::to_alphanumeric_snake;
 
-use crate::{context::CliContext, util::{git::{GitTarget, TargetType}, FilterByServiceType, FilterByServiceVersion, FindByCliName, FindById}};
+use crate::{
+    context::CliContext,
+    util::{
+        git::{GitTarget, TargetType},
+        FilterByServiceType, FilterByServiceVersion, FindByCliName, FindById,
+    },
+};
 
-use super::args::{AddServiceVersionArgs, RemoveServiceVersionArgs, ServiceSubCommands, ServicesArgs};
+use super::args::{
+    AddServiceVersionArgs, RemoveServiceVersionArgs, ServiceSubCommands, ServicesArgs,
+};
 
 pub fn exec_services(ctx: &CliContext, args: ServicesArgs) -> Result<()> {
     match args.subcommands {
         ServiceSubCommands::List => exec_list_services(ctx),
-        ServiceSubCommands::AddVersion(inner_args) => 
-            exec_add_service_version(ctx, inner_args),
-        ServiceSubCommands::RemoveVersion(inner_args) => 
-            exec_remove_service_version(ctx, inner_args),
+        ServiceSubCommands::AddVersion(inner_args) => exec_add_service_version(ctx, inner_args),
+        ServiceSubCommands::RemoveVersion(inner_args) => {
+            exec_remove_service_version(ctx, inner_args)
+        }
         ServiceSubCommands::Inspect => exec_inspect_service(ctx),
     }
 }
@@ -23,13 +31,19 @@ pub fn exec_add_service_version(ctx: &CliContext, args: AddServiceVersionArgs) -
 
     let svc_versions = ctx.db.list_service_versions()?;
     if svc_versions.find_by_cli_name(&cli_name).is_some() {
-        return Err(eyre!("A service version with the name '{}' already exists", cli_name));
+        return Err(eyre!(
+            "A service version with the name '{}' already exists",
+            cli_name
+        ));
     }
 
     Ok(())
 }
 
-pub fn exec_remove_service_version(_ctx: &CliContext, args: RemoveServiceVersionArgs) -> Result<()> {
+pub fn exec_remove_service_version(
+    _ctx: &CliContext,
+    args: RemoveServiceVersionArgs,
+) -> Result<()> {
     let _cli_name = to_alphanumeric_snake(&args.svc_name);
 
     Ok(())
@@ -52,36 +66,36 @@ pub fn exec_list_services(ctx: &CliContext) -> Result<()> {
     // Iterate over available service types and print their details.
     for service_type in service_types.iter() {
         // Print the service type name header.
-        println!("‣ {}", 
-            style(&service_type.name).magenta()
-        );
+        println!("‣ {}", style(&service_type.name).magenta());
 
-        println!("  {} {} {}",
+        println!(
+            "  {} {} {}",
             style("ƒ").white(),
             to_alphanumeric_snake(&service_type.name),
             style("(cli name)").dim()
         );
 
         // Get the available versions for this service type.
-        let versions = service_versions
-            .filter_by_service_type(service_type.id);
+        let versions = service_versions.filter_by_service_type(service_type.id);
 
         // Iterate over the available versions and print their details.
         for i in 0..versions.len() {
             let version = versions[i];
 
             // Print the version header.
-            println!("  {} {} {}", 
-                style("◆").yellow(), 
-                style(&version.version).cyan(), 
+            println!(
+                "  {} {} {}",
+                style("◆").yellow(),
+                style(&version.version).cyan(),
                 style("(version)").dim()
             );
 
-            println!("  {} {} {} {}",
+            println!(
+                "  {} {} {} {}",
                 style("┆").dim(),
                 //style("␂").white(),
                 style("ƒ").white(),
-                &version.cli_name, 
+                &version.cli_name,
                 style("(cli name)").dim()
             );
 
@@ -102,10 +116,10 @@ pub fn exec_list_services(ctx: &CliContext) -> Result<()> {
 
             // Print the available upgrade paths.
             print_upgrade_paths(
-                &service_types, 
-                &service_versions, 
-                &service_upgrade_paths, 
-                version.id
+                &service_types,
+                &service_versions,
+                &service_upgrade_paths,
+                version.id,
             )?;
         }
         //println!("");
@@ -114,19 +128,21 @@ pub fn exec_list_services(ctx: &CliContext) -> Result<()> {
 }
 
 fn print_minimum_epoch(epoch: &Epoch) {
-    println!("  {} {} {} {}",
+    println!(
+        "  {} {} {} {}",
         style("┆").dim(),
         style("▼").green(),
-        style(&epoch.name), 
+        style(&epoch.name),
         style("(minimum epoch)").dim()
     );
 }
 
 fn print_maximum_epoch(epoch: &Epoch) {
-    println!("  {} {} {} {}", 
+    println!(
+        "  {} {} {} {}",
         style("┆").dim(),
-        style("▲").red(), 
-        style(&epoch.name), 
+        style("▲").red(),
+        style(&epoch.name),
         style("(maximum epoch)").dim()
     );
 }
@@ -138,7 +154,8 @@ fn print_git_target(target: &GitTarget) {
         TargetType::Commit => format!("{}", style("(git commit)").dim()),
     };
 
-    println!("  {} {} {} {}", 
+    println!(
+        "  {} {} {} {}",
         style("┆").dim(),
         style("☉").bright().blue(),
         target.target,
@@ -148,9 +165,9 @@ fn print_git_target(target: &GitTarget) {
 
 fn print_upgrade_paths(
     service_types: &[ServiceType],
-    service_versions: &[ServiceVersion], 
+    service_versions: &[ServiceVersion],
     service_upgrade_paths: &[ServiceUpgradePath],
-    version_id: i32
+    version_id: i32,
 ) -> Result<()> {
     // Print the available upgrade paths.
     for path in service_upgrade_paths.filter_by_service_version(version_id) {
@@ -160,10 +177,11 @@ fn print_upgrade_paths(
         let to_service_type = service_types
             .find_by_id(to_service_version.service_type_id)
             .ok_or(eyre!("Failed to find service type"))?;
-        println!("  {} {} {}: {} {}",
+        println!(
+            "  {} {} {}: {} {}",
             style("┆").dim(),
             style("⤑").green(),
-            style(&to_service_type.name), 
+            style(&to_service_type.name),
             style(&to_service_version.version).green(),
             style("(upgradable to)").dim()
         );

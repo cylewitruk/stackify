@@ -8,69 +8,52 @@ use futures_util::StreamExt;
 use inquire::Confirm;
 use regex::Regex;
 use stackify_common::{
-    docker::{BuildStackifyBuildImage, BuildStackifyRuntimeImage}, download::download_file, util::truncate
+    docker::{BuildStackifyBuildImage, BuildStackifyRuntimeImage},
+    download::download_file,
+    util::truncate,
 };
 use tar::Archive;
 
-use crate::{context::CliContext, util::{new_progressbar, print::print_bytes, progressbar::PbWrapper}};
+use crate::{
+    context::CliContext,
+    util::{new_progressbar, print::print_bytes, progressbar::PbWrapper},
+};
 
 #[derive(Debug, Args)]
 #[group(
     id = "mode", 
-    required = false, 
+    required = false,
     args = ["download_only", "build_only"],
     multiple = false
 )]
 pub struct InitArgs {
     /// Specify the Bitcoin Core version to download.
-    #[arg(
-        long,
-        default_value = "26.0",
-        required = false,
-    )]
+    #[arg(long, default_value = "26.0", required = false)]
     pub bitcoin_version: String,
 
     /// Specify the Dasel version to download.
-    #[arg(
-        long,
-        default_value = "2.7.0",
-        required = false,
-    )]
+    #[arg(long, default_value = "2.7.0", required = false)]
     pub dasel_version: String,
 
-    /// Specifies whether or not Cargo projects should be initalized (pre-compiled) 
+    /// Specifies whether or not Cargo projects should be initalized (pre-compiled)
     /// in the build image. This ensures that all dependencies are already compiled,
     /// but results in a much larger image (c.a. 9GB vs 2.5GB). The trade-off is between size
     /// vs. build speed. If you plan on building new runtime binaries often, this
     /// may be a good option.
-    #[arg(
-        long,
-        default_value = "false",
-        required = false,
-    )]
+    #[arg(long, default_value = "false", required = false)]
     pub pre_compile: bool,
     /// Only download runtime binaries, do not build the images.
-    #[arg(
-        long,
-        default_value = "false",
-        required = false,
-        group = "mode"
-    )]
+    #[arg(long, default_value = "false", required = false, group = "mode")]
     pub download_only: bool,
     /// Only build the images, do not download runtime binaries.
-    #[arg(
-        long,
-        default_value = "false",
-        required = false,
-        group = "mode"
-    )]
-    pub build_only: bool
+    #[arg(long, default_value = "false", required = false, group = "mode")]
+    pub build_only: bool,
 }
 
 pub fn exec(ctx: &CliContext, args: InitArgs) -> Result<()> {
     let disk_space_usage = match args.pre_compile {
         true => "~9GB",
-        false => "~2.3GB"
+        false => "~2.3GB",
     };
 
     let confirm = Confirm::new("This operation can take a while and consume a lot of disk space. Are you sure you want to continue?")
@@ -84,7 +67,7 @@ pub fn exec(ctx: &CliContext, args: InitArgs) -> Result<()> {
     }
 
     if !args.build_only {
-        // Download and extract Bitcoin Core and copy 'bitcoin-cli' and 'bitcoind' 
+        // Download and extract Bitcoin Core and copy 'bitcoin-cli' and 'bitcoind'
         // to the bin directory.
         download_and_extract_bitcoin_core(ctx, &args.bitcoin_version)?;
 
@@ -103,110 +86,103 @@ pub fn exec(ctx: &CliContext, args: InitArgs) -> Result<()> {
 }
 
 fn download_dasel(ctx: &CliContext, version: &str) -> Result<()> {
-    PbWrapper::new_spinner("Dasel")
-        .exec(|pb| {
-            let mut download_size = 0;
-            let mut progress = 0;
-            pb.set_message("downloading...");
-            let dasel_filename = "dasel_linux_amd64";
-            let url = format!("https://github.com/TomWright/dasel/releases/download/v{}/{}",
-                version,
-                dasel_filename);
+    PbWrapper::new_spinner("Dasel").exec(|pb| {
+        let mut download_size = 0;
+        let mut progress = 0;
+        pb.set_message("downloading...");
+        let dasel_filename = "dasel_linux_amd64";
+        let url = format!(
+            "https://github.com/TomWright/dasel/releases/download/v{}/{}",
+            version, dasel_filename
+        );
 
-            let dasel_bin = download_file(
-                &url,
-                &ctx.tmp_dir,
-                |size| {
-                    download_size = size;
-                    pb.set_length(size);
-                    pb.set_message(format!("downloading... {}b", print_bytes(size))
-                    )
-                },
-                |chunk, total| {
-                    pb.inc(chunk);
-                    progress += chunk;
-                    pb.set_message(format!("downloading... {:.1}% ({}/{})", 
-                        progress as f32 / total as f32 * 100.0, 
-                        print_bytes(progress), 
-                        print_bytes(total))
-                    )
-                }
-            )?;
+        let dasel_bin = download_file(
+            &url,
+            &ctx.tmp_dir,
+            |size| {
+                download_size = size;
+                pb.set_length(size);
+                pb.set_message(format!("downloading... {}b", print_bytes(size)))
+            },
+            |chunk, total| {
+                pb.inc(chunk);
+                progress += chunk;
+                pb.set_message(format!(
+                    "downloading... {:.1}% ({}/{})",
+                    progress as f32 / total as f32 * 100.0,
+                    print_bytes(progress),
+                    print_bytes(total)
+                ))
+            },
+        )?;
 
-            std::fs::copy(
-                ctx.tmp_dir.join(&dasel_bin),
-                ctx.bin_dir.join("dasel")
-            )?;
+        std::fs::copy(ctx.tmp_dir.join(&dasel_bin), ctx.bin_dir.join("dasel"))?;
 
-            std::fs::remove_file(&dasel_bin)?;
+        std::fs::remove_file(&dasel_bin)?;
 
-            Ok(())
-        })
+        Ok(())
+    })
 }
 
 fn download_and_extract_bitcoin_core(ctx: &CliContext, version: &str) -> Result<()> {
-    let bitcoin_archive_filename = format!(
-        "bitcoin-{}-x86_64-linux-gnu.tar.gz",
-        version);
+    let bitcoin_archive_filename = format!("bitcoin-{}-x86_64-linux-gnu.tar.gz", version);
 
     let bitcoin_url = format!(
         "https://bitcoincore.org/bin/bitcoin-core-{}/{}",
-        version,
-        bitcoin_archive_filename);
+        version, bitcoin_archive_filename
+    );
 
     // Download the file.
-    PbWrapper::new_download_bar(u64::MAX, "Bitcoin Core")
-        .exec(|pb| {
-            let mut download_size = 0;
-            let mut progress = 0;
-            pb.set_message("downloading...");
-            let bitcoin_core_archive = download_file(
-                &bitcoin_url,
-                &ctx.tmp_dir, 
-                |size| {
-                    download_size = size;
-                    pb.set_length(size);
-                    pb.set_message(format!("downloading... {}b", print_bytes(size)))
-                },
-                |chunk, total| {
-                    pb.inc(chunk);
-                    progress += chunk;
-                    pb.set_message(format!("downloading... {:.1}% ({}/{})", 
-                        progress as f32 / total as f32 * 100.0, 
-                        print_bytes(progress), 
-                        print_bytes(total))
-                    )
-                }
-            )?;
+    PbWrapper::new_download_bar(u64::MAX, "Bitcoin Core").exec(|pb| {
+        let mut download_size = 0;
+        let mut progress = 0;
+        pb.set_message("downloading...");
+        let bitcoin_core_archive = download_file(
+            &bitcoin_url,
+            &ctx.tmp_dir,
+            |size| {
+                download_size = size;
+                pb.set_length(size);
+                pb.set_message(format!("downloading... {}b", print_bytes(size)))
+            },
+            |chunk, total| {
+                pb.inc(chunk);
+                progress += chunk;
+                pb.set_message(format!(
+                    "downloading... {:.1}% ({}/{})",
+                    progress as f32 / total as f32 * 100.0,
+                    print_bytes(progress),
+                    print_bytes(total)
+                ))
+            },
+        )?;
 
-            pb.replace_with_spinner();
+        pb.replace_with_spinner();
 
-            pb.set_message("extracting archive...");
-            let tmp_file = File::open(&bitcoin_core_archive)?;
-            let gz = GzDecoder::new(BufReader::new(tmp_file));
+        pb.set_message("extracting archive...");
+        let tmp_file = File::open(&bitcoin_core_archive)?;
+        let gz = GzDecoder::new(BufReader::new(tmp_file));
 
-            Archive::new(gz).unpack(&ctx.tmp_dir)?;
+        Archive::new(gz).unpack(&ctx.tmp_dir)?;
 
-            pb.set_message("copying files...");
-            let extracted_bin_dir = ctx.tmp_dir
-                .join(format!("bitcoin-{}", version))
-                .join("bin");
+        pb.set_message("copying files...");
+        let extracted_bin_dir = ctx.tmp_dir.join(format!("bitcoin-{}", version)).join("bin");
 
-            std::fs::copy(
-                extracted_bin_dir.join("bitcoin-cli"),
-                ctx.bin_dir.join("bitcoin-cli")
-            )?;
+        std::fs::copy(
+            extracted_bin_dir.join("bitcoin-cli"),
+            ctx.bin_dir.join("bitcoin-cli"),
+        )?;
 
-            std::fs::copy(
-                extracted_bin_dir.join("bitcoind"),
-                ctx.bin_dir.join("bitcoind")
-            )?;
+        std::fs::copy(
+            extracted_bin_dir.join("bitcoind"),
+            ctx.bin_dir.join("bitcoind"),
+        )?;
 
-            std::fs::remove_dir_all(&ctx.tmp_dir)?;
-            std::fs::create_dir(&ctx.tmp_dir)?;
+        std::fs::remove_dir_all(&ctx.tmp_dir)?;
+        std::fs::create_dir(&ctx.tmp_dir)?;
 
-            Ok(())
-        })
+        Ok(())
+    })
 }
 
 fn build_build_image(ctx: &CliContext, bitcoin_version: &str, pre_compile: bool) -> Result<()> {
@@ -214,7 +190,7 @@ fn build_build_image(ctx: &CliContext, bitcoin_version: &str, pre_compile: bool)
         user_id: ctx.user_id,
         group_id: ctx.group_id,
         bitcoin_version: bitcoin_version.into(),
-        pre_compile
+        pre_compile,
     };
 
     let regex = Regex::new(r#"^Step (\d+)\/(\d+) :(.*)$"#)?;
@@ -237,7 +213,7 @@ fn build_build_image(ctx: &CliContext, bitcoin_version: &str, pre_compile: bool)
                             pb.inc(step - pb.get_position());
                             pb.set_message(Cow::Owned(truncate(msg, 70).to_owned()));
                         }
-                    },
+                    }
                     Err(e) => eprintln!("Error: {}", e),
                 }
             })
@@ -247,7 +223,6 @@ fn build_build_image(ctx: &CliContext, bitcoin_version: &str, pre_compile: bool)
     pb.finish_success();
 
     Ok(())
-    
 }
 
 fn build_runtime_image(ctx: &CliContext) -> Result<()> {
@@ -258,8 +233,8 @@ fn build_runtime_image(ctx: &CliContext) -> Result<()> {
 
     let regex = Regex::new(r#"^Step (\d+)\/(\d+) :(.*)$"#)?;
     let pb = new_progressbar(
-        "{spinner:.dim.bold} runtime image: {wide_msg}", 
-        "Starting..."
+        "{spinner:.dim.bold} runtime image: {wide_msg}",
+        "Starting...",
     );
 
     let stream = ctx.docker.build_stackify_runtime_image(build)?;
@@ -275,17 +250,14 @@ fn build_runtime_image(ctx: &CliContext) -> Result<()> {
                             let msg = captures.get(3).unwrap().as_str();
                             pb.set_message(format!("[{}/{}]: {}", step, total, msg));
                         });
-                    },
+                    }
                     Err(e) => eprintln!("Error: {}", e),
                 }
             })
             .await
     });
     pb.finish_and_clear();
-    println!(
-        "{} Docker runtime image",
-        style("✔️").green()
-    );
+    println!("{} Docker runtime image", style("✔️").green());
 
     Ok(())
 }

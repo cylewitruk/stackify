@@ -44,31 +44,20 @@ pub struct AddEpochArgs {
     /// The name of the epoch to add. This must be a valid epoch name, for
     /// example: `2.05`, `2.4`, `3.0`, etc. The epoch must be unique, in decimal
     /// format, and greater than the current highest epoch.
-    #[arg(
-        required = true,
-        value_name = "EPOCH",
-        value_parser
-    )]
+    #[arg(required = true, value_name = "EPOCH", value_parser)]
     pub name: f32,
 
     /// Optionally specifies the default block height for this epoch. If not
     /// provided, the default block height will be set to the current highest
     /// default block height + 3.
-    #[arg(
-        required = false,
-        value_name = "BLOCK_HEIGHT",
-        long = "block-height"
-    )]
+    #[arg(required = false, value_name = "BLOCK_HEIGHT", long = "block-height")]
     pub block_height: Option<i32>,
 
     /// As adding a new epoch is considered an "expert feature", this flag is
     /// required to be set to confirm that the user understands the implications
     /// of adding a new epoch.
-    #[arg(
-        required = true,
-        long = "force"
-    )]
-    pub force: bool
+    #[arg(required = true, long = "force")]
+    pub force: bool,
 }
 
 #[derive(Debug, Args)]
@@ -99,7 +88,7 @@ pub enum ServiceSubCommands {
     List,
     /// Display detailed information about a service and its versions.
     #[clap(visible_alias = "insp")]
-    Inspect
+    Inspect,
 }
 
 #[derive(Debug, Args)]
@@ -120,21 +109,14 @@ pub struct AddServiceVersionArgs {
     /// The version of the service to add, for example: `21.0`, 'PoX-5', etc.
     /// Note that different services types have different constraints regarding
     /// what can be used as a version.
-    #[arg(
-        required = true,
-        value_name = "NAME"
-    )]
+    #[arg(required = true, value_name = "NAME")]
     pub name: String,
 
     /// The minimum epoch that this service version is compatible with. This
     /// must be a valid epoch name, for example: `2.05`, `2.4`, `3.0`, etc. Note
     /// that the service will not be prevented from being used on a lower epoch
     /// as that may be your intent, but it will generate a warning.
-    #[arg(
-        required = false,
-        value_name = "EPOCH",
-        long = "min-epoch"
-    )]
+    #[arg(required = false, value_name = "EPOCH", long = "min-epoch")]
     pub min_epoch: Option<String>,
 
     /// The maximum epoch that this service version is compatible with. This
@@ -142,11 +124,7 @@ pub struct AddServiceVersionArgs {
     /// that the service will not be prevented from being used on a higher epoch
     /// as that may be your intent, but it will generate a warning. To view the
     /// available epochs, run `stackify config epochs list`.
-    #[arg(
-        required = false,
-        value_name = "EPOCH",
-        long = "max-epoch"
-    )]
+    #[arg(required = false, value_name = "EPOCH", long = "max-epoch")]
     pub max_epoch: Option<String>,
 
     /// The git target for this service version. This can be a branch, tag, or
@@ -166,7 +144,6 @@ pub struct AddServiceVersionArgs {
         ])
     )]
     pub git_target: Option<String>,
-
 }
 
 const GIT_TARGET_HELP: &str = r#"The git target for this service version. This can be a branch, tag, or commit hash. This is conditionally required/allowed based on the service type.
@@ -178,40 +155,22 @@ Not allowed for: [bitcoin-miner, bitcoin-follower, stacks-stacker-self, stacks-s
 
 #[derive(Debug, Args)]
 pub struct RemoveServiceVersionArgs {
-    #[arg(
-        required = true,
-        value_name = "SERVICE"
-    )]
-    pub svc_name: String
+    #[arg(required = true, value_name = "SERVICE")]
+    pub svc_name: String,
 }
 
 #[derive(Debug, Args)]
 pub struct ImportArgs {
-    #[arg(
-        short = 'f',
-        long,
-        required = true
-    )]
+    #[arg(short = 'f', long, required = true)]
     pub file: String,
 }
 
 #[derive(Debug, Args)]
 pub struct ExportArgs {
-    #[arg(
-        short,
-        long,
-        alias = "env",
-        exclusive = true
-    )]
+    #[arg(short, long, alias = "env", exclusive = true)]
     environment: String,
-    #[arg(
-        long,
-        alias = "all-envs"
-    )]
+    #[arg(long, alias = "all-envs")]
     environments: bool,
-    #[arg(
-        short = 's',
-        long = "services"
-    )]
+    #[arg(short = 's', long = "services")]
     services: bool,
 }

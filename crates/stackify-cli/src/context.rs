@@ -7,7 +7,7 @@ use crate::db::AppDb;
 pub struct CliContext {
     /// The configuration directory for Stackify. Defaults to `$HOME/.stackify`
     pub config_dir: PathBuf,
-    /// The configuration file for Stackify. Defaults to 
+    /// The configuration file for Stackify. Defaults to
     /// `$HOME/.stackify/config.toml`
     pub config_file: PathBuf,
     /// The directory where Stackify stores environment data. Defaults to
@@ -27,5 +27,5 @@ pub struct CliContext {
     /// The group id of the current user.
     pub group_id: u32,
     /// Instance of Stackify's Docker client.
-    pub docker: StackifyDocker
+    pub docker: StackifyDocker,
 }

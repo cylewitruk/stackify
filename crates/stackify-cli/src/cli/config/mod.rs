@@ -2,11 +2,14 @@ use color_eyre::Result;
 
 use crate::context::CliContext;
 
-use self::{args::{ConfigArgs, ConfigSubCommands}, services::exec_services};
+use self::{
+    args::{ConfigArgs, ConfigSubCommands},
+    services::exec_services,
+};
 
 pub mod args;
-pub mod services;
 pub mod epochs;
+pub mod services;
 
 pub fn exec(ctx: &CliContext, args: ConfigArgs) -> Result<()> {
     match args.commands {

@@ -35,9 +35,9 @@ impl Drop for TestNetwork {
         debug!("Dropping test network: {}", self.0);
         let ctx = StackifyDocker::new().unwrap();
         let _ = ctx.runtime.block_on(async {
-            if ctx.docker.remove_network(self)
-                .await
-                .is_err() { return; }
+            if ctx.docker.remove_network(self).await.is_err() {
+                return;
+            }
         });
         debug!("Dropped test network: {}", self.0)
     }
@@ -70,7 +70,8 @@ impl Drop for TestContainer {
         debug!("Dropping test container: {}", self.0);
         let ctx = StackifyDocker::new().unwrap();
         ctx.runtime.block_on(async {
-            ctx.docker.remove_container(self, None)
+            ctx.docker
+                .remove_container(self, None)
                 .await
                 .expect(&format!("failed to stop container: {}", self));
         });
@@ -85,7 +86,8 @@ fn create_test_container(docker: &StackifyDocker) -> TestContainer {
 
     docker.pull_image(busybox_image);
 
-    let random_name = thread_rng().gen::<[u8; 4]>()
+    let random_name = thread_rng()
+        .gen::<[u8; 4]>()
         .iter()
         .map(|b| format!("{:02x}", b))
         .collect::<String>();
@@ -96,16 +98,18 @@ fn create_test_container(docker: &StackifyDocker) -> TestContainer {
         name: container_name.to_string(),
         ..Default::default()
     };
-    
+
     let config = bollard::container::Config {
         image: Some(busybox_image),
         entrypoint: Some(vec!["sh -c 'while : ;do sleep 1; done'"]),
         working_dir: Some("/root"),
         ..Default::default()
     };
-    
+
     docker.runtime.block_on(async {
-        docker.docker.create_container(Some(opts), config)
+        docker
+            .docker
+            .create_container(Some(opts), config)
             .await
             .expect("failed to create test busybox container");
     });
@@ -120,7 +124,8 @@ pub fn get_docker() -> StackifyDocker {
         .map_err(|e| {
             debug!("Failed to create docker context: {}", e);
             exit(1);
-        }).unwrap()
+        })
+        .unwrap()
 }
 
 pub fn random_environment_name() -> EnvironmentName {

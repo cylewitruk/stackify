@@ -11,10 +11,7 @@ pub enum ApiError {
 }
 
 impl<'o: 'r, 'r> Responder<'r, 'o> for ApiError {
-    fn respond_to(
-        self, 
-        _: &'r rocket::Request<'_>
-    ) -> rocket::response::Result<'o> {
+    fn respond_to(self, _: &'r rocket::Request<'_>) -> rocket::response::Result<'o> {
         let serialized = serde_json::to_string(&self).unwrap();
 
         let response = rocket::response::Response::build()

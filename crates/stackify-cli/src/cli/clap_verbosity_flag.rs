@@ -1,5 +1,4 @@
 #![allow(dead_code)]
-
 // Borrowed from https://github.com/clap-rs/clap-verbosity-flag.
 // We just want to change the clap `help_heading`.
 
