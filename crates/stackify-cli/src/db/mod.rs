@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::cell::RefCell;
 
 use color_eyre::eyre::bail;
@@ -9,15 +11,16 @@ use diesel_migrations::EmbeddedMigrations;
 use diesel_migrations::MigrationHarness;
 use log::info;
 
-use self::model::*;
-use self::opts::NewServiceVersionOpts;
-use self::schema::*;
-
 pub mod model;
 pub mod schema;
 pub mod opts;
 
-pub const DB_MIGRATIONS: EmbeddedMigrations = embed_migrations!("../../migrations");
+use self::model::*;
+use self::opts::NewServiceVersionOpts;
+use self::schema::*;
+
+
+pub const DB_MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
 
 pub struct AppDb {
     conn: RefCell<SqliteConnection>

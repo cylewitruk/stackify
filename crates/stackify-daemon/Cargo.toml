@@ -13,9 +13,17 @@ path = "src/main.rs"
 # Bitcoin
 bitcoincore-rpc = "0.18.0"
 
+# Async
+tokio = { workspace = true }
+futures-util = { workspace = true }
+
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+
+# Database
+diesel = { workspace = true }
+diesel_migrations = { workspace = true }
 
 # Web
 rocket = "0.5.0"
@@ -30,3 +38,6 @@ thiserror = { workspace = true }
 # Logging
 log = { workspace = true }
 env_logger = { workspace = true }
+
+# Local
+stackify-common = { path = "../stackify-common" }

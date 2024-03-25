@@ -2953,6 +2953,8 @@ dependencies = [
  "rand",
  "regex",
  "reqwest",
+ "serde",
+ "serde_json",
  "tar",
  "tempfile",
  "thiserror",
@@ -2966,7 +2968,10 @@ version = "0.1.0"
 dependencies = [
  "bitcoincore-rpc",
  "color-eyre",
+ "diesel",
+ "diesel_migrations",
  "env_logger",
+ "futures-util",
  "log",
  "okapi",
  "reqwest",
@@ -2974,7 +2979,9 @@ dependencies = [
  "rocket_okapi",
  "serde",
  "serde_json",
+ "stackify-common",
  "thiserror",
+ "tokio",
 ]
 
 [[package]]

@@ -1,9 +1,14 @@
-pub mod api;
-pub mod models;
-pub mod errors;
+use color_eyre::Result;
 
-fn main() {
+pub mod api;
+pub mod errors;
+pub mod db;
+
+#[rocket::main]
+async fn main() -> Result<()> {
     rocket::build()
         .mount("/api", api::routes())
-        .launch();
+        .launch().await?;
+
+    Ok(())
 }

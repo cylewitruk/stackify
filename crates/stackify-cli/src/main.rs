@@ -1,14 +1,16 @@
 use clap::{CommandFactory, Parser};
 use color_eyre::eyre::{eyre, Result};
 use context::CliContext;
+use db::{apply_db_migrations, AppDb};
 use diesel::{Connection, SqliteConnection};
-use stackify_common::{apply_db_migrations, db::AppDb, StackifyDocker};
+use stackify_common::docker::stackify_docker::StackifyDocker;
 
 use crate::cli::{Cli, Commands};
 
 mod cli;
 mod context;
 mod util;
+mod db;
 
 fn main() -> Result<()> {
     let context = initialize()?;

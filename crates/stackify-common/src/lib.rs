@@ -1,18 +1,15 @@
 pub mod docker;
-pub mod db;
 
 #[cfg(test)]
 pub mod tests;
 pub mod util;
 pub mod download;
+pub mod api;
 
 use std::fmt::Display;
 
-use color_eyre::eyre::{bail, eyre, Result};
+use color_eyre::eyre::{bail, Result};
 use regex::Regex;
-
-pub use docker::stackify_docker::StackifyDocker;
-pub use db::{AppDb, apply_db_migrations};
 
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]

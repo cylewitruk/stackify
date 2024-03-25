@@ -1,6 +1,7 @@
 use color_eyre::eyre::{eyre, Result};
 use console::style;
-use stackify_common::{db::model::{Epoch, ServiceType, ServiceUpgradePath, ServiceVersion}, util::to_alphanumeric_snake, EnvironmentName};
+use crate::db::model::{Epoch, ServiceType, ServiceUpgradePath, ServiceVersion};
+use stackify_common::util::to_alphanumeric_snake;
 
 use crate::{context::CliContext, util::{git::{GitTarget, TargetType}, FilterByServiceType, FilterByServiceVersion, FindByCliName, FindById}};
 
@@ -28,13 +29,13 @@ pub fn exec_add_service_version(ctx: &CliContext, args: AddServiceVersionArgs) -
     Ok(())
 }
 
-pub fn exec_remove_service_version(ctx: &CliContext, args: RemoveServiceVersionArgs) -> Result<()> {
-    let cli_name = to_alphanumeric_snake(&args.svc_name);
+pub fn exec_remove_service_version(_ctx: &CliContext, args: RemoveServiceVersionArgs) -> Result<()> {
+    let _cli_name = to_alphanumeric_snake(&args.svc_name);
 
     Ok(())
 }
 
-pub fn exec_inspect_service(ctx: &CliContext) -> Result<()> {
+pub fn exec_inspect_service(_ctx: &CliContext) -> Result<()> {
     Ok(())
 }
 

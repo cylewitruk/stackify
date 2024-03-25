@@ -24,21 +24,21 @@ pub fn exec_service(ctx: &CliContext, args: ServiceArgs) -> Result<()> {
 }
 
 fn exec_add(_ctx: &CliContext, args: ServiceAddArgs) -> Result<()> {
-    let env_name = EnvironmentName::new(&args.env_name)?;
+    let _env_name = EnvironmentName::new(&args.env_name)?;
     Ok(())
 }
 
 fn exec_remove(_ctx: &CliContext, args: ServiceRemoveArgs) -> Result<()> {
-    let env_name = EnvironmentName::new(&args.env_name)?;
+    let _env_name = EnvironmentName::new(&args.env_name)?;
     Ok(())
 }
 
 fn exec_inspect(_ctx: &CliContext, args: ServiceInspectArgs) -> Result<()> {
-    let env_name = EnvironmentName::new(&args.env_name)?;
+    let _env_name = EnvironmentName::new(&args.env_name)?;
     Ok(())
 }
 
 fn exec_list(_ctx: &CliContext, args: ServiceListArgs) -> Result<()> {
-    let env_name = EnvironmentName::new(&args.env_name)?;
+    let _env_name = EnvironmentName::new(&args.env_name)?;
     Ok(())
 }

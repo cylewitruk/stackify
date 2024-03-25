@@ -4,7 +4,7 @@ use bollard::container::CreateContainerOptions;
 use log::debug;
 use rand::{thread_rng, Rng};
 
-use crate::{util::random_hex, EnvironmentName, StackifyDocker};
+use crate::{docker::stackify_docker::StackifyDocker, util::random_hex, EnvironmentName};
 
 pub mod docker_tests;
 

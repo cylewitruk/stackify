@@ -1,6 +1,6 @@
-use std::{backtrace::Backtrace, fmt::Display, io::Cursor};
+use std::io::Cursor;
 
-use rocket::{response::Responder, serde::json::Json};
+use rocket::response::Responder;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -13,7 +13,7 @@ pub enum ApiError {
 impl<'o: 'r, 'r> Responder<'r, 'o> for ApiError {
     fn respond_to(
         self, 
-        request: &'r rocket::Request<'_>
+        _: &'r rocket::Request<'_>
     ) -> rocket::response::Result<'o> {
         let serialized = serde_json::to_string(&self).unwrap();
 

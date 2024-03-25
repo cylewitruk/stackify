@@ -1,4 +1,4 @@
-use color_eyre::{eyre::bail, Result};
+use color_eyre::Result;
 use console::style;
 
 use crate::{cli::{error, info, success}, context::CliContext, util::FilterByMinMaxEpoch};
@@ -63,12 +63,12 @@ fn exec_add_epoch(ctx: &CliContext, args: AddEpochArgs) -> Result<()> {
     Ok(())
 }
 
-fn exec_remove_epoch(ctx: &CliContext) -> Result<()> {
-    Ok(())
+fn exec_remove_epoch(_ctx: &CliContext) -> Result<()> {
+    todo!()
 }
 
-fn exec_inspect_epoch(ctx: &CliContext) -> Result<()> {
-    Ok(())
+fn exec_inspect_epoch(_ctx: &CliContext) -> Result<()> {
+    todo!()
 }
 
 fn exec_list_epochs(ctx: &CliContext) -> Result<()> {

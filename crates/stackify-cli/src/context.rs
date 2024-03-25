@@ -1,6 +1,8 @@
 use std::path::PathBuf;
 
-use stackify_common::{db::AppDb, StackifyDocker};
+use stackify_common::docker::stackify_docker::StackifyDocker;
+
+use crate::db::AppDb;
 
 pub struct CliContext {
     /// The configuration directory for Stackify. Defaults to `$HOME/.stackify`
