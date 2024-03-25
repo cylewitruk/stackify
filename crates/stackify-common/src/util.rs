@@ -28,5 +28,9 @@ pub fn to_alphanumeric_snake(s: &str) -> String {
         }
     }
 
+    if out.chars().last().unwrap() == '-' {
+        out.pop();
+    }
+
     out
 }

@@ -2,7 +2,7 @@ use color_eyre::eyre::{eyre, Result};
 use console::style;
 use stackify_common::{db::model::{Epoch, ServiceType, ServiceUpgradePath, ServiceVersion}, util::to_alphanumeric_snake, EnvironmentName};
 
-use crate::{cli::env::service, context::CliContext, util::{git::{GitTarget, TargetType}, FilterByServiceType, FilterByServiceVersion, FindByCliName, FindById}};
+use crate::{context::CliContext, util::{git::{GitTarget, TargetType}, FilterByServiceType, FilterByServiceVersion, FindByCliName, FindById}};
 
 use super::args::{AddServiceVersionArgs, RemoveServiceVersionArgs, ServiceSubCommands, ServicesArgs};
 
@@ -55,6 +55,12 @@ pub fn exec_list_services(ctx: &CliContext) -> Result<()> {
             style(&service_type.name).magenta()
         );
 
+        println!("  {} {} {}",
+            style("ƒ").white(),
+            to_alphanumeric_snake(&service_type.name),
+            style("(cli name)").dim()
+        );
+
         // Get the available versions for this service type.
         let versions = service_versions
             .filter_by_service_type(service_type.id);
@@ -64,15 +70,16 @@ pub fn exec_list_services(ctx: &CliContext) -> Result<()> {
             let version = versions[i];
 
             // Print the version header.
-            println!("    {} {} {}", 
+            println!("  {} {} {}", 
                 style("◆").yellow(), 
                 style(&version.version).cyan(), 
                 style("(version)").dim()
             );
 
-            println!("    {} {} {} {}",
+            println!("  {} {} {} {}",
                 style("┆").dim(),
-                style("␂").white(),
+                //style("␂").white(),
+                style("ƒ").white(),
                 &version.cli_name, 
                 style("(cli name)").dim()
             );
@@ -106,7 +113,7 @@ pub fn exec_list_services(ctx: &CliContext) -> Result<()> {
 }
 
 fn print_minimum_epoch(epoch: &Epoch) {
-    println!("    {} {} {} {}",
+    println!("  {} {} {} {}",
         style("┆").dim(),
         style("▼").green(),
         style(&epoch.name), 
@@ -115,7 +122,7 @@ fn print_minimum_epoch(epoch: &Epoch) {
 }
 
 fn print_maximum_epoch(epoch: &Epoch) {
-    println!("    {} {} {} {}", 
+    println!("  {} {} {} {}", 
         style("┆").dim(),
         style("▲").red(), 
         style(&epoch.name), 
@@ -130,7 +137,7 @@ fn print_git_target(target: &GitTarget) {
         TargetType::Commit => format!("{}", style("(git commit)").dim()),
     };
 
-    println!("    {} {} {} {}", 
+    println!("  {} {} {} {}", 
         style("┆").dim(),
         style("☉").bright().blue(),
         target.target,
@@ -152,7 +159,7 @@ fn print_upgrade_paths(
         let to_service_type = service_types
             .find_by_id(to_service_version.service_type_id)
             .ok_or(eyre!("Failed to find service type"))?;
-        println!("    {} {} {}: {} {}",
+        println!("  {} {} {}: {} {}",
             style("┆").dim(),
             style("⤑").green(),
             style(&to_service_type.name), 

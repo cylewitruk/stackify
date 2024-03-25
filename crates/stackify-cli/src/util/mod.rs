@@ -29,6 +29,43 @@ pub trait FilterByServiceVersion<T> {
     fn filter_by_service_version(&self, service_version_id: i32) -> Vec<&T>;
 }
 
+pub trait FilterByMinMaxEpoch<T> {
+    fn filter_by_max_epoch(&self, epoch_id: i32) -> Vec<&T>;
+    fn filter_by_min_epoch(&self, epoch_id: i32) -> Vec<&T>;
+}
+
+pub trait FilterByEpoch<T> {
+    fn filter_by_epoch(&self, epoch_id: i32) -> Vec<&T>;
+}
+
+impl FilterByMinMaxEpoch<ServiceVersion> for Vec<ServiceVersion> {
+    fn filter_by_max_epoch(&self, epoch_id: i32) -> Vec<&ServiceVersion> {
+        self.iter()
+            .filter(|v| v.maximum_epoch_id == Some(epoch_id))
+            .collect()
+    }
+
+    fn filter_by_min_epoch(&self, epoch_id: i32) -> Vec<&ServiceVersion> {
+        self.iter()
+            .filter(|v| v.minimum_epoch_id == Some(epoch_id))
+            .collect()
+    }
+}
+
+impl FilterByMinMaxEpoch<ServiceUpgradePath> for Vec<ServiceUpgradePath> {
+    fn filter_by_max_epoch(&self, epoch_id: i32) -> Vec<&ServiceUpgradePath> {
+        self.iter()
+            .filter(|p| p.maximum_epoch_id == Some(epoch_id))
+            .collect()
+    }
+
+    fn filter_by_min_epoch(&self, epoch_id: i32) -> Vec<&ServiceUpgradePath> {
+        self.iter()
+            .filter(|p| Some(p.minimum_epoch_id) == Some(epoch_id))
+            .collect()
+    }
+}
+
 impl FindByCliName<ServiceVersion> for Vec<ServiceVersion> {
     fn find_by_cli_name(&self, cli_name: &str) -> Option<&ServiceVersion> {
         self.iter()

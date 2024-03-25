@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use clap::builder::styling::{AnsiColor, Effects, Styles};
 use clap::{command, Parser, Subcommand};
 use clap_complete::Shell;
@@ -36,22 +38,22 @@ lazy_static! {
 }
 
 #[allow(dead_code)]
-pub fn error(msg: &str) {
+pub fn error(msg: impl AsRef<str> + Display) {
     println!("{} {}", *ERROR, msg);
 }
 
 #[allow(dead_code)]
-pub fn info(msg: &str) {
+pub fn info(msg: impl AsRef<str> + Display) {
     println!("{} {}", *INFO, msg);
 }
 
 #[allow(dead_code)]
-pub fn warn(msg: &str) {
+pub fn warn(msg: impl AsRef<str> + Display) {
     println!("{} {}", *WARN, msg);
 }
 
 #[allow(dead_code)]
-pub fn success(msg: &str) {
+pub fn success(msg: impl AsRef<str> + Display) {
     println!("{} {}", *SUCCESS, msg);
 }
 

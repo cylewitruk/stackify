@@ -152,6 +152,17 @@ impl AppDb {
                 .get_result::<ServiceVersion>(&mut *self.conn.borrow_mut())?
         )
     }
+
+    pub fn new_epoch(&self, name: &str, default_block_height: u32) -> Result<Epoch> {
+        Ok(
+            diesel::insert_into(epoch::table)
+                .values((
+                    epoch::name.eq(name),
+                    epoch::default_block_height.eq(default_block_height as i32)
+                ))
+                .get_result::<Epoch>(&mut *self.conn.borrow_mut())?
+        )
+    }
 }
 
 /// Applies any pending application database migrations. Initializes the
