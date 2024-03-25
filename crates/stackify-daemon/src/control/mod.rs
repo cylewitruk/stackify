@@ -1,11 +1,11 @@
 use std::{thread::{self, JoinHandle}, time::Duration};
 use diesel::{Connection, SqliteConnection};
-use log::{debug, info};
+use log::*;
 use stackify_common::{ServiceState, ServiceType};
 use tokio::sync::mpsc::{channel, Sender};
 use tokio::process::Child;
 
-use color_eyre::{owo_colors::OwoColorize, Result};
+use color_eyre::{eyre::bail, owo_colors::OwoColorize, Result};
 
 use crate::db::DaemonDb;
 
@@ -46,6 +46,8 @@ pub struct MonitorMsg {
 }
 
 impl Monitor {
+    /// Create a new Monitor instance for monitoring at most one local service and
+    /// any number of remote services.
     pub fn new<P: AsRef<str> + ?Sized>(db_path: &P) -> Result<Self> {
         let db_conn = SqliteConnection::establish(db_path.as_ref())?;
         let db = DaemonDb::new(db_conn);
@@ -87,6 +89,10 @@ impl Monitor {
     /// service type.
     fn monitor_task(&mut self) -> Result<()> {
         let services = self.db.list_services()?;
+
+        if services.iter().filter(|s| s.is_local).count() > 1 {
+            bail!("more than one local service found in database");
+        }
 
         if let Some(mut data) = self.data.take() {
             for service in services {

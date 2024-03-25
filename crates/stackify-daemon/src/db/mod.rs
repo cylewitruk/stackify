@@ -2,7 +2,6 @@ use std::cell::RefCell;
 
 use color_eyre::Result;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, SqliteConnection};
-use stackify_common::api::models::Service;
 
 pub mod model;
 pub mod schema;
