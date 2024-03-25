@@ -5,7 +5,7 @@ use serde::{Serialize, Deserialize};
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GetStatusResponse {
     pub status: Status,
-    pub services: HashMap<Service, ServiceStatus>
+    pub services: HashMap<Service, ServiceState>
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -16,10 +16,10 @@ pub enum Status {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub enum ServiceStatus {
-    Running,
-    Stopped,
-    Error
+pub enum ServiceState {
+    Running = 1,
+    Stopped = 2,
+    Error = 3
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -30,7 +30,9 @@ pub enum Service {
     StacksFollower = 3,
     StacksSigner = 4,
     StacksStackerSelf = 5,
-    StacksStackerPool = 6
+    StacksStackerPool = 6,
+    StackifyEnvironment = 7,
+    StackifyDaemon = 8
 }
 
 #[derive(Debug, Serialize, Deserialize)]

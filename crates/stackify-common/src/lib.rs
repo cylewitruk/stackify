@@ -76,3 +76,31 @@ impl TryFrom<String> for EnvironmentName {
     }
 }
 
+pub enum ServiceType {
+    BitcoinMiner = 0,
+    BitcoinFollower = 1,
+    StacksMiner = 2,
+    StacksFollower = 3,
+    StacksSigner = 4,
+    StacksStackerSelf = 5,
+    StacksStackerPool = 6,
+    StackifyEnvironment = 7,
+    StackifyDaemon = 8
+}
+
+impl ServiceType {
+    pub fn from_i32(value: i32) -> Result<Self> {
+        match value {
+            0 => Ok(Self::BitcoinMiner),
+            1 => Ok(Self::BitcoinFollower),
+            2 => Ok(Self::StacksMiner),
+            3 => Ok(Self::StacksFollower),
+            4 => Ok(Self::StacksSigner),
+            5 => Ok(Self::StacksStackerSelf),
+            6 => Ok(Self::StacksStackerPool),
+            7 => Ok(Self::StackifyEnvironment),
+            8 => Ok(Self::StackifyDaemon),
+            _ => bail!("Invalid service type value: {}", value)
+        }
+    }
+}

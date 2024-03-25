@@ -10,12 +10,16 @@ path = "src/main.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+# Util
+time  = { workspace = true }
+
 # Bitcoin
 bitcoincore-rpc = "0.18.0"
 
 # Async
 tokio = { workspace = true }
 futures-util = { workspace = true }
+tokio-util = { workspace = true }
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }

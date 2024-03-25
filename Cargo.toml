@@ -33,6 +33,7 @@ anstyle = "1.0.6"
 # Async
 tokio = { version = "1.36.0", features = ["full"] }
 futures-util = "0.3.30"
+tokio-util = "0.7.10"
 # Docker
 bollard = { version ="0.16.0", features = ["ssl", "time", "buildkit"] }
 # Error handling
