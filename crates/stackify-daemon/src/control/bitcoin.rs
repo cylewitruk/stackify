@@ -1,26 +1,40 @@
 use bitcoincore_rpc::{Auth, Client, RpcApi};
 use color_eyre::{eyre::{bail, eyre}, Result};
+use log::warn;
 use reqwest::Url;
 use stackify_common::ServiceState;
 use tokio::process::Command;
 
-use crate::db::model;
+use crate::db::model::{self, Service};
 
-use super::{Monitor, MonitorData};
+use super::{Monitor, MonitorContext, MonitorData};
 
 impl Monitor {
-    pub fn local_bitcoin_miner(&self, service: &model::Service, data: &mut MonitorData) -> Result<()> {
+    pub async fn local_bitcoin_miner(&self, ctx: &mut MonitorContext, service: &model::Service, data: &mut MonitorData) -> Result<()> {
         if data.child.is_none() && data.expected_state == ServiceState::Running {
-            self.db.insert_log_entry(
-                service.service_type_id, 
-                "INFO", 
-                "Local Bitcoin miner node is not running. Attempting to start..."
-            )?;
+            warn!("Local Bitcoin miner is expected to be running, but no child process is running. Starting...");
 
+            // Call the start-bitcoind-miner.sh script to start the miner.
             let child = Command::new("/home/stacks/start-bitcoind-miner.sh")
                 .spawn()?;
+
+            // We didn't get an error, so the process should be running. Set the state to running.
+            ctx.db.set_service_state(service.id, ServiceState::Running as i32)?;
+
             data.child = Some(child);
             data.last_state = ServiceState::Running;
+        } else if data.child.is_some() && data.expected_state == ServiceState::Stopped {
+            warn!("Local Bitcoin miner is expected to be stopped, but a child process is running. Stopping...");
+
+            // Kill the child process.
+            let child = data.child.as_mut().unwrap();
+            child.kill().await?;
+
+            // We didn't get an error, so the process should be stopped. Set the state to stopped.
+            ctx.db.set_service_state(service.id, ServiceState::Stopped as i32)?;
+
+            data.child = None;
+            data.last_state = ServiceState::Stopped;
         }
 
         Ok(())

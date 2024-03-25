@@ -13,7 +13,7 @@ async fn main() -> Result<()> {
 
     let monitor = 
         control::Monitor::new(db_path)?;
-    let (monitor, channel) = monitor.start()?;
+    let channel = monitor.start().await?;
 
     rocket::build()
         .mount("/api", api::routes())

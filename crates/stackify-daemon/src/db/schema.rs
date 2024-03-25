@@ -19,6 +19,7 @@ table! {
 
 table! {
     service (service_type_id) {
+        id -> Integer,
         service_type_id -> Integer,
         version -> Text,
         expected_service_state_id -> Integer,

@@ -1,9 +1,11 @@
-use std::{thread::{self, JoinHandle}, time::Duration};
+use std::path::PathBuf;
+use std::time::Duration;
 use diesel::{Connection, SqliteConnection};
 use log::*;
 use stackify_common::{ServiceState, ServiceType};
 use tokio::sync::mpsc::{channel, Sender};
 use tokio::process::Child;
+use tokio::task::JoinHandle;
 
 use color_eyre::{eyre::bail, owo_colors::OwoColorize, Result};
 
@@ -25,7 +27,7 @@ pub mod stacks_stacker;
 /// TODO: This could be alleviated by running the SqliteConnection in its own
 /// thread and using a channel to communicate with it.
 pub struct Monitor {
-    db: DaemonDb,
+    db_path: String,
     data: Option<MonitorData>
 }
 
@@ -45,27 +47,47 @@ pub struct MonitorMsg {
     expected_state: ServiceState
 }
 
+pub struct MonitorContext {
+    pub db: DaemonDb,
+    pub data: Option<MonitorData>
+}
+
 impl Monitor {
     /// Create a new Monitor instance for monitoring at most one local service and
     /// any number of remote services.
     pub fn new<P: AsRef<str> + ?Sized>(db_path: &P) -> Result<Self> {
-        let db_conn = SqliteConnection::establish(db_path.as_ref())?;
-        let db = DaemonDb::new(db_conn);
         Ok(Self { 
-            db,
+            db_path: db_path.as_ref().to_owned(),
             data: None
         })
     }
 
     /// Consumes the Monitor and starts the monitoring thread, returning its
     /// JoinHandle and a Sender to signal the thread to stop.
-    pub fn start(mut self: Self) -> Result<(JoinHandle<()>, Sender<MonitorMsg>)> {
+    pub async fn start(self: Self) -> Result<Sender<MonitorMsg>> {
         let (sender, mut receiver) = channel::<MonitorMsg>(10);
 
-        let handle = thread::spawn(move || {
-            loop {
-                println!("Monitoring...");
+        tokio::spawn(async move {
+            info!("monitoring thread started.");
+            info!("opening local database at {}", self.db_path);
+            let db_conn = SqliteConnection::establish(&self.db_path)
+                .unwrap_or_else(|e| {
+                    error!("{}: {}", "Error".red(), e);
+                    panic!("failed to establish database connection");
+                });
+            let db = DaemonDb::new(db_conn);
 
+            let mut context = MonitorContext {
+                db,
+                data: None
+            };
+
+            
+            info!("beginning monitoring loop");
+            loop {
+                trace!("Monitoring loop...");
+
+                // Check to see if we've received any messages.
                 match receiver.try_recv() {
                     Ok(_) => {
                         println!("Received stop signal.");
@@ -74,32 +96,37 @@ impl Monitor {
                     Err(_) => {}
                 }
 
-                self.monitor_task()
-                    .unwrap_or_else(|e| eprintln!("{}: {}", "Error".red(), e));
+                // Call the monitor task and log any errors.
+                self.monitor_task(&mut context).await
+                    .unwrap_or_else(|e| {
+                        error!("{}: {}", "Error".red(), e);
+                        
+                });
 
-                thread::sleep(Duration::from_secs(1));
+                // Pause for a second.
+                let _ = tokio::time::sleep(Duration::from_secs(1));
             }
         });
 
-        Ok((handle, sender))
+        Ok(sender)
     }
 
     /// This function is called in a loop by the monitoring thread and is used
     /// as a router to call the appropriate monitoring function for this node's
     /// service type.
-    fn monitor_task(&mut self) -> Result<()> {
-        let services = self.db.list_services()?;
+    async fn monitor_task(&self, ctx: &mut MonitorContext) -> Result<()> {
+        let services = ctx.db.list_services()?;
 
         if services.iter().filter(|s| s.is_local).count() > 1 {
             bail!("more than one local service found in database");
         }
 
-        if let Some(mut data) = self.data.take() {
+        if let Some(mut data) = ctx.data.take() {
             for service in services {
                 match ServiceType::from_i32(service.service_type_id)? {
                     ServiceType::BitcoinMiner => {
                         if service.is_local {
-                            self.local_bitcoin_miner(&service, &mut data)?;
+                            self.local_bitcoin_miner(ctx, &service, &mut data).await?;
                         } else {
                             self.remote_bitcoin_node(&service, &mut data)?;
                         }
@@ -138,17 +165,12 @@ impl Monitor {
                     ServiceType::StackifyDaemon | ServiceType::StackifyEnvironment => {},
                 }
             }
-            self.data = Some(data);
+            ctx.data = Some(data);
         } else {
             debug!("Monitor has not yet been initialized, returning.");
             return Ok(());
         }
 
-        
-
         Ok(())
     }
-    
-
-    
 }

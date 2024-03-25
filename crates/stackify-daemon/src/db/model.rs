@@ -24,6 +24,7 @@ pub struct ServiceState {
 #[derive(Queryable, Insertable)]
 #[diesel(table_name = service)]
 pub struct Service {
+    pub id: i32,
     pub service_type_id: i32,
     pub version: String,
     pub expected_service_state_id: i32,
