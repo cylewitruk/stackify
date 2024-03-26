@@ -2,8 +2,7 @@ use color_eyre::Result;
 use console::style;
 
 use crate::{
-    cli::{error, info, success},
-    context::CliContext,
+    cli::{error, info, success, context::CliContext},
     util::FilterByMinMaxEpoch,
 };
 

@@ -1,8 +1,10 @@
 #![allow(dead_code)]
 
 use std::cell::RefCell;
+use std::collections::HashMap;
 
 use color_eyre::eyre::bail;
+use color_eyre::eyre::{Error, Report};
 use color_eyre::eyre::Result;
 use diesel::connection::SimpleConnection;
 use diesel::prelude::*;
@@ -35,6 +37,30 @@ impl AppDb {
 
 /// Environments
 impl AppDb {
+    pub fn get_environment_by_name(&self, name: &str) -> Result<Environment> {
+        environment::table
+            .filter(environment::name.eq(name))
+            .first(&mut *self.conn.borrow_mut())
+            .map_err(|e| e.into())
+    }
+
+    pub fn update_environment_epochs(&self, epochs: HashMap<i32, i32>) -> Result<()> {
+        let conn = &mut *self.conn.borrow_mut();
+
+        conn.transaction(|tx| {
+            for (env_epoch_id, height) in epochs {
+                diesel::update(environment_epoch::table)
+                    .filter(environment_epoch::id.eq(env_epoch_id))
+                    .set(environment_epoch::starts_at_block_height.eq(height))
+                    .execute(tx)
+                    .map_err(Report::from)?;
+            }
+            Ok::<(), color_eyre::eyre::Error>(())
+        })?;
+
+        Ok(())
+    }
+    
     pub fn list_environments(&self) -> Result<Vec<Environment>> {
         Ok(environment::table
             .order_by(environment::name.asc())
@@ -90,6 +116,12 @@ impl AppDb {
         } else {
             bail!("environment not found")
         }
+    }
+
+    pub fn list_environment_epochs(&self, environment_id: i32) -> Result<Vec<EnvironmentEpoch>> {
+        Ok(environment_epoch::table
+            .filter(environment_epoch::environment_id.eq(environment_id))
+            .get_results::<EnvironmentEpoch>(&mut *self.conn.borrow_mut())?)
     }
 }
 

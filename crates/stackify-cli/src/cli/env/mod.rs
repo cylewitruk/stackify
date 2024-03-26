@@ -3,12 +3,13 @@ use comfy_table::{Cell, Color, ColumnConstraint, Table, Width};
 use console::style;
 use stackify_common::{docker::ListStackifyContainerOpts, EnvironmentName};
 
-use crate::cli::{warn, ERROR, PAD_WIDTH};
-use crate::context::CliContext;
+use crate::cli::{warn, PAD_WIDTH};
+use crate::cli::context::CliContext;
 use crate::util::print::{print_fail, print_ok};
 use crate::util::progressbar::PbWrapper;
 
 use self::args::EnvArgs;
+use self::epoch::exec_epoch;
 use self::service::exec_service;
 
 use super::{error, info};
@@ -16,6 +17,7 @@ use super::{error, info};
 pub mod args;
 pub mod build;
 pub mod service;
+pub mod epoch;
 
 pub fn exec(ctx: &CliContext, args: EnvArgs) -> Result<()> {
     match args.commands {
@@ -28,7 +30,14 @@ pub fn exec(ctx: &CliContext, args: EnvArgs) -> Result<()> {
         args::EnvSubCommands::Down(inner_args) => exec_down(ctx, inner_args),
         args::EnvSubCommands::Build(inner_args) => build::exec(ctx, inner_args),
         args::EnvSubCommands::Service(inner_args) => exec_service(ctx, inner_args),
+        args::EnvSubCommands::Epoch(inner_args) => exec_epoch(ctx, inner_args),
+        args::EnvSubCommands::Set(inner_args) => exec_set(ctx, inner_args),
     }
+}
+
+fn exec_set(_ctx: &CliContext, args: args::SetArgs) -> Result<()> {
+    println!("Set environment: {}", args.env_name);
+    Ok(())
 }
 
 fn exec_inspect(_ctx: &CliContext, args: args::InspectArgs) -> Result<()> {
@@ -94,9 +103,9 @@ fn exec_start(ctx: &CliContext, args: args::StartArgs) -> Result<()> {
     // Check if the environment has any services defined. If not, return an error.
     let env = ctx.db.list_environment_services(env_name.as_ref())?;
     if env.is_empty() {
-        println!(
-            "{} The '{}' environment has no services defined, so there is nothing to start.\n",
-            *ERROR, env_name
+        warn(format!(
+            "The '{}' environment has no services defined, so there is nothing to start.\n",
+            env_name)
         );
         println!("Please define at least one service before starting the environment.");
         println!(

@@ -9,7 +9,7 @@ use comfy_table::{Cell, CellAlignment, ColumnConstraint, Table, Width};
 use console::style;
 use regex::Regex;
 
-use crate::context::CliContext;
+use super::context::CliContext;
 
 #[derive(Debug, Args)]
 pub struct InfoArgs {

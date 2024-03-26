@@ -1,6 +1,6 @@
 use clap::{CommandFactory, Parser};
 use color_eyre::eyre::{eyre, Result};
-use context::CliContext;
+use cli::context::CliContext;
 use db::{apply_db_migrations, AppDb};
 use diesel::{Connection, SqliteConnection};
 use stackify_common::docker::stackify_docker::StackifyDocker;
@@ -8,7 +8,6 @@ use stackify_common::docker::stackify_docker::StackifyDocker;
 use crate::cli::{Cli, Commands};
 
 mod cli;
-mod context;
 mod db;
 mod util;
 
@@ -35,6 +34,9 @@ fn main() -> Result<()> {
             }
             Commands::Completions { shell } => {
                 shell.generate(&mut Cli::command(), &mut std::io::stdout());
+            },
+            Commands::MarkdownHelp => {
+                clap_markdown::print_help_markdown::<Cli>();
             }
         },
         Err(e) => {

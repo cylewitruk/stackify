@@ -15,7 +15,7 @@ use stackify_common::{
 use tar::Archive;
 
 use crate::{
-    context::CliContext,
+    cli::context::CliContext,
     util::{new_progressbar, print::print_bytes, progressbar::PbWrapper},
 };
 

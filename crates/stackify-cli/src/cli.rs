@@ -1,14 +1,11 @@
 use std::fmt::Display;
 
-use anstyle::RgbColor;
 use clap::builder::styling::{Effects, Styles};
 use clap::{command, Parser, Subcommand};
 use clap_complete::Shell;
 use clap_verbosity_flag::Verbosity;
 use color_eyre::eyre::Result;
-use console::{style, StyledObject};
-use lazy_static::lazy_static;
-use owo_colors::OwoColorize;
+//use owo_colors::OwoColorize;
 
 use crate::cli::theme::ThemedObject;
 
@@ -28,19 +25,12 @@ pub mod init;
 pub mod network;
 pub mod show;
 pub mod theme;
+pub mod context;
 
 pub mod clap_color_flag;
 pub mod clap_verbosity_flag;
 
 pub const PAD_WIDTH: usize = 40;
-
-lazy_static! {
-    pub static ref INFO: StyledObject<&'static str> = style("Info").blue().bold();
-    pub static ref WARN: StyledObject<&'static str> = style("Warning").yellow().bold();
-    pub static ref ERROR: StyledObject<&'static str> = style("Error").red().bold();
-    pub static ref SUCCESS: StyledObject<&'static str> = style("Success").green().bold();
-    pub static ref FINISHED: StyledObject<&'static str> = style("Finished").green().bold();
-}
 
 #[allow(dead_code)]
 pub fn error(msg: impl AsRef<str> + Display) {
@@ -83,7 +73,7 @@ const ABOUT: &str = r#"  ____  _             _    _  __
     long_about = ABOUT,
     styles=styles(),
     max_term_width = 100,
-    next_line_help = true
+    //next_line_help = true
 )]
 pub struct Cli {
     #[command(subcommand)]
@@ -129,6 +119,8 @@ pub enum Commands {
         #[arg(value_enum)]
         shell: clap_complete_command::Shell,
     },
+    #[clap(hide = true)]
+    MarkdownHelp
 }
 
 fn styles() -> Styles {
@@ -140,10 +132,13 @@ fn styles() -> Styles {
     // Cyan: 71, 158, 194
     // Gray: 152, 152, 157
     Styles::styled()
-        .header(owo_to_anstyle_color(theme().palette().red).on_default() | Effects::BOLD)
-        .usage(owo_to_anstyle_color(theme().palette().red).on_default() | Effects::BOLD)
-        .literal(owo_to_anstyle_color(theme().palette().blue).on_default())
-        .placeholder(owo_to_anstyle_color(theme().palette().green).on_default() | Effects::BOLD)
+        .header(owo_to_anstyle_color(theme().palette().green).on_default() | Effects::BOLD)
+        .usage(owo_to_anstyle_color(theme().palette().green).on_default() | Effects::BOLD)
+        .literal(owo_to_anstyle_color(theme().palette().cyan).on_default())
+        .invalid(owo_to_anstyle_color(theme().palette().red).on_default())
+        .valid(owo_to_anstyle_color(theme().palette().green).on_default())
+        .error(owo_to_anstyle_color(theme().palette().red).on_default() | Effects::BOLD)
+        .placeholder(owo_to_anstyle_color(theme().palette().cyan).on_default())
 }
 
 fn owo_to_anstyle_color(color: owo_colors::Rgb) -> anstyle::RgbColor {

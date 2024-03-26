@@ -1,7 +1,7 @@
 use clap::Args;
 use color_eyre::eyre::Result;
 
-use crate::context::CliContext;
+use crate::cli::context::CliContext;
 
 #[derive(Debug, Args)]
 pub struct CleanArgs {}

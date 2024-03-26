@@ -1,3 +1,4 @@
+use comfy_table::{presets, Table};
 use lazy_static::lazy_static;
 use owo_colors::{style, OwoColorize, Rgb, Style, Styled};
 
@@ -23,6 +24,19 @@ pub trait ThemedObject {
     fn warning(&self) -> Styled<&Self>;
     fn error(&self) -> Styled<&Self>;
     fn success(&self) -> Styled<&Self>;
+    fn table_header(&self) -> Styled<&Self>;
+
+    fn bold(&self) -> Styled<&Self> where Self: Sized {
+        OwoColorize::style(self, style().bold())
+    }
+
+    fn italic(&self) -> Styled<&Self> where Self: Sized {
+        OwoColorize::style(self, style().italic())
+    }
+
+    fn underline(&self) -> Styled<&Self> where Self: Sized {
+        OwoColorize::style(self, style().underline())
+    }
 }
 
 impl<T: OwoColorize> ThemedObject for T {
@@ -78,6 +92,11 @@ impl<T: OwoColorize> ThemedObject for T {
         self.style(THEME.success)
     }
 
+    fn table_header(&self) -> Styled<&Self> {
+        self.style(THEME.table_header)
+    }
+
+
 }
 
 pub struct ColorPalette {
@@ -122,6 +141,7 @@ pub struct Theme {
     pub warning: Style,
     pub error: Style,
     pub success: Style,
+    pub table_header: Style,
 }
 
 impl Default for Theme {
@@ -150,7 +170,14 @@ impl Theme {
             warning: style().fg_rgb::<205, 172, 8>(),
             error: style().fg_rgb::<204, 55, 46>(),
             success: style().fg_rgb::<38, 164, 57>(),
+            table_header: style().color(palette.cyan).bold(),
             palette,
         }
     }
+}
+
+pub fn new_table(headers: &[&str]) -> Table {
+    let mut table = Table::new();
+    table.load_preset(presets::UTF8_FULL);
+    table
 }

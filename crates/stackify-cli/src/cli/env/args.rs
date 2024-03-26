@@ -38,6 +38,59 @@ pub enum EnvSubCommands {
     /// Commands for managing environments' services.
     #[clap(visible_aliases = ["svc"])]
     Service(ServiceArgs),
+    /// Commands for managing environments' epoch configurations.
+    Epoch(EpochArgs),
+    /// Update the environment's configuration. Note that changes made here will
+    /// not affect the environment until it is restarted.
+    Set(SetArgs)
+}
+
+#[derive(Debug, Args)]
+pub struct SetArgs {
+    /// The name of the environment.
+    #[arg(
+        required = false,
+        value_name = "NAME",
+        short = 'e',
+        long = "environment",
+        visible_alias = "env"
+    )]
+    pub env_name: String,
+
+}
+
+#[derive(Debug, Args)]
+pub struct EpochArgs {
+    #[command(subcommand)]
+    pub commands: EpochSubCommands,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum EpochSubCommands {
+    /// Prints the current epoch-map for the specified environment.
+    List(EpochListArgs),
+    /// Modify the epoch-map for the specified environment.
+    Edit(EpochEditArgs)
+}
+
+#[derive(Debug, Args)]
+pub struct EpochListArgs {
+    /// The name of the environment to which the epoch-map belongs.
+    #[arg(
+        required = true,
+        value_name = "ENVIRONMENT",
+    )]
+    pub env_name: String,
+}
+
+#[derive(Debug, Args)]
+pub struct EpochEditArgs {
+    /// The name of the environment to which the epoch-map belongs.
+    #[arg(
+        required = true,
+        value_name = "ENVIRONMENT",
+    )]
+    pub env_name: String,
 }
 
 #[derive(Debug, Args)]
@@ -59,6 +112,9 @@ pub enum ServiceSubCommands {
     /// Displays a list of services for the specified environment.
     #[clap(visible_alias = "ls")]
     List(ServiceListArgs),
+    /// Commands for managing service configuration files. This will provide you
+    /// with an editor to manually edit the configuration file for the specified
+    /// service.
     #[clap(visible_alias = "cfg")]
     Config
 }
@@ -84,11 +140,6 @@ pub struct ServiceInspectArgs {
 
 #[derive(Debug, Args)]
 pub struct ServiceAddArgs {
-    /// The name of the service to add. For more information on the available
-    /// services, see the `stackify config services` command.
-    #[arg(required = true, value_name = "NAME")]
-    pub svc_name: String,
-
     /// Indicates whether or not an interactive prompt should be used for providing
     /// the required information for this command (recommended!). This flag is
     /// set by default.

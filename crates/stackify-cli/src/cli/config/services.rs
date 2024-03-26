@@ -1,10 +1,11 @@
 use crate::db::model::{Epoch, ServiceType, ServiceUpgradePath, ServiceVersion};
-use color_eyre::eyre::{eyre, Result};
+use color_eyre::eyre::{bail, eyre, Result};
 use console::style;
+use inquire::{Select, Text};
 use stackify_common::util::to_alphanumeric_snake;
 
 use crate::{
-    context::CliContext,
+    cli::context::CliContext,
     util::{
         git::{GitTarget, TargetType},
         FilterByServiceType, FilterByServiceVersion, FindByCliName, FindById,
@@ -27,17 +28,49 @@ pub fn exec_services(ctx: &CliContext, args: ServicesArgs) -> Result<()> {
 }
 
 pub fn exec_add_service_version(ctx: &CliContext, args: AddServiceVersionArgs) -> Result<()> {
-    let cli_name = to_alphanumeric_snake(&args.svc_name);
+    let service_types = ctx.db.list_service_types()?;
 
-    let svc_versions = ctx.db.list_service_versions()?;
-    if svc_versions.find_by_cli_name(&cli_name).is_some() {
-        return Err(eyre!(
-            "A service version with the name '{}' already exists",
-            cli_name
-        ));
+    // Collect service type
+    let service_type_names = service_types.iter().map(|st| st.name.clone()).collect::<Vec<_>>();
+    let service_type = Select::new("Select a service type", service_type_names)
+        .prompt()?;
+    let service_type = service_types.iter().find(|st| st.name == service_type)
+        .ok_or(eyre!("Service type not found"))?;
+    
+    // Collect service version
+    let all_service_versions = ctx.db.list_service_versions()?;
+    let service_versions = all_service_versions
+        .filter_by_service_type(service_type.id);
+    let service_version_names = service_versions.iter().map(|sv| sv.version.clone()).collect::<Vec<_>>();
+    let service_version = Select::new("Select a service version", service_version_names)
+        .prompt()?;
+    let service_version_id = service_versions.iter().find(|sv| sv.version == service_version)
+        .ok_or(eyre!("Service version not found"))?;
+
+    if service_type.allow_git_target {
+        let git_target_type = Select::new("What kind of git target do you want to use?", vec!["Tag", "Branch", "Commit hash"])
+            .prompt()?;
+        let git_target = match git_target_type {
+            "Tag" => {
+                Text::new("Enter the git target")
+                    .with_help_message("This is the tag of the 'stacks-core' Github repository from which the service should be built.")
+                    .prompt()?
+            }
+            "Branch" => {
+                Text::new("Enter the git target")
+                    .with_help_message("This is the branch of the 'stacks-core' Github repository from which the service should be built.")
+                    .prompt()?
+            }
+            "Commit hash" => {
+                Text::new("Enter the git target")
+                    .with_help_message("This is the commit hash of the 'stacks-core' Github repository from which the service should be built.")
+                    .prompt()?
+            }
+            _ => bail!("Invalid git target type"),
+        };
     }
 
-    Ok(())
+    todo!()
 }
 
 pub fn exec_remove_service_version(
@@ -46,11 +79,11 @@ pub fn exec_remove_service_version(
 ) -> Result<()> {
     let _cli_name = to_alphanumeric_snake(&args.svc_name);
 
-    Ok(())
+    todo!()
 }
 
 pub fn exec_inspect_service(_ctx: &CliContext) -> Result<()> {
-    Ok(())
+    todo!()
 }
 
 pub fn exec_list_services(ctx: &CliContext) -> Result<()> {

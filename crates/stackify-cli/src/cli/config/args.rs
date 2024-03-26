@@ -93,24 +93,11 @@ pub enum ServiceSubCommands {
 
 #[derive(Debug, Args)]
 pub struct AddServiceVersionArgs {
-    /// The CLI-name of the service to add a version to. This name should be
-    /// alphanumeric and snake-cased, for example: `bitcoin`, `stacks-node`,
-    /// etc. Run `stackify config services list` to see the available services
-    /// and their CLI-names.
-    #[arg(
-        short = 's',
-        long = "service",
-        visible_alias = "svc",
-        required = true,
-        value_name = "SERVICE"
-    )]
-    pub svc_name: String,
-
     /// The version of the service to add, for example: `21.0`, 'PoX-5', etc.
     /// Note that different services types have different constraints regarding
     /// what can be used as a version.
-    #[arg(required = true, value_name = "NAME")]
-    pub name: String,
+    #[arg(required = true, value_name = "VERSION")]
+    pub version: String,
 
     /// The minimum epoch that this service version is compatible with. This
     /// must be a valid epoch name, for example: `2.05`, `2.4`, `3.0`, etc. Note
@@ -138,9 +125,9 @@ pub struct AddServiceVersionArgs {
         long = "git-target",
         help = GIT_TARGET_HELP,
         required_if_eq_any([
-            ("svc_name", "stacks-miner"),
-            ("svc_name", "stacks-follower"),
-            ("svc_name", "stacks-signer")
+            ("version", "stacks-miner"),
+            ("version", "stacks-follower"),
+            ("version", "stacks-signer")
         ])
     )]
     pub git_target: Option<String>,

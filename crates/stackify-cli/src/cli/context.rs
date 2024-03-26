@@ -1,5 +1,4 @@
 use std::path::PathBuf;
-
 use stackify_common::docker::stackify_docker::StackifyDocker;
 
 use crate::db::AppDb;

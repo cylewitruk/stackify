@@ -1,6 +1,6 @@
 use color_eyre::Result;
 
-use crate::context::CliContext;
+use crate::cli::context::CliContext;
 
 use self::{
     args::{ConfigArgs, ConfigSubCommands},
