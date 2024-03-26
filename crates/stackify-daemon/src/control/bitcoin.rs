@@ -23,7 +23,7 @@ impl Monitor {
             warn!("Local Bitcoin miner is expected to be running, but no child process is running. Starting...");
 
             // Call the start-bitcoind-miner.sh script to start the miner.
-            let child = Command::new("/home/stacks/start-bitcoind-miner.sh").spawn()?;
+            let child = Command::new("/stacks/bin/start-bitcoind-miner.sh").spawn()?;
 
             // We didn't get an error, so the process should be running. Set the state to running.
             ctx.db

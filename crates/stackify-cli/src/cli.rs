@@ -1,18 +1,23 @@
 use std::fmt::Display;
 
-use clap::builder::styling::{AnsiColor, Effects, Styles};
+use anstyle::RgbColor;
+use clap::builder::styling::{Effects, Styles};
 use clap::{command, Parser, Subcommand};
 use clap_complete::Shell;
 use clap_verbosity_flag::Verbosity;
 use color_eyre::eyre::Result;
 use console::{style, StyledObject};
 use lazy_static::lazy_static;
+use owo_colors::OwoColorize;
+
+use crate::cli::theme::ThemedObject;
 
 use self::clean::CleanArgs;
 use self::config::args::ConfigArgs;
 use self::env::args::EnvArgs;
 use self::info::InfoArgs;
 use self::init::InitArgs;
+use self::theme::theme;
 
 // Top-level command handlers
 pub mod clean;
@@ -22,6 +27,7 @@ pub mod info;
 pub mod init;
 pub mod network;
 pub mod show;
+pub mod theme;
 
 pub mod clap_color_flag;
 pub mod clap_verbosity_flag;
@@ -38,27 +44,27 @@ lazy_static! {
 
 #[allow(dead_code)]
 pub fn error(msg: impl AsRef<str> + Display) {
-    println!("{} {}", *ERROR, msg);
+    println!("{} {}", "Error:".error().bold(), msg);
 }
 
 #[allow(dead_code)]
 pub fn info(msg: impl AsRef<str> + Display) {
-    println!("{} {}", *INFO, msg);
+    println!("{} {}", "Info:".info().bold(), msg);
 }
 
 #[allow(dead_code)]
 pub fn warn(msg: impl AsRef<str> + Display) {
-    println!("{} {}", *WARN, msg);
+    println!("{} {}", "Warning:".warning().bold(), msg);
 }
 
 #[allow(dead_code)]
 pub fn success(msg: impl AsRef<str> + Display) {
-    println!("{} {}", *SUCCESS, msg);
+    println!("{} {}", "Success:".success().bold(), msg);
 }
 
 #[allow(dead_code)]
 pub fn finished(msg: &str) {
-    println!("{} {}", *FINISHED, msg);
+    println!("{} {}", "Finished:".success().bold(), msg);
 }
 
 const ABOUT: &str = r#"  ____  _             _    _  __       
@@ -77,7 +83,7 @@ const ABOUT: &str = r#"  ____  _             _    _  __
     long_about = ABOUT,
     styles=styles(),
     max_term_width = 100,
-    next_line_help = true,
+    next_line_help = true
 )]
 pub struct Cli {
     #[command(subcommand)]
@@ -126,9 +132,20 @@ pub enum Commands {
 }
 
 fn styles() -> Styles {
+    // Red: 204, 55, 46
+    // Green: 38, 164, 57
+    // Yellow: 205, 172, 8
+    // Blue: 8, 105, 203
+    // Magenta: 150, 71, 191
+    // Cyan: 71, 158, 194
+    // Gray: 152, 152, 157
     Styles::styled()
-        .header(AnsiColor::Red.on_default() | Effects::BOLD)
-        .usage(AnsiColor::Red.on_default() | Effects::BOLD)
-        .literal(AnsiColor::Blue.on_default() | Effects::BOLD)
-        .placeholder(AnsiColor::Green.on_default())
+        .header(owo_to_anstyle_color(theme().palette().red).on_default() | Effects::BOLD)
+        .usage(owo_to_anstyle_color(theme().palette().red).on_default() | Effects::BOLD)
+        .literal(owo_to_anstyle_color(theme().palette().blue).on_default())
+        .placeholder(owo_to_anstyle_color(theme().palette().green).on_default() | Effects::BOLD)
+}
+
+fn owo_to_anstyle_color(color: owo_colors::Rgb) -> anstyle::RgbColor {
+    anstyle::RgbColor(color.0, color.1, color.2)
 }

@@ -38,7 +38,7 @@ fn main() -> Result<()> {
             }
         },
         Err(e) => {
-            println!("{}", e);
+            e.print()?;
         }
     }
 

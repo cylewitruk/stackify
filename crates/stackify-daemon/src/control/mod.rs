@@ -1,6 +1,8 @@
 use diesel::{Connection, SqliteConnection};
 use log::*;
+use reqwest::Url;
 use stackify_common::{ServiceState, ServiceType};
+use tokio::time::Instant;
 use std::time::Duration;
 use tokio::process::Child;
 use tokio::sync::mpsc::{channel, Sender};
@@ -37,6 +39,52 @@ pub struct MonitorData {
     last_state: ServiceState,
     expected_state: ServiceState,
     version: String,
+}
+
+pub enum ServiceData {
+    BitcoinMiner {
+        version: String,
+        rpc_url: Url,
+        rpc_username: String,
+        rpc_password: String,
+        block_speed: u32,
+        last_block_at: Instant,
+        last_block_height: u32,
+        process: Option<Child>
+    },
+    BitcoinFollower {
+        version: String,
+        rpc_url: Url,
+        rpc_username: String,
+        rpc_password: String,
+        process: Option<Child>
+    },
+    StacksMiner {
+        version: String,
+        p2p_url: Url,
+        rpc_url: Url,
+        rpc_username: String,
+        rpc_password: String,
+        last_block_at: Instant,
+        last_block_height: u32,
+        process: Option<Child>
+    },
+    StacksFollower {
+        version: String,
+        rpc_url: Url,
+        rpc_username: String,
+        rpc_password: String,
+        process: Option<Child>
+    },
+    StacksSigner {
+        version: String,
+        rpc_url: Url,
+        rpc_username: String,
+        rpc_password: String,
+        process: Option<Child>
+    },
+    StacksStackerSelf,
+    StacksStackerPool
 }
 
 /// Enum representing the actions that the monitor can take via its mpsc channel.
@@ -121,7 +169,7 @@ impl Monitor {
                 });
 
                 // Pause for a second.
-                let _ = tokio::time::sleep(Duration::from_secs(1));
+                tokio::time::sleep(Duration::from_secs(1)).await;
             }
         });
 
@@ -134,6 +182,7 @@ impl Monitor {
     async fn monitor_task(&self, ctx: &mut MonitorContext) -> Result<()> {
         let services = ctx.db.list_services()?;
 
+        // If we've got more than one local service, something is wrong.
         if services.iter().filter(|s| s.is_local).count() > 1 {
             bail!("more than one local service found in database");
         }

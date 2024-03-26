@@ -38,17 +38,17 @@ env_logger = { workspace = true }
 
 # Console/Terminal/CLI
 console = { workspace = true }
-#crossterm = { workspace = true }
-#ratatui = { workspace = true }
 comfy-table = { workspace = true }
 inquire = "0.7.3"
 indicatif = { version = "0.17.8", features = ["improved_unicode"] }
-anstyle = { workspace = true }
 colorchoice = "1.0.0"
 clap = { workspace = true }
 clap_complete = { workspace = true }
 clap_complete_command = "0.5.1"
 shellwords = { workspace = true }
+anstyle = { workspace = true }
+owo-colors = "4.0.0"
+anstyle-owo-colors = "2.0.0"
 
 # Database
 diesel = { workspace = true }

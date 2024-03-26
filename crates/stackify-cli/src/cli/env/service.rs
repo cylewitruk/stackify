@@ -22,6 +22,9 @@ pub fn exec_service(ctx: &CliContext, args: ServiceArgs) -> Result<()> {
         ServiceSubCommands::List(inner_args) => {
             exec_list(ctx, inner_args)?;
         }
+        ServiceSubCommands::Config => {
+            todo!()
+        }
     }
     Ok(())
 }

@@ -97,6 +97,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8901269c6307e8d93993578286ac0edf7f195079ffff5ebdeea6a59ffb7e36bc"
 
 [[package]]
+name = "anstyle-owo-colors"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3e0d88191a86820dfb558312ad87006721fda7c14a2f4a5b2994117db48bb818"
+dependencies = [
+ "anstyle",
+ "owo-colors 4.0.0",
+]
+
+[[package]]
 name = "anstyle-parse"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -573,7 +583,7 @@ dependencies = [
  "eyre",
  "indenter",
  "once_cell",
- "owo-colors",
+ "owo-colors 3.5.0",
  "tracing-error",
 ]
 
@@ -584,7 +594,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cd6be1b2a7e382e2b98b43b2adcca6bb0e465af0bdd38123873ae61eb17a72c2"
 dependencies = [
  "once_cell",
- "owo-colors",
+ "owo-colors 3.5.0",
  "tracing-core",
  "tracing-error",
 ]
@@ -2059,6 +2069,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c1b04fb49957986fdce4d6ee7a65027d55d4b6d2265e5848bbb507b58ccfdb6f"
 
 [[package]]
+name = "owo-colors"
+version = "4.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "caff54706df99d2a78a5a4e3455ff45448d81ef1bb63c22cd14052ca0e993a3f"
+
+[[package]]
 name = "parking_lot"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2902,6 +2918,7 @@ name = "stackify-cli"
 version = "0.1.0"
 dependencies = [
  "anstyle",
+ "anstyle-owo-colors",
  "bollard",
  "clap",
  "clap_complete",
@@ -2923,6 +2940,7 @@ dependencies = [
  "lazy_static",
  "libc",
  "log",
+ "owo-colors 4.0.0",
  "pathdiff",
  "rand",
  "regex",
@@ -2972,6 +2990,7 @@ dependencies = [
  "diesel_migrations",
  "env_logger",
  "futures-util",
+ "home",
  "log",
  "okapi",
  "reqwest",

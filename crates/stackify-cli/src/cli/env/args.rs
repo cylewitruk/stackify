@@ -59,6 +59,8 @@ pub enum ServiceSubCommands {
     /// Displays a list of services for the specified environment.
     #[clap(visible_alias = "ls")]
     List(ServiceListArgs),
+    #[clap(visible_alias = "cfg")]
+    Config
 }
 
 #[derive(Debug, Args)]
