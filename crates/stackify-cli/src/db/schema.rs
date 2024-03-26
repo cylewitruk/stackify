@@ -109,10 +109,10 @@ table! {
 table! {
     environment_service_action (id) {
         id -> Integer,
-        environment_id -> Integer,
-        service_id -> Integer,
+        environment_service_id -> Integer,
         service_action_type_id -> Integer,
-        at_block_height -> Integer,
+        at_block_height -> Nullable<Integer>,
+        at_epoch_id -> Nullable<Integer>,
         data -> Nullable<Text>,
     }
 }

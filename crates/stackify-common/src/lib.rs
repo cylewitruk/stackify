@@ -112,3 +112,24 @@ pub enum ServiceState {
     Stopped = 2,
     Error = 3,
 }
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
+pub enum ServiceAction {
+    StartContainer = 1,
+    StopContainer = 2,
+    UpgradeService = 3,
+    StartService = 4,
+    StopService = 5,
+    StartNetwork = 6,
+    StopNetwork = 7,
+
+}
+
+
+/*        (1, 'container start', 0, 0),
+        (2, 'container stop', 0, 0),
+        (3, 'upgrade service', 0, 0),
+        (4, 'start service', 0, 0),
+        (5, 'stop service', 1, 0),
+        (6, 'start network', 0, 0),
+        (7, 'stop network', 0, 1) */

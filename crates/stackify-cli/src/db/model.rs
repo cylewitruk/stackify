@@ -113,10 +113,10 @@ pub struct EnvironmentService {
 #[diesel(table_name = environment_service_action)]
 pub struct EnvironmentServiceAction {
     pub id: i32,
-    pub environment_id: i32,
-    pub service_id: i32,
+    pub environment_service_id: i32,
     pub service_action_type_id: i32,
-    pub at_block_height: i32,
+    pub at_block_height: Option<i32>,
+    pub at_epoch_id: Option<i32>,
     pub data: Option<String>,
 }
 

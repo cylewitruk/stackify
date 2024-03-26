@@ -206,15 +206,13 @@ INSERT INTO service_action_type_constraint (service_action_id, allowed_after_ser
 
 CREATE TABLE environment_service_action (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    environment_id INTEGER NOT NULL,
-    service_id INTEGER NOT NULL,
+    environment_service_id INTEGER NOT NULL,
     service_action_type_id INTEGER NOT NULL,
-    at_block_height INTEGER NOT NULL,
+    at_block_height INTEGER NULL,
+    at_epoch_id INTEGER NULL,
     data TEXT NULL,
 
-    UNIQUE (environment_id, service_id, service_action_type_id),
-    FOREIGN KEY (environment_id) REFERENCES environment (id),
-    FOREIGN KEY (service_id) REFERENCES service (id),
+    FOREIGN KEY (environment_service_id) REFERENCES environment_service (id),
     FOREIGN KEY (service_action_type_id) REFERENCES service_action_type (id)
 );
 

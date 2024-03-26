@@ -19,6 +19,8 @@ use crate::{
     util::{new_progressbar, print::print_bytes, progressbar::PbWrapper},
 };
 
+use super::theme::Inquire;
+
 #[derive(Debug, Args)]
 #[group(
     id = "mode", 
@@ -56,7 +58,7 @@ pub fn exec(ctx: &CliContext, args: InitArgs) -> Result<()> {
         false => "~2.3GB",
     };
 
-    let confirm = Confirm::new("This operation can take a while and consume a lot of disk space. Are you sure you want to continue?")
+    let confirm = Inquire::new_confirm("This operation can take a while and consume a lot of disk space. Are you sure you want to continue?")
         .with_default(false)
         .with_help_message(&format!("Estimated disk space usage: {}", disk_space_usage))
         .prompt()?;

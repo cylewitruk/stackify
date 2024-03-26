@@ -17,6 +17,7 @@ use super::{error, info};
 pub mod args;
 pub mod build;
 pub mod service;
+pub mod service_add;
 pub mod epoch;
 
 pub fn exec(ctx: &CliContext, args: EnvArgs) -> Result<()> {

@@ -4,7 +4,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 
 use color_eyre::eyre::bail;
-use color_eyre::eyre::{Error, Report};
+use color_eyre::eyre::Report;
 use color_eyre::eyre::Result;
 use diesel::connection::SimpleConnection;
 use diesel::prelude::*;
@@ -37,6 +37,38 @@ impl AppDb {
 
 /// Environments
 impl AppDb {
+    pub fn add_environment_service(
+        &self,
+        environment_id: i32,
+        service_version_id: i32
+    ) -> Result<EnvironmentService> {
+        Ok(diesel::insert_into(environment_service::table)
+            .values((
+                environment_service::environment_id.eq(environment_id),
+                environment_service::service_version_id.eq(service_version_id),
+            ))
+            .get_result(&mut *self.conn.borrow_mut())?)
+    }
+
+    pub fn add_environment_service_action(
+        &self,
+        environment_service_id: i32,
+        service_action_type_id: i32,
+        at_block_height: Option<i32>,
+        at_epoch_id: Option<i32>,
+    ) -> Result<()> {
+        diesel::insert_into(environment_service_action::table)
+            .values((
+                environment_service_action::environment_service_id.eq(environment_service_id),
+                environment_service_action::service_action_type_id.eq(service_action_type_id),
+                environment_service_action::at_block_height.eq(at_block_height),
+                environment_service_action::at_epoch_id.eq(at_epoch_id),
+            ))
+            .execute(&mut *self.conn.borrow_mut())?;
+
+        Ok(())
+    }
+
     pub fn get_environment_by_name(&self, name: &str) -> Result<Environment> {
         environment::table
             .filter(environment::name.eq(name))
@@ -68,12 +100,32 @@ impl AppDb {
     }
 
     pub fn create_environment(&self, name: &str, bitcoin_block_speed: u32) -> Result<Environment> {
-        Ok(diesel::insert_into(environment::table)
-            .values((
-                environment::name.eq(name),
-                environment::bitcoin_block_speed.eq(bitcoin_block_speed as i32),
-            ))
-            .get_result::<Environment>(&mut *self.conn.borrow_mut())?)
+        let conn = &mut *self.conn.borrow_mut();
+
+        conn.transaction(|tx| {
+            let env = diesel::insert_into(environment::table)
+                .values((
+                    environment::name.eq(name),
+                    environment::bitcoin_block_speed.eq(bitcoin_block_speed as i32),
+                ))
+                .get_result::<Environment>(tx)?;
+
+            let epochs = epoch::table
+                .order_by(epoch::id.asc())
+                .load::<Epoch>(tx)?;
+
+            for epoch in epochs {
+                diesel::insert_into(environment_epoch::table)
+                    .values((
+                        environment_epoch::environment_id.eq(env.id),
+                        environment_epoch::epoch_id.eq(epoch.id),
+                        environment_epoch::starts_at_block_height.eq(epoch.default_block_height),
+                    ))
+                    .execute(tx)?;
+            }
+
+            Ok(env)
+        })
     }
 
     pub fn delete_environment(&self, name: &str) -> Result<()> {
@@ -84,18 +136,19 @@ impl AppDb {
             .optional()?;
 
         if let Some(environment_id) = environment_id {
-            let service_ids = service::table
-                .select(service::id)
-                .filter(service::environment_id.eq(environment_id))
+            let environment_service_ids = environment_service::table
+                .select(environment_service::id)
+                .filter(environment_service::environment_id.eq(environment_id))
                 .load::<i32>(&mut *self.conn.borrow_mut())?;
 
             diesel::delete(
                 environment_service_action::table
-                    .filter(environment_service_action::service_id.eq_any(service_ids)),
+                    .filter(environment_service_action::id.eq_any(environment_service_ids)),
             )
             .execute(&mut *self.conn.borrow_mut())?;
 
-            diesel::delete(service::table.filter(service::environment_id.eq(environment_id)))
+            diesel::delete(environment_service::table
+                .filter(environment_service::environment_id.eq(environment_id)))
                 .execute(&mut *self.conn.borrow_mut())?;
         }
 
