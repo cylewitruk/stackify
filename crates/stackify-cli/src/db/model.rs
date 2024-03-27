@@ -42,6 +42,7 @@ pub struct EnvironmentEpoch {
 pub struct ServiceType {
     pub id: i32,
     pub name: String,
+    pub cli_name: String,
     pub allow_minimum_epoch: bool,
     pub allow_maximum_epoch: bool,
     pub allow_git_target: bool,
@@ -72,19 +73,6 @@ pub struct ServiceUpgradePath {
 }
 
 #[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, QueryableByName)]
-#[diesel(table_name = service)]
-pub struct Service {
-    pub id: i32,
-    pub name: String,
-    pub created_at: PrimitiveDateTime,
-    pub updated_at: PrimitiveDateTime,
-    pub environment_id: i32,
-    pub service_type_id: i32,
-    pub start_at_block_height: i32,
-    pub stop_at_block_height: Option<i32>,
-}
-
-#[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, QueryableByName)]
 #[diesel(table_name = service_action_type)]
 pub struct ServiceActionType {
     pub id: i32,
@@ -107,6 +95,8 @@ pub struct EnvironmentService {
     pub id: i32,
     pub environment_id: i32,
     pub service_version_id: i32,
+    pub name: String,
+    pub comment: Option<String>,
 }
 
 #[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, QueryableByName)]

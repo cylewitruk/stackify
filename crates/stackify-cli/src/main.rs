@@ -10,6 +10,7 @@ use crate::cli::{Cli, Commands};
 mod cli;
 mod db;
 mod util;
+mod includes;
 
 fn main() -> Result<()> {
     let context = initialize()?;
@@ -74,6 +75,8 @@ fn initialize() -> Result<CliContext> {
     std::fs::create_dir_all(&data_dir)?;
     let bin_dir = config_dir.join("bin");
     std::fs::create_dir_all(&bin_dir)?;
+    let assets_dir = config_dir.join("assets");
+    std::fs::create_dir_all(&assets_dir)?;
 
     let mut connection =
         SqliteConnection::establish(&db_file.to_string_lossy()).map_err(|e| eyre!(e))?;
@@ -90,6 +93,7 @@ fn initialize() -> Result<CliContext> {
         data_dir,
         bin_dir,
         tmp_dir,
+        assets_dir,
         db_file,
         db: app_db,
         user_id: uid,

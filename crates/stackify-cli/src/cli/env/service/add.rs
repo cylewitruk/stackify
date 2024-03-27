@@ -1,9 +1,27 @@
+use clap::Args;
 use color_eyre::Result;
-use stackify_common::{EnvironmentName, ServiceAction};
+use stackify_common::{util::random_hex, EnvironmentName, ServiceAction};
 
 use crate::{cli::{context::CliContext, theme::ThemedObject}, db::model::Epoch, util::FilterByServiceType};
 
-use super::args::ServiceAddArgs;
+#[derive(Debug, Args)]
+pub struct ServiceAddArgs {
+    /// Indicates whether or not an interactive prompt should be used for providing
+    /// the required information for this command (recommended!). This flag is
+    /// set by default.
+    #[arg(required = false, short = 'i', default_value = "true")]
+    pub interactive: bool,
+
+    /// The name of the environment to which the service should be added.
+    #[arg(
+        required = true,
+        value_name = "NAME",
+        short = 'e',
+        long = "environment",
+        visible_alias = "env"
+    )]
+    pub env_name: String,
+}
 
 pub fn exec(ctx: &CliContext, args: ServiceAddArgs) -> Result<()> {
     let env_name = EnvironmentName::new(&args.env_name)?;
@@ -25,7 +43,7 @@ pub fn exec(ctx: &CliContext, args: ServiceAddArgs) -> Result<()> {
     let all_service_versions = ctx.db.list_service_versions()?;
     let service_versions = all_service_versions
         .filter_by_service_type(service_type.id);
-    let service_version = cliclack::select(&format!("Which version of '{}'?", service_type.name))
+    let service_version = cliclack::select("Which version?")
         .items(&service_versions.into_iter().map(|sv| (sv.clone(), &sv.version, "")).collect::<Vec<_>>())
         .interact()?;
 
@@ -91,10 +109,22 @@ pub fn exec(ctx: &CliContext, args: ServiceAddArgs) -> Result<()> {
         }
     };
 
+    let comment: String = cliclack::input("Comment:")
+        .placeholder("Write a short comment about this service")
+        .required(false)
+        .interact()?;
+
+    random_hex(4);
+    let name = format!("{}-{}-{}", 
+        env_name.to_string(), 
+        service_type.cli_name, 
+        random_hex(4));
+
     cliclack::log::success(format!("{}\n{}", 
         "Configuration complete!".green().bold(), 
         "Please review the above and confirm the addition of the service to the environment.
     "))?;
+
     let add = cliclack::confirm("Add the above service to the environment?")
         .interact()?;
 
@@ -104,7 +134,13 @@ pub fn exec(ctx: &CliContext, args: ServiceAddArgs) -> Result<()> {
     }
 
     // Add the service
-    let env_service = ctx.db.add_environment_service(env.id, service_version.id)?;
+    let env_service = ctx.db.add_environment_service(
+        env.id, 
+        service_version.id,
+        &name,
+        Some(&comment)
+    )?;
+
     if let StartAt::BlockHeight(block_height) = start_at {
         ctx.db.add_environment_service_action(
             env_service.id,
@@ -122,7 +158,11 @@ pub fn exec(ctx: &CliContext, args: ServiceAddArgs) -> Result<()> {
     }
 
     //cliclack::log::success("Service added successfully!")?;
-    cliclack::outro(format!("The service has been added to the environment '{}'.", env_name))?;
+    cliclack::outro(format!(
+        "The service {} has been added to the environment {}.",
+        name.bold(),
+        env_name.bold())
+    )?;
 
     Ok(())
 }

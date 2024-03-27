@@ -1,5 +1,7 @@
 use clap::{Args, Subcommand};
 
+use super::service::add::ServiceAddArgs;
+
 #[derive(Debug, Args)]
 pub struct EnvArgs {
     #[command(subcommand)]
@@ -130,25 +132,6 @@ pub struct ServiceInspectArgs {
     /// you will receive an error.
     #[arg(
         required = false,
-        value_name = "NAME",
-        short = 'e',
-        long = "environment",
-        visible_alias = "env"
-    )]
-    pub env_name: String,
-}
-
-#[derive(Debug, Args)]
-pub struct ServiceAddArgs {
-    /// Indicates whether or not an interactive prompt should be used for providing
-    /// the required information for this command (recommended!). This flag is
-    /// set by default.
-    #[arg(required = false, short = 'i', default_value = "true")]
-    pub interactive: bool,
-
-    /// The name of the environment to which the service should be added.
-    #[arg(
-        required = true,
         value_name = "NAME",
         short = 'e',
         long = "environment",

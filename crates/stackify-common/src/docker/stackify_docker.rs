@@ -1,3 +1,4 @@
+use std::hash::Hash;
 use std::io::Write;
 use std::{collections::HashMap, path::Path};
 
@@ -24,8 +25,7 @@ use super::{
     BuildInfo, BuildStackifyBuildImage, BuildStackifyRuntimeImage, ContainerService,
     ContainerState, CreateContainerResult, DockerNetwork, DockerVersion, Label,
     ListStackifyContainerOpts, NewStacksNetworkResult, Progress, StackifyContainer, StackifyImage,
-    StacksLabel, TarAppend, STACKIFY_BUILD_DOCKERFILE, STACKIFY_CARGO_CONFIG,
-    STACKIFY_RUN_DOCKERFILE,
+    StacksLabel, TarAppend
 };
 
 /// A Docker client for Stackify which also includes a Tokio runtime for
@@ -99,6 +99,50 @@ impl StackifyDocker {
 }
 
 impl StackifyDocker {
+    pub fn create_stackify_build_container<P: AsRef<Path>>(
+        &self, 
+        bin_dir: &P, 
+        entrypoint: &[u8]
+    ) -> Result<CreateContainerResult> {
+        let container_name = "stackify-build";
+        let opts = CreateContainerOptions {
+            name: container_name.to_string(),
+            ..Default::default()
+        };
+
+        let labels = vec![
+            StacksLabel(Label::Stackify, String::new()).into(),
+        ]
+        .into_iter()
+        .collect::<HashMap<String, String>>();
+
+        let mut volumes: HashMap<String, HashMap<(), ()>> = HashMap::new();
+        volumes.insert(format!("{}:~/.stackify/bin", bin_dir.as_ref().display()), HashMap::new());
+        volumes.insert(format!("{}/build-entrypoint.sh:/entrypoint.sh", bin_dir.as_ref().display()), HashMap::new());
+
+        self.upload_ephemeral_file_to_container(container_name, 
+            Path::new("/entrypoint.sh"), 
+            entrypoint
+        )?;
+
+        let config = Config {
+            image: Some("stackify-build:latest".to_string()),
+            hostname: Some(container_name.to_string()),
+            volumes: Some(volumes),
+            entrypoint: Some(vec!["/entrypoint.sh".into()]),
+            labels: Some(labels),
+            ..Default::default()
+        };
+
+        self.runtime.block_on(async {
+            let container = self.docker.create_container(Some(opts), config).await?;
+            Ok(CreateContainerResult {
+                id: container.id,
+                warnings: container.warnings,
+            })
+        })
+    }
+
     pub fn create_environment_container(
         &self,
         environment_name: &EnvironmentName,
@@ -233,8 +277,8 @@ impl StackifyDocker {
         build: BuildStackifyBuildImage,
     ) -> Result<impl Stream<Item = Result<BuildInfo>> + Unpin + '_> {
         let mut tar = tar::Builder::new(Vec::new());
-        tar.append_data2("Dockerfile.build", STACKIFY_BUILD_DOCKERFILE.as_bytes())?;
-        tar.append_data2("cargo-config.toml", STACKIFY_CARGO_CONFIG.as_bytes())?;
+        tar.append_data2("Dockerfile.build", build.stackify_build_dockerfile)?;
+        tar.append_data2("cargo-config.toml", build.stackify_cargo_config)?;
         let archive = tar.into_inner()?;
 
         let mut c = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
@@ -297,7 +341,7 @@ impl StackifyDocker {
         build: BuildStackifyRuntimeImage,
     ) -> Result<impl Stream<Item = Result<BuildInfo>> + Unpin + '_> {
         let mut tar = tar::Builder::new(Vec::new());
-        tar.append_data2("Dockerfile.runtime", STACKIFY_RUN_DOCKERFILE.as_bytes())?;
+        tar.append_data2("Dockerfile.runtime", build.stackify_runtime_dockerfile)?;
         let archive = tar.into_inner()?;
 
         let mut c = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());

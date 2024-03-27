@@ -8,7 +8,7 @@ use crate::{
     cli::context::CliContext,
     util::{
         git::{GitTarget, TargetType},
-        FilterByServiceType, FilterByServiceVersion, FindByCliName, FindById,
+        FilterByServiceType, FilterByServiceVersion, FindById,
     },
 };
 

@@ -8,9 +8,9 @@ pub mod stackify_docker;
 #[cfg(test)]
 pub mod tests;
 
-pub const STACKIFY_BUILD_DOCKERFILE: &str = include_str!("../../../../assets/Dockerfile.build");
-pub const STACKIFY_RUN_DOCKERFILE: &str = include_str!("../../../../assets/Dockerfile.runtime");
-pub const STACKIFY_CARGO_CONFIG: &str = include_str!("../../../../assets/cargo-config.toml");
+// pub const STACKIFY_BUILD_DOCKERFILE: &str = include_str!("../../../../assets/Dockerfile.build");
+// pub const STACKIFY_RUN_DOCKERFILE: &str = include_str!("../../../../assets/Dockerfile.runtime");
+// pub const STACKIFY_CARGO_CONFIG: &str = include_str!("../../../../assets/cargo-config.toml");
 
 #[derive(Debug)]
 pub struct NewStacksNetworkResult {
@@ -143,11 +143,13 @@ pub struct DockerNetwork {
 }
 
 #[derive(Debug)]
-pub struct BuildStackifyBuildImage {
+pub struct BuildStackifyBuildImage<'a> {
     pub user_id: u32,
     pub group_id: u32,
     pub bitcoin_version: String,
     pub pre_compile: bool,
+    pub stackify_build_dockerfile: &'a [u8],
+    pub stackify_cargo_config: &'a [u8],
 }
 
 pub struct StackifyContainer {
@@ -158,9 +160,10 @@ pub struct StackifyContainer {
     pub status_readable: String,
 }
 
-pub struct BuildStackifyRuntimeImage {
+pub struct BuildStackifyRuntimeImage<'a> {
     pub user_id: u32,
     pub group_id: u32,
+    pub stackify_runtime_dockerfile: &'a [u8],
 }
 
 pub struct BuildInfo {

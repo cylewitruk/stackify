@@ -40,12 +40,16 @@ impl AppDb {
     pub fn add_environment_service(
         &self,
         environment_id: i32,
-        service_version_id: i32
+        service_version_id: i32,
+        name: &str,
+        comment: Option<&str>
     ) -> Result<EnvironmentService> {
         Ok(diesel::insert_into(environment_service::table)
             .values((
                 environment_service::environment_id.eq(environment_id),
                 environment_service::service_version_id.eq(service_version_id),
+                environment_service::name.eq(name),
+                environment_service::comment.eq(comment),
             ))
             .get_result(&mut *self.conn.borrow_mut())?)
     }
@@ -180,12 +184,6 @@ impl AppDb {
 
 /// Configuration
 impl AppDb {
-    pub fn list_services(&self) -> Result<Vec<Service>> {
-        Ok(service::table
-            .order_by(service::name.asc())
-            .load(&mut *self.conn.borrow_mut())?)
-    }
-
     pub fn list_service_types(&self) -> Result<Vec<ServiceType>> {
         Ok(service_type::table
             .order_by(service_type::name.asc())

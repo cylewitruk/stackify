@@ -39,6 +39,7 @@ table! {
     service_type (id) {
         id -> Integer,
         name -> Text,
+        cli_name -> Text,
         allow_minimum_epoch -> Bool,
         allow_maximum_epoch -> Bool,
         allow_git_target -> Bool,
@@ -70,19 +71,6 @@ table! {
 }
 
 table! {
-    service (id) {
-        id -> Integer,
-        name -> Text,
-        created_at -> Timestamp,
-        updated_at -> Timestamp,
-        environment_id -> Integer,
-        service_type_id -> Integer,
-        start_at_block_height -> Integer,
-        stop_at_block_height -> Nullable<Integer>,
-    }
-}
-
-table! {
     service_action_type (id) {
         id -> Integer,
         name -> Text,
@@ -103,6 +91,8 @@ table! {
         id -> Integer,
         environment_id -> Integer,
         service_version_id -> Integer,
+        name -> Text,
+        comment -> Nullable<Text>,
     }
 }
 
@@ -147,7 +137,6 @@ allow_tables_to_appear_in_same_query!(
     service_type,
     service_version,
     service_upgrade_path,
-    service,
     service_action_type,
     service_action_type_constraint,
     environment_service_action,

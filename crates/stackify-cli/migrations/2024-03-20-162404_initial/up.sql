@@ -57,22 +57,41 @@ CREATE TABLE environment_epoch (
 CREATE TABLE service_type (
     id INTEGER PRIMARY KEY,
     name TEXT NOT NULL,
+    cli_name TEXT NOT NULL,
     allow_minimum_epoch BOOLEAN NOT NULL DEFAULT 1,
     allow_maximum_epoch BOOLEAN NOT NULL DEFAULT 1,
     allow_git_target BOOLEAN NOT NULL DEFAULT 1
 ) WITHOUT ROWID;
 
-INSERT INTO service_type (id, name, allow_git_target) 
-    VALUES (0, 'Bitcoin Miner', 0);
-INSERT INTO service_type (id, name, allow_git_target) 
-    VALUES (1, 'Bitcoin Follower', 0);
-INSERT INTO service_type (id, name) VALUES (2, 'Stacks Miner');
-INSERT INTO service_type (id, name) VALUES (3, 'Stacks Follower');
-INSERT INTO service_type (id, name) VALUES (4, 'Stacks Signer'); -- Minimum epoch 2.5
-INSERT INTO service_type (id, name, allow_git_target) 
-    VALUES (5, 'Stacks Stacker (Self)', 0);
-INSERT INTO service_type (id, name, allow_git_target) 
-    VALUES (6, 'Stacks Stacker (Pool)', 0);
+INSERT INTO service_type (id, name, cli_name, allow_git_target)
+    VALUES (0, 'Bitcoin Miner', 'bitcoin-miner' 0);
+INSERT INTO service_type (id, name, cli_name, allow_git_target)
+    VALUES (1, 'Bitcoin Follower', 'bitcoin-follower', 0);
+INSERT INTO service_type (id, name, cli_name)
+    VALUES (2, 'Stacks Miner', 'stacks-miner');
+INSERT INTO service_type (id, name, cli_name)
+    VALUES (3, 'Stacks Follower', 'stacks-follower');
+INSERT INTO service_type (id, name, cli_name)
+    VALUES (4, 'Stacks Signer', 'stacks-signer'); -- Minimum epoch 2.5
+INSERT INTO service_type (id, name, cli_name, allow_git_target)
+    VALUES (5, 'Stacks Stacker (Self)', 'stacks-stacker-self', 0);
+INSERT INTO service_type (id, name, cli_name, allow_git_target) 
+    VALUES (6, 'Stacks Stacker (Pool)', 'stacks-stacker-pool', 0);
+
+-- Default service configuration file templates.
+-- These will be populated by the application upon init since we use actual
+-- files as the source.
+CREATE TABLE service_config (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    service_type_id INTEGER NOT NULL,
+    filename TEXT NOT NULL,
+    destination_dir TEXT NOT NULL,
+    description TEXT NOT NULL,
+    default_contents TEXT NOT NULL,
+
+    UNIQUE (service_type_id, name),
+    FOREIGN KEY (service_type_id) REFERENCES service_type (id)
+) WITHOUT ROWID;
 
 CREATE TABLE service_version (
     id INTEGER PRIMARY KEY,
@@ -133,25 +152,12 @@ INSERT INTO service_upgrade_path (id, name, service_type_id, from_service_versio
 INSERT INTO service_upgrade_path (id, name, service_type_id, from_service_version_id, to_service_version_id)
     VALUES (1, 'Stacks Follower: 2.4 → Nakamoto', 3, 4, 5);
 
-CREATE TABLE service (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    environment_id INTEGER NOT NULL,
-    service_type_id INTEGER NOT NULL,
-    start_at_block_height INTEGER NOT NULL DEFAULT 0,
-    stop_at_block_height INTEGER NULL,
-
-    UNIQUE (environment_id, name),
-    FOREIGN KEY (environment_id) REFERENCES environment (id),
-    FOREIGN KEY (service_type_id) REFERENCES service_type (id)
-);
-
 CREATE TABLE environment_service (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     environment_id INTEGER NOT NULL,
     service_version_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    comment TEXT NULL,
 
     UNIQUE (environment_id, service_version_id),
     FOREIGN KEY (environment_id) REFERENCES environment (id),
@@ -218,15 +224,13 @@ CREATE TABLE environment_service_action (
 
 CREATE TABLE environment_container (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    environment_id INTEGER NOT NULL,
+    environment_service_id INTEGER NOT NULL,
     container_id TEXT NOT NULL,
-    service_id INTEGER NOT NULL,
     service_version_id INTEGER NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
-    UNIQUE (environment_id, container_id),
-    FOREIGN KEY (environment_id) REFERENCES environment (id),
-    FOREIGN KEY (service_id) REFERENCES service (id),
+    UNIQUE (environment_service_id, container_id),
+    FOREIGN KEY (environment_service_id) REFERENCES environment_service (id),
     FOREIGN KEY (service_version_id) REFERENCES service_version (id)
 );
 

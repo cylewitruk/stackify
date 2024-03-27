@@ -1,0 +1,39 @@
+[node]
+rpc_bind = "0.0.0.0:20443"
+p2p_bind = "0.0.0.0:20444"
+local_peer_seed = "{{local_peer_seed}}"
+prometheus_bind = "prometheus:4000"
+pox_sync_sample_secs = {{pox_sync_sample_secs}}
+wait_time_for_microblocks = {{wait_time_for_microblocks}}
+working_dir = "/stacks/data"
+
+{{#if miner}}
+seed = "{{seed}}"
+miner = true
+{{/if}}
+
+[burnchain]
+chain = "bitcoin"
+mode = "krypton"
+peer_host = "bitcoin-node"
+username = "bitcoin"
+password = "bitcoin"
+rpc_port = 18443
+peer_port = 18444
+
+{{#each account as |a|}}
+# "mnemonic": "{{a.mnemonic}}",
+# "privateKey": "{{a.privateKey}}",
+# "btcAddress": "{{a.btcAddress}}",
+[[ustx_balance]]
+address = "{{a.address}}"
+amount = {{a.amount}}
+
+{{/each}}
+
+{{#each epoch as |e|}}
+[[burnchain.epochs]]
+epoch_name = "{{e.name}}"
+start_height = {{e.start_height}}
+
+{{/each}}

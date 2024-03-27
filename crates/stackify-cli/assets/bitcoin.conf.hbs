@@ -1,0 +1,39 @@
+regtest=1 #chain=regtest
+daemon=0
+
+[regtest]
+printtoconsole=1
+disablewallet=0
+txindex=1
+coinstatsindex=1
+
+# Specify a non-default location to store blockchain and other data.
+datadir=/stacks/bitcoin
+
+# [network]
+# bind=0.0.0.0:18444
+discover=0
+dns=0
+dnsseed=0
+listenonion=0
+
+# [rpc]
+deprecatedrpc=serialversion
+deprecatedrpc=create_bdb
+rpcserialversion=0
+# Accept command line and JSON-RPC commands.
+server=1
+# Accept public REST requests.
+rest=1
+rpcbind=0.0.0.0:18443
+rpcallowip=0.0.0.0/0
+rpcallowip=::/0
+rpcconnect=bitcoin-node
+rpcuser=bitcoin
+rpcpassword=bitcoin
+rpcwallet=default
+
+# [wallet]
+addresstype=legacy
+changetype=legacy
+fallbackfee=0.00001

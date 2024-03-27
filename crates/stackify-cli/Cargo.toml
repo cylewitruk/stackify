@@ -20,6 +20,8 @@ dyn-fmt = "0.4.0"
 regex = { workspace = true }
 lazy_static = { workspace = true }
 convert_case = "0.6.0"
+handlebars = "5.1.2"
+rust-embed="8.3.0"
 
 # Error Handling
 color-eyre = { workspace = true }
@@ -41,6 +43,7 @@ console = { workspace = true }
 shellwords = { workspace = true }
 colorchoice = "1.0.0"
 textwrap = "0.16.1"
+scrawl = "2.0.0"
 ### Clap
 clap = { workspace = true }
 clap_complete = { workspace = true }

@@ -1,11 +1,10 @@
-use std::{borrow::Cow, fs::File, io::BufReader};
+use std::{borrow::Cow, fs::{File, Permissions}, io::{BufReader, Write}, os::unix::fs::PermissionsExt};
 
 use clap::Args;
 use color_eyre::Result;
 use console::style;
 use flate2::bufread::GzDecoder;
 use futures_util::StreamExt;
-use inquire::Confirm;
 use regex::Regex;
 use stackify_common::{
     docker::{BuildStackifyBuildImage, BuildStackifyRuntimeImage},
@@ -15,19 +14,12 @@ use stackify_common::{
 use tar::Archive;
 
 use crate::{
-    cli::context::CliContext,
-    util::{new_progressbar, print::print_bytes, progressbar::PbWrapper},
+    cli::context::CliContext, includes::{BITCOIN_CONF, BITCOIN_ENTRYPOINT, STACKIFY_BUILD_DOCKERFILE, STACKIFY_BUILD_ENTRYPOINT, STACKIFY_CARGO_CONFIG, STACKIFY_RUN_DOCKERFILE}, util::{new_progressbar, print::print_bytes, progressbar::PbWrapper}
 };
 
 use super::theme::Inquire;
 
 #[derive(Debug, Args)]
-#[group(
-    id = "mode", 
-    required = false,
-    args = ["download_only", "build_only"],
-    multiple = false
-)]
 pub struct InitArgs {
     /// Specify the Bitcoin Core version to download.
     #[arg(long, default_value = "26.0", required = false)]
@@ -45,11 +37,13 @@ pub struct InitArgs {
     #[arg(long, default_value = "false", required = false)]
     pub pre_compile: bool,
     /// Only download runtime binaries, do not build the images.
-    #[arg(long, default_value = "false", required = false, group = "mode")]
-    pub download_only: bool,
+    #[arg(long, default_value = "false", required = false)]
+    pub no_download: bool,
     /// Only build the images, do not download runtime binaries.
-    #[arg(long, default_value = "false", required = false, group = "mode")]
-    pub build_only: bool,
+    #[arg(long, default_value = "false", required = false)]
+    pub no_build: bool,
+    #[arg(long, default_value = "false", required = false)]
+    pub no_assets: bool,
 }
 
 pub fn exec(ctx: &CliContext, args: InitArgs) -> Result<()> {
@@ -58,17 +52,25 @@ pub fn exec(ctx: &CliContext, args: InitArgs) -> Result<()> {
         false => "~2.3GB",
     };
 
-    let confirm = Inquire::new_confirm("This operation can take a while and consume a lot of disk space. Are you sure you want to continue?")
-        .with_default(false)
-        .with_help_message(&format!("Estimated disk space usage: {}", disk_space_usage))
-        .prompt()?;
+    if !args.no_build {
+        let confirm = Inquire::new_confirm("This operation can take a while and consume a lot of disk space. Are you sure you want to continue?")
+            .with_default(false)
+            .with_help_message(&format!("Estimated disk space usage: {}", disk_space_usage))
+            .prompt()?;
 
-    if !confirm {
-        println!("Aborted.");
-        return Ok(());
+        if !confirm {
+            println!("Aborted.");
+            return Ok(());
+        }
     }
 
-    if !args.build_only {
+    if !args.no_assets {
+        copy_assets(ctx)?;
+    }
+
+    //ctx.docker.create_stackify_build_container(&ctx.bin_dir, STACKIFY_BUILD_ENTRYPOINT)?;
+
+    if !args.no_download {
         // Download and extract Bitcoin Core and copy 'bitcoin-cli' and 'bitcoind'
         // to the bin directory.
         download_and_extract_bitcoin_core(ctx, &args.bitcoin_version)?;
@@ -77,12 +79,14 @@ pub fn exec(ctx: &CliContext, args: InitArgs) -> Result<()> {
         download_dasel(ctx, &args.dasel_version)?;
     }
 
-    if !args.download_only {
+    if !args.no_build {
         // Build the build image.
         build_build_image(ctx, &args.bitcoin_version, args.pre_compile)?;
 
         build_runtime_image(ctx)?;
     }
+
+    load_default_configuration_files(ctx)?;
 
     Ok(())
 }
@@ -193,6 +197,8 @@ fn build_build_image(ctx: &CliContext, bitcoin_version: &str, pre_compile: bool)
         group_id: ctx.group_id,
         bitcoin_version: bitcoin_version.into(),
         pre_compile,
+        stackify_build_dockerfile: STACKIFY_BUILD_DOCKERFILE,
+        stackify_cargo_config: STACKIFY_CARGO_CONFIG,
     };
 
     let regex = Regex::new(r#"^Step (\d+)\/(\d+) :(.*)$"#)?;
@@ -231,6 +237,7 @@ fn build_runtime_image(ctx: &CliContext) -> Result<()> {
     let build = BuildStackifyRuntimeImage {
         user_id: ctx.user_id,
         group_id: ctx.group_id,
+        stackify_runtime_dockerfile: STACKIFY_RUN_DOCKERFILE
     };
 
     let regex = Regex::new(r#"^Step (\d+)\/(\d+) :(.*)$"#)?;
@@ -260,6 +267,56 @@ fn build_runtime_image(ctx: &CliContext) -> Result<()> {
     });
     pb.finish_and_clear();
     println!("{} Docker runtime image", style("✔️").green());
+
+    Ok(())
+}
+
+fn create_runtime_container(ctx: &CliContext) -> Result<()> {
+    todo!()
+}
+
+fn load_default_configuration_files(ctx: &CliContext) -> Result<()> {
+    let bitcoin_conf = BITCOIN_CONF;
+    todo!();
+}
+
+fn copy_assets(ctx: &CliContext) -> Result<()> {
+    copy_executable(ctx, "build-entrypoint.sh", false, STACKIFY_BUILD_ENTRYPOINT)?;
+    copy_executable(ctx, "bitcoin-miner-entrypoint.sh", false, BITCOIN_ENTRYPOINT)?;
+
+    Ok(())
+}
+
+fn copy_executable(ctx: &CliContext, filename: &str, replace: bool, data: &[u8]) -> Result<()> {
+    let mut file = match File::options()
+        .create(true)
+        .create_new(!replace)
+        .write(true)
+        .open(ctx.assets_dir.join(filename))
+        {
+            Ok(file) => file,
+            Err(err) => {
+                if err.kind() == std::io::ErrorKind::AlreadyExists {
+                    println!("{} already exists, skipping.", style(filename).dim());
+                    return Ok(());
+                } else {
+                    return Err(err.into());
+                }
+            }
+        };
+
+    file.write_all(data)?;
+    file.set_permissions(Permissions::from_mode(0o755))?;
+    file.sync_all()?;
+
+    Ok(())
+}
+
+fn copy_readable(ctx: &CliContext, filename: &str, data: &[u8]) -> Result<()> {
+    let mut file = File::create_new(ctx.assets_dir.join(filename))?;
+    file.write_all(data)?;
+    file.set_permissions(Permissions::from_mode(0o644))?;
+    file.sync_all()?;
 
     Ok(())
 }
