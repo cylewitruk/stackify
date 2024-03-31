@@ -47,6 +47,25 @@ table! {
 }
 
 table! {
+    file_type (id) {
+        id -> Integer,
+        name -> Text,
+    }
+}
+
+table! {
+    service_type_file (id) {
+        id -> Integer,
+        service_type_id -> Integer,
+        file_type_id -> Integer,
+        filename -> Text,
+        destination_dir -> Text,
+        description -> Text,
+        default_contents -> Binary,
+    }
+}
+
+table! {
     service_version (id) {
         id -> Integer,
         service_type_id -> Integer,

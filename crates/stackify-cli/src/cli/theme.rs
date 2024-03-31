@@ -40,6 +40,10 @@ pub trait ThemedObject {
     fn underline(&self) -> Styled<&Self> where Self: Sized {
         OwoColorize::style(self, style().underline())
     }
+
+    fn dimmed(&self) -> Styled<&Self> where Self: Sized {
+        OwoColorize::style(self, style().dimmed())
+    }
 }
 
 impl<T: OwoColorize + Display> ThemedObject for T {

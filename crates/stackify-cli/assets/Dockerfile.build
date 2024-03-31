@@ -18,15 +18,15 @@ RUN apt update \
 RUN rustup component add rustfmt
 
 # Create our non-root user & group ('stacks')
-RUN groupadd -r -g ${GROUP_ID} stacks \
-    && useradd -r -m --uid ${GROUP_ID} -g ${GROUP_ID} stacks \
-    && install -d -m 0755 -o stacks -g stacks \
+RUN groupadd -r -g ${GROUP_ID} stackify \
+    && useradd -r -m --uid ${GROUP_ID} -g ${GROUP_ID} stackify \
+    && install -d -m 0755 -o stackify -g stackify \
         /src \
         /target \
         /out
 
-USER stacks
-COPY --chown=stacks:stacks ./cargo-config.toml /home/stacks/.cargo/config.toml
+USER stackify
+COPY --chown=stackify:stackify ./cargo-config.toml /home/stackify/.cargo/config.toml
 
 RUN mkdir ~/repos
 
@@ -51,4 +51,4 @@ RUN cd ~/repos/clarinet \
 ENV CARGO_INCREMENTAL 1
 ENV CARGO_TARGET_DIR /target
 
-WORKDIR /home/stacks
+WORKDIR /home/stackify

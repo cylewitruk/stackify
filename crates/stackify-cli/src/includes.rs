@@ -9,5 +9,5 @@ pub const BITCOIN_ENTRYPOINT: &[u8] = include_bytes!("../assets/bitcoin-entrypoi
 
 // These are loaded into the database
 pub const BITCOIN_CONF: &str = include_str!("../assets/bitcoin.conf.hbs");
-pub const STACKS_MINER_CONF: &str = include_str!("../assets/stacks-node.toml.hbs");
+pub const STACKS_NODE_CONF: &str = include_str!("../assets/stacks-node.toml.hbs");
 pub const STACKS_SIGNER_CONF: &str = include_str!("../assets/stacks-signer.toml.hbs");

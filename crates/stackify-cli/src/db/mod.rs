@@ -7,6 +7,7 @@ use color_eyre::eyre::bail;
 use color_eyre::eyre::Report;
 use color_eyre::eyre::Result;
 use diesel::connection::SimpleConnection;
+use diesel::insert_into;
 use diesel::prelude::*;
 use diesel_migrations::embed_migrations;
 use diesel_migrations::EmbeddedMigrations;
@@ -182,8 +183,52 @@ impl AppDb {
     }
 }
 
+pub struct InsertServiceFile {
+    pub service_type_id: i32,
+    pub file_type_id: i32,
+    /// The filename of the file as it will be copied into the Docker container.
+    pub filename: String,
+    /// The destination path within the service's Docker container, 
+    /// _excluding filename_.
+    pub destination_dir: String,
+    pub description: String,
+    pub default_contents: Vec<u8>,
+
+}
+
 /// Configuration
 impl AppDb {
+    pub fn check_if_service_type_file_exists(&self, service_type_id: i32, filename: &str) -> Result<bool> {
+        let count: i64 = service_type_file::table
+            .filter(service_type_file::service_type_id.eq(service_type_id))
+            .filter(service_type_file::filename.eq(filename))
+            .count()
+            .get_result(&mut *self.conn.borrow_mut())?;
+
+        Ok(count > 0)
+    }
+
+    pub fn list_service_files_for_service_type(&self, service_type_id: i32) -> Result<Vec<ServiceTypeFile>> {
+        Ok(service_type_file::table
+            .filter(service_type_file::service_type_id.eq(service_type_id))
+            .load(&mut *self.conn.borrow_mut())?)
+    }
+
+    pub fn insert_service_file(&self, insert: InsertServiceFile) -> Result<()> {
+        let _ = insert_into(service_type_file::table)
+        .values((
+            service_type_file::service_type_id.eq(insert.service_type_id),
+            service_type_file::filename.eq(&insert.filename),
+            service_type_file::file_type_id.eq(insert.file_type_id),
+            service_type_file::destination_dir.eq(&insert.destination_dir),
+            service_type_file::description.eq(&insert.description),
+            service_type_file::default_contents.eq(&insert.default_contents),
+        ))
+        .execute(&mut *self.conn.borrow_mut())?;
+
+        Ok(())
+    }
+
     pub fn list_service_types(&self) -> Result<Vec<ServiceType>> {
         Ok(service_type::table
             .order_by(service_type::name.asc())

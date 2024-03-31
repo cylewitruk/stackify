@@ -49,6 +49,26 @@ pub struct ServiceType {
 }
 
 #[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, QueryableByName)]
+#[diesel(table_name = file_type)]
+pub struct FileType {
+    pub id: i32,
+    pub name: String,
+}
+
+#[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, QueryableByName)]
+#[diesel(table_name = service_type_file)]
+pub struct ServiceTypeFile {
+    pub id: i32,
+    pub service_type_id: i32,
+    pub file_type_id: i32,
+    pub filename: String,
+    pub destination_dir: String,
+    pub description: String,
+    pub default_contents: Vec<u8>,
+
+}
+
+#[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, QueryableByName)]
 #[diesel(table_name = service_version)]
 pub struct ServiceVersion {
     pub id: i32,

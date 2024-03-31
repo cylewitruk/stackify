@@ -64,7 +64,7 @@ CREATE TABLE service_type (
 ) WITHOUT ROWID;
 
 INSERT INTO service_type (id, name, cli_name, allow_git_target)
-    VALUES (0, 'Bitcoin Miner', 'bitcoin-miner' 0);
+    VALUES (0, 'Bitcoin Miner', 'bitcoin-miner', 0);
 INSERT INTO service_type (id, name, cli_name, allow_git_target)
     VALUES (1, 'Bitcoin Follower', 'bitcoin-follower', 0);
 INSERT INTO service_type (id, name, cli_name)
@@ -78,20 +78,35 @@ INSERT INTO service_type (id, name, cli_name, allow_git_target)
 INSERT INTO service_type (id, name, cli_name, allow_git_target) 
     VALUES (6, 'Stacks Stacker (Pool)', 'stacks-stacker-pool', 0);
 
+CREATE TABLE file_type (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+
+    UNIQUE (name)
+) WITHOUT ROWID;
+
+INSERT INTO file_type (id, name) 
+    VALUES 
+        (0, 'Binary'),
+        (1, 'Plain-Text'),
+        (2, 'Handlebars Template')
+    ;
+
 -- Default service configuration file templates.
 -- These will be populated by the application upon init since we use actual
 -- files as the source.
-CREATE TABLE service_config (
+CREATE TABLE service_type_file (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     service_type_id INTEGER NOT NULL,
+    file_type_id INTEGER NOT NULL,
     filename TEXT NOT NULL,
     destination_dir TEXT NOT NULL,
     description TEXT NOT NULL,
-    default_contents TEXT NOT NULL,
+    default_contents BINARY NOT NULL,
 
-    UNIQUE (service_type_id, name),
+    UNIQUE (service_type_id, filename),
     FOREIGN KEY (service_type_id) REFERENCES service_type (id)
-) WITHOUT ROWID;
+);
 
 CREATE TABLE service_version (
     id INTEGER PRIMARY KEY,

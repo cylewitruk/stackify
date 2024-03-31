@@ -9,14 +9,14 @@ RUN apt update \
     && apt upgrade -y \
     && apt install -y procps sqlite3 jq
 
-# Create our non-root user & group ('stacks')
-RUN groupadd -r -g ${GROUP_ID} stacks \
-    && useradd -r -m --uid ${GROUP_ID} -g ${GROUP_ID} stacks \
-    && install -d -m 0755 -o stacks -g stacks \
+# Create our non-root user & group ('stackify')
+RUN groupadd -r -g ${GROUP_ID} stackify \
+    && useradd -r -m --uid ${GROUP_ID} -g ${GROUP_ID} stackify \
+    && install -d -m 0755 -o stackify -g stackify \
         /src \
-        /stacks \
-        /stacks/logs \
-        /stacks/bitcoin \
-        /stacks/conf
+        /stackify \
+        /stackify/logs \
+        /stackify/bitcoin \
+        /stackify/conf
 
-WORKDIR /home/stacks
+WORKDIR /home/stackify

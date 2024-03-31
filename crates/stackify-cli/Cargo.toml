@@ -58,7 +58,8 @@ prettytable-rs = "^0.10"
 comfy-table = { workspace = true }
 inquire = { version = "0.7.3", features = ["editor", "macros"] }
 indicatif = { version = "0.17.8", features = ["improved_unicode"] }
-cliclack = "0.1.13"
+#cliclack = "0.1.13"
+cliclack = { git = "https://github.com/cylewitruk/cliclack.git", branch = "stackify"}
 
 # Database
 diesel = { workspace = true }
