@@ -5,10 +5,13 @@ use color_eyre::eyre::{eyre, Result};
 use crate::EnvironmentName;
 
 pub mod containers;
+pub mod files;
 pub mod images;
+pub mod networks;
 pub mod stackify_docker;
 #[cfg(test)]
 pub mod tests;
+pub mod util;
 
 // pub const STACKIFY_BUILD_DOCKERFILE: &str = include_str!("../../../../assets/Dockerfile.build");
 // pub const STACKIFY_RUN_DOCKERFILE: &str = include_str!("../../../../assets/Dockerfile.runtime");
@@ -96,7 +99,7 @@ INSERT INTO service_type (id, name) VALUES (5, 'Stacks Stacker (Self)');
 INSERT INTO service_type (id, name) VALUES (6, 'Stacks Stacker (Pool)'); */
 
 #[derive(Debug)]
-pub enum Label {
+pub enum LabelKey {
     Stackify,
     EnvironmentName,
     Service,
@@ -104,24 +107,24 @@ pub enum Label {
     IsLeader,
 }
 
-impl std::fmt::Display for Label {
+impl std::fmt::Display for LabelKey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Label::Stackify => write!(f, "{}", "local.stackify"),
-            Label::EnvironmentName => write!(f, "{}", "local.stackify.environment"),
-            Label::Service => write!(f, "{}", "local.stackify.service"),
-            Label::NodeVersion => write!(f, "{}", "local.stackify.node_version"),
-            Label::IsLeader => write!(f, "{}", "local.stackify.is_leader"),
+            LabelKey::Stackify => write!(f, "{}", "local.stackify"),
+            LabelKey::EnvironmentName => write!(f, "{}", "local.stackify.environment"),
+            LabelKey::Service => write!(f, "{}", "local.stackify.service"),
+            LabelKey::NodeVersion => write!(f, "{}", "local.stackify.node_version"),
+            LabelKey::IsLeader => write!(f, "{}", "local.stackify.is_leader"),
         }
     }
 }
 
 #[derive(Debug)]
-pub struct StacksLabel<T>(Label, T)
+pub struct StackifyLabel<T>(LabelKey, T)
 where
     T: Into<String>;
 
-impl<T> Into<(String, T)> for StacksLabel<T>
+impl<T> Into<(String, T)> for StackifyLabel<T>
 where
     T: Into<String>,
 {
@@ -139,7 +142,7 @@ pub struct DockerVersion {
 }
 
 #[derive(Debug)]
-pub struct DockerNetwork {
+pub struct StackifyNetwork {
     pub id: String,
     pub name: String,
 }
@@ -201,22 +204,6 @@ impl Progress {
     }
 }
 
-pub trait TarAppend {
-    fn append_data2<P: AsRef<Path>>(&mut self, path: P, data: &[u8]) -> Result<()>;
-}
-
-impl TarAppend for tar::Builder<Vec<u8>> {
-    fn append_data2<P: AsRef<Path>>(&mut self, path: P, data: &[u8]) -> Result<()> {
-        let mut header = tar::Header::new_gnu();
-        header.set_path(path)?;
-        header.set_size(data.len() as u64);
-        header.set_mode(0o644);
-        header.set_cksum();
-        self.append(&header, data)?;
-        Ok(())
-    }
-}
-
 pub struct StackifyImage {
     pub id: String,
     pub tags: Vec<String>,
@@ -250,20 +237,5 @@ impl ContainerState {
             }
         };
         Ok(state)
-    }
-}
-
-pub fn make_filters() -> HashMap<String, Vec<String>> {
-    return HashMap::new();
-}
-
-pub trait AddLabelFilter {
-    fn add_label_filter(&mut self, label: Label, value: &str) -> &mut Self;
-}
-
-impl AddLabelFilter for HashMap<String, Vec<String>> {
-    fn add_label_filter(&mut self, label: Label, value: &str) -> &mut Self {
-        self.insert("label".into(), vec![format!("{}={}", label, value)]);
-        self
     }
 }

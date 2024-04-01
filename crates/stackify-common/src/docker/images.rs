@@ -2,20 +2,20 @@ use std::{collections::HashMap, io::Write};
 
 use bollard::image::{BuildImageOptions, BuilderVersion};
 use color_eyre::Result;
-use futures_util::{Stream, StreamExt};
+use futures_util::{Stream, StreamExt, TryStreamExt};
 
 use crate::util::random_hex;
 
 use super::{
-    stackify_docker::StackifyDocker, BuildInfo, BuildStackifyBuildImage, BuildStackifyRuntimeImage,
-    Label, Progress, StackifyImage, StacksLabel, TarAppend,
+    stackify_docker::StackifyDocker, util::TarAppend as _, BuildInfo, BuildStackifyBuildImage,
+    BuildStackifyRuntimeImage, LabelKey, Progress, StackifyImage, StackifyLabel,
 };
 
 impl StackifyDocker {
     /// Lists all images with the label "local.stackify".
     pub fn list_stackify_images(&self) -> Result<Vec<StackifyImage>> {
         let mut filters = HashMap::new();
-        filters.insert("label".to_string(), vec![Label::Stackify.to_string()]);
+        filters.insert("label".to_string(), vec![LabelKey::Stackify.to_string()]);
 
         let opts = bollard::image::ListImagesOptions {
             filters,
@@ -70,7 +70,7 @@ impl StackifyDocker {
         .cloned()
         .collect();
 
-        let labels = vec![StacksLabel(Label::Stackify, String::new()).into()]
+        let labels = vec![StackifyLabel(LabelKey::Stackify, String::new()).into()]
             .into_iter()
             .collect::<HashMap<_, _>>();
 
@@ -128,7 +128,7 @@ impl StackifyDocker {
         .cloned()
         .collect();
 
-        let labels = vec![StacksLabel(Label::Stackify, String::new()).into()]
+        let labels = vec![StackifyLabel(LabelKey::Stackify, String::new()).into()]
             .into_iter()
             .collect::<HashMap<_, _>>();
 
@@ -159,5 +159,25 @@ impl StackifyDocker {
             }
             Err(e) => Err(e.into()),
         })));
+    }
+
+    /// Pulls a remote image.
+    pub fn pull_image(&self, image: &str) {
+        let ctx = StackifyDocker::new().unwrap();
+
+        ctx.runtime.block_on(async {
+            ctx.docker
+                .create_image(
+                    Some(bollard::image::CreateImageOptions {
+                        from_image: image,
+                        ..Default::default()
+                    }),
+                    None,
+                    None,
+                )
+                .try_collect::<Vec<_>>()
+                .await
+                .expect("Failed to pull image");
+        });
     }
 }

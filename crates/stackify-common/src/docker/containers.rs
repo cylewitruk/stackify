@@ -3,11 +3,11 @@ use std::{collections::HashMap, path::Path};
 use bollard::container::{Config, CreateContainerOptions};
 use color_eyre::Result;
 
-use crate::{docker::AddLabelFilter, EnvironmentName};
+use crate::{docker::util::AddLabelFilter, EnvironmentName};
 
 use super::{
-    make_filters, stackify_docker::StackifyDocker, ContainerService, ContainerState,
-    CreateContainerResult, Label, ListStackifyContainerOpts, StackifyContainer, StacksLabel,
+    stackify_docker::StackifyDocker, util::make_filters, ContainerService, ContainerState,
+    CreateContainerResult, LabelKey, ListStackifyContainerOpts, StackifyContainer, StackifyLabel,
 };
 
 impl StackifyDocker {
@@ -22,7 +22,7 @@ impl StackifyDocker {
             ..Default::default()
         };
 
-        let labels = vec![StacksLabel(Label::Stackify, String::new()).into()]
+        let labels = vec![StackifyLabel(LabelKey::Stackify, String::new()).into()]
             .into_iter()
             .collect::<HashMap<String, String>>();
 
@@ -108,9 +108,9 @@ impl StackifyDocker {
         };
 
         let labels = vec![
-            StacksLabel(Label::EnvironmentName, environment_name.into()).into(),
-            StacksLabel(
-                Label::Service,
+            StackifyLabel(LabelKey::EnvironmentName, environment_name.into()).into(),
+            StackifyLabel(
+                LabelKey::Service,
                 ContainerService::Environment.to_label_string(),
             )
             .into(),
@@ -161,7 +161,7 @@ impl StackifyDocker {
     ) -> Result<Vec<StackifyContainer>> {
         let mut filters = make_filters();
         if let Some(env) = args.environment_name {
-            filters.add_label_filter(Label::EnvironmentName, &env.to_string());
+            filters.add_label_filter(LabelKey::EnvironmentName, &env.to_string());
         }
 
         let opts = bollard::container::ListContainersOptions {
@@ -196,5 +196,9 @@ impl StackifyDocker {
                 })
                 .collect::<Vec<_>>())
         })
+    }
+
+    pub fn create_stacks_node_container(&self, _environment_name: &EnvironmentName) -> Result<()> {
+        Ok(())
     }
 }
