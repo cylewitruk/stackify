@@ -43,7 +43,7 @@ impl AppDb {
         environment_id: i32,
         service_version_id: i32,
         name: &str,
-        comment: Option<&str>
+        comment: Option<&str>,
     ) -> Result<EnvironmentService> {
         Ok(diesel::insert_into(environment_service::table)
             .values((
@@ -74,6 +74,25 @@ impl AppDb {
         Ok(())
     }
 
+    pub fn add_environment_service_file(
+        &self,
+        environment_id: i32,
+        environment_service_id: i32,
+        service_type_file_id: i32,
+        contents: &[u8],
+    ) -> Result<()> {
+        diesel::insert_into(environment_service_file::table)
+            .values((
+                environment_service_file::environment_id.eq(environment_id),
+                environment_service_file::environment_service_id.eq(environment_service_id),
+                environment_service_file::service_type_file_id.eq(service_type_file_id),
+                environment_service_file::contents.eq(contents),
+            ))
+            .execute(&mut *self.conn.borrow_mut())?;
+
+        Ok(())
+    }
+
     pub fn get_environment_by_name(&self, name: &str) -> Result<Environment> {
         environment::table
             .filter(environment::name.eq(name))
@@ -97,7 +116,7 @@ impl AppDb {
 
         Ok(())
     }
-    
+
     pub fn list_environments(&self) -> Result<Vec<Environment>> {
         Ok(environment::table
             .order_by(environment::name.asc())
@@ -115,9 +134,7 @@ impl AppDb {
                 ))
                 .get_result::<Environment>(tx)?;
 
-            let epochs = epoch::table
-                .order_by(epoch::id.asc())
-                .load::<Epoch>(tx)?;
+            let epochs = epoch::table.order_by(epoch::id.asc()).load::<Epoch>(tx)?;
 
             for epoch in epochs {
                 diesel::insert_into(environment_epoch::table)
@@ -152,28 +169,32 @@ impl AppDb {
             )
             .execute(&mut *self.conn.borrow_mut())?;
 
-            diesel::delete(environment_service::table
-                .filter(environment_service::environment_id.eq(environment_id)))
-                .execute(&mut *self.conn.borrow_mut())?;
+            diesel::delete(
+                environment_service::table
+                    .filter(environment_service::environment_id.eq(environment_id)),
+            )
+            .execute(&mut *self.conn.borrow_mut())?;
         }
 
         Ok(())
     }
 
-    pub fn list_environment_services(&self, name: &str) -> Result<Vec<EnvironmentService>> {
-        let environment_id: Option<i32> = environment::table
-            .select(environment::id)
-            .filter(environment::name.eq(name))
-            .first::<i32>(&mut *self.conn.borrow_mut())
-            .optional()?;
+    pub fn list_environment_services(
+        &self,
+        environment_id: i32,
+    ) -> Result<Vec<EnvironmentService>> {
+        Ok(environment_service::table
+            .filter(environment_service::environment_id.eq(environment_id))
+            .get_results::<EnvironmentService>(&mut *self.conn.borrow_mut())?)
+    }
 
-        if let Some(environment_id) = environment_id {
-            Ok(environment_service::table
-                .filter(environment_service::environment_id.eq(environment_id))
-                .get_results::<EnvironmentService>(&mut *self.conn.borrow_mut())?)
-        } else {
-            bail!("environment not found")
-        }
+    pub fn list_environment_service_files(
+        &self,
+        environment_service_id: i32,
+    ) -> Result<Vec<EnvironmentServiceFile>> {
+        Ok(environment_service_file::table
+            .filter(environment_service_file::environment_service_id.eq(environment_service_id))
+            .get_results::<EnvironmentServiceFile>(&mut *self.conn.borrow_mut())?)
     }
 
     pub fn list_environment_epochs(&self, environment_id: i32) -> Result<Vec<EnvironmentEpoch>> {
@@ -188,17 +209,20 @@ pub struct InsertServiceFile {
     pub file_type_id: i32,
     /// The filename of the file as it will be copied into the Docker container.
     pub filename: String,
-    /// The destination path within the service's Docker container, 
+    /// The destination path within the service's Docker container,
     /// _excluding filename_.
     pub destination_dir: String,
     pub description: String,
     pub default_contents: Vec<u8>,
-
 }
 
 /// Configuration
 impl AppDb {
-    pub fn check_if_service_type_file_exists(&self, service_type_id: i32, filename: &str) -> Result<bool> {
+    pub fn check_if_service_type_file_exists(
+        &self,
+        service_type_id: i32,
+        filename: &str,
+    ) -> Result<bool> {
         let count: i64 = service_type_file::table
             .filter(service_type_file::service_type_id.eq(service_type_id))
             .filter(service_type_file::filename.eq(filename))
@@ -208,7 +232,10 @@ impl AppDb {
         Ok(count > 0)
     }
 
-    pub fn list_service_files_for_service_type(&self, service_type_id: i32) -> Result<Vec<ServiceTypeFile>> {
+    pub fn list_service_files_for_service_type(
+        &self,
+        service_type_id: i32,
+    ) -> Result<Vec<ServiceTypeFile>> {
         Ok(service_type_file::table
             .filter(service_type_file::service_type_id.eq(service_type_id))
             .load(&mut *self.conn.borrow_mut())?)
@@ -216,15 +243,15 @@ impl AppDb {
 
     pub fn insert_service_file(&self, insert: InsertServiceFile) -> Result<()> {
         let _ = insert_into(service_type_file::table)
-        .values((
-            service_type_file::service_type_id.eq(insert.service_type_id),
-            service_type_file::filename.eq(&insert.filename),
-            service_type_file::file_type_id.eq(insert.file_type_id),
-            service_type_file::destination_dir.eq(&insert.destination_dir),
-            service_type_file::description.eq(&insert.description),
-            service_type_file::default_contents.eq(&insert.default_contents),
-        ))
-        .execute(&mut *self.conn.borrow_mut())?;
+            .values((
+                service_type_file::service_type_id.eq(insert.service_type_id),
+                service_type_file::filename.eq(&insert.filename),
+                service_type_file::file_type_id.eq(insert.file_type_id),
+                service_type_file::destination_dir.eq(&insert.destination_dir),
+                service_type_file::description.eq(&insert.description),
+                service_type_file::default_contents.eq(&insert.default_contents),
+            ))
+            .execute(&mut *self.conn.borrow_mut())?;
 
         Ok(())
     }
@@ -233,6 +260,10 @@ impl AppDb {
         Ok(service_type::table
             .order_by(service_type::name.asc())
             .load(&mut *self.conn.borrow_mut())?)
+    }
+
+    pub fn list_service_type_files(&self) -> Result<Vec<ServiceTypeFile>> {
+        Ok(service_type_file::table.load(&mut *self.conn.borrow_mut())?)
     }
 
     pub fn list_epochs(&self) -> Result<Vec<Epoch>> {

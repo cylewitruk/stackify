@@ -3,8 +3,8 @@ use comfy_table::{Cell, Color, ColumnConstraint, Table, Width};
 use console::style;
 use stackify_common::{docker::ListStackifyContainerOpts, EnvironmentName};
 
-use crate::cli::{warn, PAD_WIDTH};
 use crate::cli::context::CliContext;
+use crate::cli::{warn, PAD_WIDTH};
 use crate::util::print::{print_fail, print_ok};
 use crate::util::progressbar::PbWrapper;
 
@@ -16,8 +16,8 @@ use super::{error, info};
 
 pub mod args;
 pub mod build;
-pub mod service;
 pub mod epoch;
+pub mod service;
 
 pub fn exec(ctx: &CliContext, args: EnvArgs) -> Result<()> {
     match args.commands {
@@ -99,14 +99,15 @@ fn exec_delete(_ctx: &CliContext, _args: args::DeleteArgs) -> Result<()> {
 
 fn exec_start(ctx: &CliContext, args: args::StartArgs) -> Result<()> {
     let env_name = EnvironmentName::new(&args.env_name)?;
+    let env = ctx.db.get_environment_by_name(env_name.as_ref())?;
 
     // Check if the environment has any services defined. If not, return an error.
-    let env = ctx.db.list_environment_services(env_name.as_ref())?;
-    if env.is_empty() {
+    let env_services = ctx.db.list_environment_services(env.id)?;
+    if env_services.is_empty() {
         warn(format!(
             "The '{}' environment has no services defined, so there is nothing to start.\n",
-            env_name)
-        );
+            env_name
+        ));
         println!("Please define at least one service before starting the environment.");
         println!(
             "See the {} command for more information.",

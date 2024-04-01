@@ -8,9 +8,10 @@ use super::args::BuildArgs;
 
 pub fn exec(ctx: &CliContext, args: BuildArgs) -> Result<()> {
     let env_name = EnvironmentName::new(&args.env_name)?;
+    let env = ctx.db.get_environment_by_name(env_name.as_ref())?;
 
     // Check if the environment has any services defined. If not, return an error.
-    let env = ctx.db.list_environment_services(env_name.as_ref())?;
+    let env = ctx.db.list_environment_services(env.id)?;
     if env.is_empty() {
         warn(format!(
             "The '{}' environment has no services defined, so there is nothing to start.",

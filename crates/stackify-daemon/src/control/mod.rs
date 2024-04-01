@@ -2,10 +2,10 @@ use diesel::{Connection, SqliteConnection};
 use log::*;
 use reqwest::Url;
 use stackify_common::{ServiceState, ServiceType};
-use tokio::time::Instant;
 use std::time::Duration;
 use tokio::process::Child;
 use tokio::sync::mpsc::{channel, Sender};
+use tokio::time::Instant;
 
 use color_eyre::{eyre::bail, owo_colors::OwoColorize, Result};
 
@@ -50,14 +50,14 @@ pub enum ServiceData {
         block_speed: u32,
         last_block_at: Instant,
         last_block_height: u32,
-        process: Option<Child>
+        process: Option<Child>,
     },
     BitcoinFollower {
         version: String,
         rpc_url: Url,
         rpc_username: String,
         rpc_password: String,
-        process: Option<Child>
+        process: Option<Child>,
     },
     StacksMiner {
         version: String,
@@ -67,24 +67,24 @@ pub enum ServiceData {
         rpc_password: String,
         last_block_at: Instant,
         last_block_height: u32,
-        process: Option<Child>
+        process: Option<Child>,
     },
     StacksFollower {
         version: String,
         rpc_url: Url,
         rpc_username: String,
         rpc_password: String,
-        process: Option<Child>
+        process: Option<Child>,
     },
     StacksSigner {
         version: String,
         rpc_url: Url,
         rpc_username: String,
         rpc_password: String,
-        process: Option<Child>
+        process: Option<Child>,
     },
     StacksStackerSelf,
-    StacksStackerPool
+    StacksStackerPool,
 }
 
 /// Enum representing the actions that the monitor can take via its mpsc channel.

@@ -31,25 +31,36 @@ pub fn exec_add_service_version(ctx: &CliContext, args: AddServiceVersionArgs) -
     let service_types = ctx.db.list_service_types()?;
 
     // Collect service type
-    let service_type_names = service_types.iter().map(|st| st.name.clone()).collect::<Vec<_>>();
-    let service_type = Select::new("Select a service type", service_type_names)
-        .prompt()?;
-    let service_type = service_types.iter().find(|st| st.name == service_type)
+    let service_type_names = service_types
+        .iter()
+        .map(|st| st.name.clone())
+        .collect::<Vec<_>>();
+    let service_type = Select::new("Select a service type", service_type_names).prompt()?;
+    let service_type = service_types
+        .iter()
+        .find(|st| st.name == service_type)
         .ok_or(eyre!("Service type not found"))?;
-    
+
     // Collect service version
     let all_service_versions = ctx.db.list_service_versions()?;
-    let service_versions = all_service_versions
-        .filter_by_service_type(service_type.id);
-    let service_version_names = service_versions.iter().map(|sv| sv.version.clone()).collect::<Vec<_>>();
-    let service_version = Select::new("Select a service version", service_version_names)
-        .prompt()?;
-    let service_version_id = service_versions.iter().find(|sv| sv.version == service_version)
+    let service_versions = all_service_versions.filter_by_service_type(service_type.id);
+    let service_version_names = service_versions
+        .iter()
+        .map(|sv| sv.version.clone())
+        .collect::<Vec<_>>();
+    let service_version =
+        Select::new("Select a service version", service_version_names).prompt()?;
+    let service_version_id = service_versions
+        .iter()
+        .find(|sv| sv.version == service_version)
         .ok_or(eyre!("Service version not found"))?;
 
     if service_type.allow_git_target {
-        let git_target_type = Select::new("What kind of git target do you want to use?", vec!["Tag", "Branch", "Commit hash"])
-            .prompt()?;
+        let git_target_type = Select::new(
+            "What kind of git target do you want to use?",
+            vec!["Tag", "Branch", "Commit hash"],
+        )
+        .prompt()?;
         let git_target = match git_target_type {
             "Tag" => {
                 Text::new("Enter the git target")

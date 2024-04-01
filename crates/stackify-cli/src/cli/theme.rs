@@ -29,19 +29,31 @@ pub trait ThemedObject {
     fn success(&self) -> Styled<&Self>;
     fn table_header(&self) -> Styled<&Self>;
 
-    fn bold(&self) -> Styled<&Self> where Self: Sized {
+    fn bold(&self) -> Styled<&Self>
+    where
+        Self: Sized,
+    {
         OwoColorize::style(self, style().bold())
     }
 
-    fn italic(&self) -> Styled<&Self> where Self: Sized {
+    fn italic(&self) -> Styled<&Self>
+    where
+        Self: Sized,
+    {
         OwoColorize::style(self, style().italic())
     }
 
-    fn underline(&self) -> Styled<&Self> where Self: Sized {
+    fn underline(&self) -> Styled<&Self>
+    where
+        Self: Sized,
+    {
         OwoColorize::style(self, style().underline())
     }
 
-    fn dimmed(&self) -> Styled<&Self> where Self: Sized {
+    fn dimmed(&self) -> Styled<&Self>
+    where
+        Self: Sized,
+    {
         OwoColorize::style(self, style().dimmed())
     }
 }
@@ -102,8 +114,6 @@ impl<T: OwoColorize + Display> ThemedObject for T {
     fn table_header(&self) -> Styled<&Self> {
         self.style(THEME.table_header)
     }
-
-
 }
 
 pub struct ColorPalette {
@@ -114,7 +124,7 @@ pub struct ColorPalette {
     pub magenta: Rgb,
     pub cyan: Rgb,
     pub gray: Rgb,
-    pub white: Rgb
+    pub white: Rgb,
 }
 
 impl Default for ColorPalette {
@@ -130,7 +140,6 @@ impl Default for ColorPalette {
             white: Rgb(255, 255, 255),
         }
     }
-
 }
 
 pub struct Theme {
@@ -192,18 +201,15 @@ pub fn new_table(headers: &[&str]) -> Table {
 pub struct Inquire;
 impl Inquire {
     pub fn new_select<'a, T: Display>(message: &'a str, options: Vec<T>) -> inquire::Select<'a, T> {
-        inquire::Select::new(message, options)
-            .with_render_config(inquire_style())
+        inquire::Select::new(message, options).with_render_config(inquire_style())
     }
 
     pub fn new_text<'a>(message: &'a str) -> inquire::Text<'a> {
-        inquire::Text::new(message)
-            .with_render_config(inquire_style())
+        inquire::Text::new(message).with_render_config(inquire_style())
     }
 
     pub fn new_confirm<'a>(message: &'a str) -> inquire::Confirm<'a> {
-        inquire::Confirm::new(message)
-            .with_render_config(inquire_style())
+        inquire::Confirm::new(message).with_render_config(inquire_style())
     }
 }
 

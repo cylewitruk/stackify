@@ -1,4 +1,8 @@
-use std::{fs::{File, Permissions}, io::{BufReader, Write}, os::unix::fs::PermissionsExt};
+use std::{
+    fs::{File, Permissions},
+    io::{BufReader, Write},
+    os::unix::fs::PermissionsExt,
+};
 
 use clap::Args;
 use color_eyre::Result;
@@ -7,19 +11,20 @@ use flate2::bufread::GzDecoder;
 use futures_util::StreamExt;
 use regex::Regex;
 use stackify_common::{
-    docker::{BuildStackifyBuildImage, BuildStackifyRuntimeImage}, 
+    docker::{BuildStackifyBuildImage, BuildStackifyRuntimeImage},
     download::download_file,
-    FileType, ServiceType
+    FileType, ServiceType,
 };
 use tar::Archive;
 
 use crate::{
-    cli::context::CliContext, db::InsertServiceFile, includes::{
-        BITCOIN_CONF, BITCOIN_ENTRYPOINT, STACKIFY_BUILD_DOCKERFILE, 
-        STACKIFY_BUILD_ENTRYPOINT, STACKIFY_CARGO_CONFIG, STACKIFY_RUN_DOCKERFILE, 
-        STACKS_NODE_CONF, STACKS_SIGNER_CONF
-    }, 
-    util::new_progressbar
+    cli::context::CliContext,
+    db::InsertServiceFile,
+    includes::{
+        BITCOIN_CONF, BITCOIN_ENTRYPOINT, STACKIFY_BUILD_DOCKERFILE, STACKIFY_BUILD_ENTRYPOINT,
+        STACKIFY_CARGO_CONFIG, STACKIFY_RUN_DOCKERFILE, STACKS_NODE_CONF, STACKS_SIGNER_CONF,
+    },
+    util::new_progressbar,
 };
 
 use super::theme::ThemedObject;
@@ -50,7 +55,7 @@ pub struct InitArgs {
     #[arg(long, default_value = "false", required = false)]
     pub no_assets: bool,
     #[arg(long, default_value = "false", required = false)]
-    pub no_create_containers: bool
+    pub no_create_containers: bool,
 }
 
 pub fn exec(ctx: &CliContext, args: InitArgs) -> Result<()> {
@@ -61,18 +66,19 @@ pub fn exec(ctx: &CliContext, args: InitArgs) -> Result<()> {
 
     cliclack::intro("Initialize Stackify".bold())?;
     cliclack::log::remark(
-"This operation will prepare your system for running Stackify.
+        "This operation will prepare your system for running Stackify.
 It will download and build the necessary Docker images, create Stackify containers, download 
-runtime binaries, initialize the database and copy assets to the appropriate directories."
+runtime binaries, initialize the database and copy assets to the appropriate directories.",
     )?;
 
     if !args.no_build {
-        cliclack::log::warning(format!("{}\n{} {}",
+        cliclack::log::warning(format!(
+            "{}\n{} {}",
             "This operation can take a while and consume a lot of disk space.".yellow(),
-            "Estimated disk space usage:", 
+            "Estimated disk space usage:",
             disk_space_usage.red().bold()
         ))?;
-        
+
         let confirm = cliclack::confirm("Are you sure you want to continue?").interact()?;
 
         if !confirm {
@@ -96,8 +102,9 @@ runtime binaries, initialize the database and copy assets to the appropriate dir
 
     if !args.no_build {
         // Build the build image.
+        cliclack::log::info("Building Docker images...")?;
         build_build_image(ctx, &args.bitcoin_version, args.pre_compile)?;
-
+        // Build the runtime image.
         build_runtime_image(ctx)?;
     }
 
@@ -111,23 +118,18 @@ runtime binaries, initialize the database and copy assets to the appropriate dir
 
         let mut spinner = cliclack::spinner();
         spinner.start("Creating build container...");
-        ctx.docker.create_stackify_build_container(&ctx.bin_dir, STACKIFY_BUILD_ENTRYPOINT)?;
+        ctx.docker
+            .create_stackify_build_container(&ctx.bin_dir, STACKIFY_BUILD_ENTRYPOINT)?;
         spinner.stop("Build container created");
 
-        if let Some(runtime_container) = ctx.docker.find_container_by_name("stackify-runtime")? {
-            cliclack::log::warning("Removing existing runtime container...")?;
-            ctx.docker.rm_container(&runtime_container.id)?;
-        }
-        let mut spinner = cliclack::spinner();
-        spinner.start("Creating runtime container...");
-        create_runtime_container(ctx)?;
-        spinner.stop("Runtime container created");
+        // NOTE: We don't create runtime containers here because they are
+        // created together with environments.
     }
 
     Ok(())
 }
 
-/// Downloads the Dasel binary, which is a jq-like tool for working with json, 
+/// Downloads the Dasel binary, which is a jq-like tool for working with json,
 /// yaml, toml, xml, etc. and is useful to have in the runtime image for shell-
 /// scripts to manipulate configuration files.
 fn download_dasel(ctx: &CliContext, version: &str) -> Result<()> {
@@ -193,7 +195,11 @@ fn download_and_extract_bitcoin_core(ctx: &CliContext, version: &str) -> Result<
             progress += chunk;
         },
     )?;
-    dl.stop(format!("{} {}", style("✔").green(), "Download Bitcoin Core"))?;
+    dl.stop(format!(
+        "{} {}",
+        style("✔").green(),
+        "Download Bitcoin Core"
+    ))?;
 
     let mut unpack = cliclack::spinner();
     unpack.start("copying files...");
@@ -276,7 +282,7 @@ fn build_runtime_image(ctx: &CliContext) -> Result<()> {
     let build = BuildStackifyRuntimeImage {
         user_id: ctx.user_id,
         group_id: ctx.group_id,
-        stackify_runtime_dockerfile: STACKIFY_RUN_DOCKERFILE
+        stackify_runtime_dockerfile: STACKIFY_RUN_DOCKERFILE,
     };
 
     let regex = Regex::new(r#"^Step (\d+)\/(\d+) :(.*)$"#)?;
@@ -310,80 +316,100 @@ fn build_runtime_image(ctx: &CliContext) -> Result<()> {
     Ok(())
 }
 
-fn create_runtime_container(ctx: &CliContext) -> Result<()> {
-    todo!()
-}
-
 /// TODO: Super ugly... just doing this to get it done.
 fn load_default_configuration_files(ctx: &CliContext) -> Result<()> {
     // Insert Bitcoin Core configuration file template (for a miner)
-    if !ctx.db.check_if_service_type_file_exists(ServiceType::BitcoinMiner.into(), "bitcoin.conf")? {
+    if !ctx
+        .db
+        .check_if_service_type_file_exists(ServiceType::BitcoinMiner.into(), "bitcoin.conf")?
+    {
         ctx.db.insert_service_file(InsertServiceFile {
             filename: "bitcoin.conf".into(),
             description: "Bitcoin Core configuration file template".into(),
             service_type_id: ServiceType::BitcoinMiner as i32,
             destination_dir: "/home/stacks/.bitcoin".into(),
             default_contents: BITCOIN_CONF.as_bytes().to_vec(),
-            file_type_id: FileType::HandlebarsTemplate as i32
+            file_type_id: FileType::HandlebarsTemplate as i32,
         })?;
     } else {
         println!("{} already exists, skipping.", style("bitcoin.conf").dim());
     }
 
     // Insert Bitcoin Core configuration file template (for a follower).
-    if !ctx.db.check_if_service_type_file_exists(ServiceType::BitcoinFollower.into(), "bitcoin.conf")? {
+    if !ctx
+        .db
+        .check_if_service_type_file_exists(ServiceType::BitcoinFollower.into(), "bitcoin.conf")?
+    {
         ctx.db.insert_service_file(InsertServiceFile {
             filename: "bitcoin.conf".into(),
             description: "Bitcoin Core configuration file template".into(),
             service_type_id: ServiceType::BitcoinFollower as i32,
             destination_dir: "/home/stacks/.bitcoin".into(),
             default_contents: BITCOIN_CONF.as_bytes().to_vec(),
-            file_type_id: FileType::HandlebarsTemplate as i32
+            file_type_id: FileType::HandlebarsTemplate as i32,
         })?;
     } else {
         println!("{} already exists, skipping.", style("bitcoin.conf").dim());
     }
 
     // Insert Stacks Node configuration file template (for a miner).
-    if !ctx.db.check_if_service_type_file_exists(ServiceType::StacksMiner.into(), "stacks-node.toml")? {
+    if !ctx
+        .db
+        .check_if_service_type_file_exists(ServiceType::StacksMiner.into(), "stacks-node.toml")?
+    {
         ctx.db.insert_service_file(InsertServiceFile {
             filename: "stacks-node.toml".into(),
             description: "Stacks Node configuration file template".into(),
             service_type_id: ServiceType::StacksMiner as i32,
             destination_dir: "/stacks/config/".into(),
             default_contents: STACKS_NODE_CONF.as_bytes().to_vec(),
-            file_type_id: FileType::HandlebarsTemplate as i32
+            file_type_id: FileType::HandlebarsTemplate as i32,
         })?;
     } else {
-        println!("{} already exists, skipping.", style("stacks-node.toml").dim());
+        println!(
+            "{} already exists, skipping.",
+            style("stacks-node.toml").dim()
+        );
     }
 
     // Insert Stacks Node configuration file template (for a follower).
-    if !ctx.db.check_if_service_type_file_exists(ServiceType::StacksFollower.into(), "stacks-node.toml")? {
+    if !ctx
+        .db
+        .check_if_service_type_file_exists(ServiceType::StacksFollower.into(), "stacks-node.toml")?
+    {
         ctx.db.insert_service_file(InsertServiceFile {
             filename: "stacks-node.toml".into(),
             description: "Stacks Node configuration file template".into(),
             service_type_id: ServiceType::StacksFollower as i32,
             destination_dir: "/stacks/config/".into(),
             default_contents: STACKS_NODE_CONF.as_bytes().to_vec(),
-            file_type_id: FileType::HandlebarsTemplate as i32
+            file_type_id: FileType::HandlebarsTemplate as i32,
         })?;
     } else {
-        println!("{} already exists, skipping.", style("stacks-node.toml").dim());
+        println!(
+            "{} already exists, skipping.",
+            style("stacks-node.toml").dim()
+        );
     }
 
     // Insert Stacks Signer configuration file template.
-    if !ctx.db.check_if_service_type_file_exists(ServiceType::StacksSigner.into(), "stacks-signer.toml")? {
+    if !ctx
+        .db
+        .check_if_service_type_file_exists(ServiceType::StacksSigner.into(), "stacks-signer.toml")?
+    {
         ctx.db.insert_service_file(InsertServiceFile {
             filename: "stacks-signer.toml".into(),
             description: "Stacks Signer configuration file template".into(),
             service_type_id: ServiceType::StacksSigner as i32,
             destination_dir: "/stacks/config/".into(),
             default_contents: STACKS_SIGNER_CONF.as_bytes().to_vec(),
-            file_type_id: FileType::HandlebarsTemplate as i32
+            file_type_id: FileType::HandlebarsTemplate as i32,
         })?;
     } else {
-        println!("{} already exists, skipping.", style("stacks-signer.toml").dim());
+        println!(
+            "{} already exists, skipping.",
+            style("stacks-signer.toml").dim()
+        );
     }
 
     Ok(())
@@ -391,29 +417,39 @@ fn load_default_configuration_files(ctx: &CliContext) -> Result<()> {
 
 fn copy_assets(ctx: &CliContext) -> Result<()> {
     install_asset_executable(ctx, "build-entrypoint.sh", false, STACKIFY_BUILD_ENTRYPOINT)?;
-    install_asset_executable(ctx, "bitcoin-miner-entrypoint.sh", false, BITCOIN_ENTRYPOINT)?;
+    install_asset_executable(
+        ctx,
+        "bitcoin-miner-entrypoint.sh",
+        false,
+        BITCOIN_ENTRYPOINT,
+    )?;
 
     Ok(())
 }
 
 /// Copies a file into the local Stackify assets directory and sets its executable permissions.
-fn install_asset_executable(ctx: &CliContext, filename: &str, replace: bool, data: &[u8]) -> Result<()> {
+fn install_asset_executable(
+    ctx: &CliContext,
+    filename: &str,
+    replace: bool,
+    data: &[u8],
+) -> Result<()> {
     let mut file = match File::options()
         .create(true)
         .create_new(!replace)
         .write(true)
         .open(ctx.assets_dir.join(filename))
-        {
-            Ok(file) => file,
-            Err(err) => {
-                if err.kind() == std::io::ErrorKind::AlreadyExists {
-                    println!("{} already exists, skipping.", style(filename).dim());
-                    return Ok(());
-                } else {
-                    return Err(err.into());
-                }
+    {
+        Ok(file) => file,
+        Err(err) => {
+            if err.kind() == std::io::ErrorKind::AlreadyExists {
+                println!("{} already exists, skipping.", style(filename).dim());
+                return Ok(());
+            } else {
+                return Err(err.into());
             }
-        };
+        }
+    };
 
     file.write_all(data)?;
     file.set_permissions(Permissions::from_mode(0o755))?;
@@ -429,17 +465,17 @@ fn install_asset(ctx: &CliContext, filename: &str, replace: bool, data: &[u8]) -
         .create_new(!replace)
         .write(true)
         .open(ctx.assets_dir.join(filename))
-        {
-            Ok(file) => file,
-            Err(err) => {
-                if err.kind() == std::io::ErrorKind::AlreadyExists {
-                    println!("{} already exists, skipping.", style(filename).dim());
-                    return Ok(());
-                } else {
-                    return Err(err.into());
-                }
+    {
+        Ok(file) => file,
+        Err(err) => {
+            if err.kind() == std::io::ErrorKind::AlreadyExists {
+                println!("{} already exists, skipping.", style(filename).dim());
+                return Ok(());
+            } else {
+                return Err(err.into());
             }
-        };
+        }
+    };
     file.write_all(data)?;
     file.set_permissions(Permissions::from_mode(0o644))?;
     file.sync_all()?;

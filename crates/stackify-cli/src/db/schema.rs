@@ -116,6 +116,16 @@ table! {
 }
 
 table! {
+    environment_service_file (id) {
+        id -> Integer,
+        environment_id -> Integer,
+        environment_service_id -> Integer,
+        service_type_file_id -> Integer,
+        contents -> Binary,
+    }
+}
+
+table! {
     environment_service_action (id) {
         id -> Integer,
         environment_service_id -> Integer,

@@ -1,31 +1,26 @@
-use std::hash::Hash;
-use std::io::Write;
+use std::path::PathBuf;
 use std::{collections::HashMap, path::Path};
 
 use bollard::container::{Config, CreateContainerOptions};
 use bollard::{
     container::UploadToContainerOptions,
-    image::{BuildImageOptions, BuilderVersion},
     network::{CreateNetworkOptions, ListNetworksOptions},
     secret::Ipam,
     Docker, API_DEFAULT_VERSION,
 };
 use bytes::Bytes;
 use color_eyre::eyre::{eyre, Result};
-use futures_util::{Stream, StreamExt, TryStreamExt};
+use futures_util::{Stream, TryStreamExt};
 use log::debug;
 use rand::{thread_rng, Rng};
 use tokio::runtime::Runtime;
 
 use crate::docker::{make_filters, AddLabelFilter};
-use crate::util::random_hex;
 use crate::EnvironmentName;
 
 use super::{
-    BuildInfo, BuildStackifyBuildImage, BuildStackifyRuntimeImage, ContainerService,
-    ContainerState, CreateContainerResult, DockerNetwork, DockerVersion, Label,
-    ListStackifyContainerOpts, NewStacksNetworkResult, Progress, StackifyContainer, StackifyImage,
-    StacksLabel, TarAppend
+    ContainerService, ContainerState, CreateContainerResult, DockerNetwork, DockerVersion, Label,
+    ListStackifyContainerOpts, NewStacksNetworkResult, StackifyContainer, StacksLabel,
 };
 
 /// A Docker client for Stackify which also includes a Tokio runtime for
@@ -36,6 +31,12 @@ use super::{
 pub struct StackifyDocker {
     pub(crate) docker: bollard::Docker,
     pub(crate) runtime: Runtime,
+    pub(crate) user_id: u32,
+    pub(crate) group_id: u32,
+    pub(crate) stackify_root_dir: PathBuf,
+    pub(crate) stackify_bin_dir: PathBuf,
+    pub(crate) stackify_data_dir: PathBuf,
+    pub(crate) stackify_config_dir: PathBuf,
 }
 
 impl Default for StackifyDocker {
@@ -50,8 +51,10 @@ impl StackifyDocker {
     /// the new 'rootless' model on Unix systems.
     pub fn new() -> Result<Self> {
         let uid;
+        let gid;
         unsafe {
             uid = libc::geteuid();
+            gid = libc::getegid();
         }
 
         let mut docker: Option<Docker>;
@@ -91,308 +94,21 @@ impl StackifyDocker {
             return Err(eyre!("Failed to connect to the Docker daemon."));
         }
 
+        let stackify_root_dir = PathBuf::from("/stackify");
         Ok(StackifyDocker {
             docker: docker.unwrap(),
             runtime: Runtime::new()?,
+            user_id: uid,
+            group_id: gid,
+            stackify_root_dir: stackify_root_dir.clone(),
+            stackify_bin_dir: stackify_root_dir.join("bin"),
+            stackify_data_dir: stackify_root_dir.join("data"),
+            stackify_config_dir: stackify_root_dir.join("config"),
         })
     }
 }
 
 impl StackifyDocker {
-    pub fn create_stackify_build_container<P: AsRef<Path>>(
-        &self, 
-        bin_dir: &P, 
-        entrypoint: &[u8]
-    ) -> Result<CreateContainerResult> {
-        let container_name = "stackify-build";
-        let opts = CreateContainerOptions {
-            name: container_name.to_string(),
-            ..Default::default()
-        };
-
-        let labels = vec![
-            StacksLabel(Label::Stackify, String::new()).into(),
-        ]
-        .into_iter()
-        .collect::<HashMap<String, String>>();
-
-        let mut volumes: HashMap<String, HashMap<(), ()>> = HashMap::new();
-        volumes.insert(format!("{}:~/.stackify/bin", bin_dir.as_ref().display()), HashMap::new());
-        volumes.insert(format!("{}/build-entrypoint.sh:/entrypoint.sh", bin_dir.as_ref().display()), HashMap::new());
-
-        self.upload_ephemeral_file_to_container(container_name, 
-            Path::new("/entrypoint.sh"), 
-            entrypoint
-        )?;
-
-        let config = Config {
-            image: Some("stackify-build:latest".to_string()),
-            hostname: Some(container_name.to_string()),
-            volumes: Some(volumes),
-            entrypoint: Some(vec!["/entrypoint.sh".into()]),
-            labels: Some(labels),
-            ..Default::default()
-        };
-
-        self.runtime.block_on(async {
-            let container = self.docker.create_container(Some(opts), config).await?;
-            Ok(CreateContainerResult {
-                id: container.id,
-                warnings: container.warnings,
-            })
-        })
-    }
-
-    pub fn create_environment_container(
-        &self,
-        environment_name: &EnvironmentName,
-    ) -> Result<CreateContainerResult> {
-        let container_name = format!("stackify-env-{}", environment_name);
-        let opts = CreateContainerOptions {
-            name: container_name.clone(),
-            ..Default::default()
-        };
-
-        let labels = vec![
-            StacksLabel(Label::EnvironmentName, environment_name.into()).into(),
-            StacksLabel(
-                Label::Service,
-                ContainerService::Environment.to_label_string(),
-            )
-            .into(),
-        ]
-        .into_iter()
-        .collect::<HashMap<String, String>>();
-
-        let config = Config {
-            image: Some("busybox:latest".to_string()),
-            hostname: Some(container_name.clone()),
-            entrypoint: Some(vec![
-                "/usr/bin/env sh -c 'while true; do sleep 1; done'".to_string()
-            ]),
-            labels: Some(labels),
-
-            ..Default::default()
-        };
-
-        self.runtime.block_on(async {
-            let container = self.docker.create_container(Some(opts), config).await?;
-            Ok(CreateContainerResult {
-                id: container.id,
-                warnings: container.warnings,
-            })
-        })
-    }
-
-    pub fn rm_container(&self, container_id: &str) -> Result<()> {
-        self.runtime.block_on(async {
-            self.docker.remove_container(container_id, None).await?;
-            Ok(())
-        })
-    }
-
-    pub fn stop_container(&self, container_id: &str) -> Result<()> {
-        self.runtime.block_on(async {
-            self.docker.stop_container(container_id, None).await?;
-            Ok(())
-        })
-    }
-
-    /// Lists all containers with the label "local.stackify".
-    /// By default, this method will only return RUNNING containers. To get all
-    /// containers, set `only_running` to `false`.
-    pub fn list_stackify_containers(
-        &self,
-        args: ListStackifyContainerOpts,
-    ) -> Result<Vec<StackifyContainer>> {
-        let mut filters = make_filters();
-        if let Some(env) = args.environment_name {
-            filters.add_label_filter(Label::EnvironmentName, &env.to_string());
-        }
-
-        let opts = bollard::container::ListContainersOptions {
-            all: if args.only_running.is_some() {
-                !args.only_running.unwrap()
-            } else {
-                true
-            },
-            //filters,
-            filters,
-            ..Default::default()
-        };
-
-        eprintln!("opts: {:?}", opts);
-
-        self.runtime.block_on(async {
-            let containers = self.docker.list_containers(Some(opts)).await?;
-            eprintln!("containers: {:?}", containers);
-            Ok(containers
-                .iter()
-                .map(|c| {
-                    let state = ContainerState::parse(&c.state.clone().unwrap_or_default())
-                        .expect("Failed to parse container state.");
-
-                    StackifyContainer {
-                        id: c.id.clone().unwrap(),
-                        name: c.names.clone().unwrap().join(", "),
-                        labels: c.labels.clone().unwrap_or_default(),
-                        state,
-                        status_readable: c.status.clone().unwrap_or_default(),
-                    }
-                })
-                .collect::<Vec<_>>())
-        })
-    }
-
-    /// Lists all images with the label "local.stackify".
-    pub fn list_stackify_images(&self) -> Result<Vec<StackifyImage>> {
-        let mut filters = HashMap::new();
-        filters.insert("label".to_string(), vec![Label::Stackify.to_string()]);
-
-        let opts = bollard::image::ListImagesOptions {
-            filters,
-            ..Default::default()
-        };
-
-        self.runtime.block_on(async {
-            let images = self
-                .docker
-                .list_images(Some(opts))
-                .await?
-                .iter()
-                .map(|image| StackifyImage {
-                    id: image.id.clone(),
-                    tags: image.repo_tags.clone(),
-                    container_count: image.containers,
-                    size: image.size,
-                })
-                .collect::<Vec<_>>();
-            Ok(images)
-        })
-    }
-
-    /// Builds the Stackify build image.
-    pub fn build_stackify_build_image(
-        &self,
-        build: BuildStackifyBuildImage,
-    ) -> Result<impl Stream<Item = Result<BuildInfo>> + Unpin + '_> {
-        let mut tar = tar::Builder::new(Vec::new());
-        tar.append_data2("Dockerfile.build", build.stackify_build_dockerfile)?;
-        tar.append_data2("cargo-config.toml", build.stackify_cargo_config)?;
-        let archive = tar.into_inner()?;
-
-        let mut c = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
-        c.write_all(&archive).unwrap();
-        let compressed = c.finish().unwrap();
-
-        // docker build --tag stacks.local/runtime:latest --build-arg USER_ID=1000 --build-arg GROUP_ID=1000 --build-arg BITCOIN_VERSION=26.0 --target runtime .
-
-        let image = "stackify-build".to_string();
-
-        let build_args: HashMap<String, String> = [
-            ("USER_ID".to_string(), build.user_id.to_string()),
-            ("GROUP_ID".to_string(), build.group_id.to_string()),
-            (
-                "BITCOIN_VERSION".to_string(),
-                build.bitcoin_version.to_string(),
-            ),
-            ("PRE_COMPILE".to_string(), build.pre_compile.to_string()),
-        ]
-        .iter()
-        .cloned()
-        .collect();
-
-        let labels = vec![StacksLabel(Label::Stackify, String::new()).into()]
-            .into_iter()
-            .collect::<HashMap<_, _>>();
-
-        let opts = BuildImageOptions {
-            dockerfile: "Dockerfile.build".to_string(),
-            t: image.clone(),
-            session: Some(random_hex(8)),
-            pull: true,
-            buildargs: build_args,
-            labels,
-            version: BuilderVersion::BuilderV1,
-            rm: true,
-            ..Default::default()
-        };
-
-        let stream = self.docker.build_image(opts, None, Some(compressed.into()));
-
-        return Ok(Box::pin(stream.map(|msg| match msg {
-            Ok(info) => {
-                Ok(BuildInfo {
-                    message: info.stream.unwrap_or_else(|| "".to_string()),
-                    error: info.error,
-                    progress:
-                        info.progress_detail.map(|p| {
-                            Progress::new(p.current.unwrap() as u32, p.total.unwrap() as u32)
-                        }),
-                })
-            }
-            Err(e) => Err(e.into()),
-        })));
-    }
-
-    /// Builds the Stackify build image.
-    pub fn build_stackify_runtime_image(
-        &self,
-        build: BuildStackifyRuntimeImage,
-    ) -> Result<impl Stream<Item = Result<BuildInfo>> + Unpin + '_> {
-        let mut tar = tar::Builder::new(Vec::new());
-        tar.append_data2("Dockerfile.runtime", build.stackify_runtime_dockerfile)?;
-        let archive = tar.into_inner()?;
-
-        let mut c = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
-        c.write_all(&archive).unwrap();
-        let compressed = c.finish().unwrap();
-
-        // docker build --tag stacks.local/runtime:latest --build-arg USER_ID=1000 --build-arg GROUP_ID=1000 --build-arg BITCOIN_VERSION=26.0 --target runtime .
-
-        let image = "stackify-runtime".to_string();
-
-        let build_args: HashMap<String, String> = [
-            ("USER_ID".to_string(), build.user_id.to_string()),
-            ("GROUP_ID".to_string(), build.group_id.to_string()),
-        ]
-        .iter()
-        .cloned()
-        .collect();
-
-        let labels = vec![StacksLabel(Label::Stackify, String::new()).into()]
-            .into_iter()
-            .collect::<HashMap<_, _>>();
-
-        let opts = BuildImageOptions {
-            dockerfile: "Dockerfile.runtime".to_string(),
-            t: image.clone(),
-            session: Some(random_hex(8)),
-            pull: true,
-            buildargs: build_args,
-            labels,
-            version: BuilderVersion::BuilderV1,
-            rm: true,
-            ..Default::default()
-        };
-
-        let stream = self.docker.build_image(opts, None, Some(compressed.into()));
-
-        return Ok(Box::pin(stream.map(|msg| match msg {
-            Ok(info) => {
-                Ok(BuildInfo {
-                    message: info.stream.unwrap_or_else(|| "".to_string()),
-                    error: info.error,
-                    progress:
-                        info.progress_detail.map(|p| {
-                            Progress::new(p.current.unwrap() as u32, p.total.unwrap() as u32)
-                        }),
-                })
-            }
-            Err(e) => Err(e.into()),
-        })));
-    }
-
     pub fn get_docker_version(&self) -> Result<DockerVersion> {
         self.runtime.block_on(async {
             let version = self.docker.version().await?;

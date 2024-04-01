@@ -89,6 +89,29 @@ pub enum ServiceType {
     StackifyDaemon = 8,
 }
 
+impl Into<i32> for ServiceType {
+    fn into(self) -> i32 {
+        self as i32
+    }
+}
+
+impl From<i32> for ServiceType {
+    fn from(value: i32) -> Self {
+        match value {
+            0 => Self::BitcoinMiner,
+            1 => Self::BitcoinFollower,
+            2 => Self::StacksMiner,
+            3 => Self::StacksFollower,
+            4 => Self::StacksSigner,
+            5 => Self::StacksStackerSelf,
+            6 => Self::StacksStackerPool,
+            7 => Self::StackifyEnvironment,
+            8 => Self::StackifyDaemon,
+            _ => panic!("Invalid service type value: {}", value),
+        }
+    }
+}
+
 impl ServiceType {
     pub fn from_i32(value: i32) -> Result<Self> {
         match value {
@@ -120,16 +143,12 @@ pub enum ServiceAction {
     UpgradeService = 3,
     StartService = 4,
     StopService = 5,
-    StartNetwork = 6,
-    StopNetwork = 7,
-
+    AttachNetwork = 6,
+    DetachNetwork = 7,
 }
 
-
-/*        (1, 'container start', 0, 0),
-        (2, 'container stop', 0, 0),
-        (3, 'upgrade service', 0, 0),
-        (4, 'start service', 0, 0),
-        (5, 'stop service', 1, 0),
-        (6, 'start network', 0, 0),
-        (7, 'stop network', 0, 1) */
+pub enum FileType {
+    Binary = 0,
+    PlainText = 1,
+    HandlebarsTemplate = 2,
+}

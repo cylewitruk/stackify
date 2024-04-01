@@ -1,6 +1,6 @@
 use clap::{Args, Subcommand};
 
-use super::service::add::ServiceAddArgs;
+use super::service::{add::ServiceAddArgs, config::ServiceConfigArgs};
 
 #[derive(Debug, Args)]
 pub struct EnvArgs {
@@ -44,7 +44,7 @@ pub enum EnvSubCommands {
     Epoch(EpochArgs),
     /// Update the environment's configuration. Note that changes made here will
     /// not affect the environment until it is restarted.
-    Set(SetArgs)
+    Set(SetArgs),
 }
 
 #[derive(Debug, Args)]
@@ -58,7 +58,6 @@ pub struct SetArgs {
         visible_alias = "env"
     )]
     pub env_name: String,
-
 }
 
 #[derive(Debug, Args)]
@@ -72,26 +71,20 @@ pub enum EpochSubCommands {
     /// Prints the current epoch-map for the specified environment.
     List(EpochListArgs),
     /// Modify the epoch-map for the specified environment.
-    Edit(EpochEditArgs)
+    Edit(EpochEditArgs),
 }
 
 #[derive(Debug, Args)]
 pub struct EpochListArgs {
     /// The name of the environment to which the epoch-map belongs.
-    #[arg(
-        required = true,
-        value_name = "ENVIRONMENT",
-    )]
+    #[arg(required = true, value_name = "ENVIRONMENT")]
     pub env_name: String,
 }
 
 #[derive(Debug, Args)]
 pub struct EpochEditArgs {
     /// The name of the environment to which the epoch-map belongs.
-    #[arg(
-        required = true,
-        value_name = "ENVIRONMENT",
-    )]
+    #[arg(required = true, value_name = "ENVIRONMENT")]
     pub env_name: String,
 }
 
@@ -118,7 +111,7 @@ pub enum ServiceSubCommands {
     /// with an editor to manually edit the configuration file for the specified
     /// service.
     #[clap(visible_alias = "cfg")]
-    Config
+    Config(ServiceConfigArgs),
 }
 
 #[derive(Debug, Args)]

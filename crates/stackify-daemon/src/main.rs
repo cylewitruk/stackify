@@ -1,4 +1,7 @@
-use color_eyre::{eyre::{bail, eyre}, Result};
+use color_eyre::{
+    eyre::{bail, eyre},
+    Result,
+};
 use diesel::{connection::SimpleConnection, Connection, SqliteConnection};
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use env_logger::Env;
@@ -27,13 +30,11 @@ async fn main() -> Result<()> {
 }
 
 pub fn initialize() -> Result<String> {
-    let env = Env::default()
-        .filter_or("RUST_LOG", "trace");
+    let env = Env::default().filter_or("RUST_LOG", "trace");
     env_logger::init_from_env(env);
     color_eyre::install().unwrap();
 
-    let home_dir = home::home_dir()
-        .ok_or_else(|| eyre!("Failed to get home directory."))?;
+    let home_dir = home::home_dir().ok_or_else(|| eyre!("Failed to get home directory."))?;
 
     let config_dir = home_dir.join(".stackify");
     std::fs::create_dir_all(&config_dir)?;
@@ -42,9 +43,9 @@ pub fn initialize() -> Result<String> {
     let mut conn = SqliteConnection::establish(
         db_path
             .to_str()
-            .ok_or_else(|| eyre!("Failed to convert database path to string."))?
-        )
-        .or_else(|e| bail!("failed to establish database connection: {:?}", e))?;
+            .ok_or_else(|| eyre!("Failed to convert database path to string."))?,
+    )
+    .or_else(|e| bail!("failed to establish database connection: {:?}", e))?;
 
     apply_db_migrations(&mut conn)?;
 

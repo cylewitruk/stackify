@@ -14,12 +14,8 @@ use super::args::{EpochArgs, EpochEditArgs, EpochListArgs, EpochSubCommands};
 
 pub fn exec_epoch(ctx: &CliContext, args: EpochArgs) -> Result<()> {
     match args.commands {
-        EpochSubCommands::List(inner_args) => {
-            exec_list(ctx, inner_args)
-        },
-        EpochSubCommands::Edit(inner_args) => {
-            exec_edit(ctx, inner_args)
-        }
+        EpochSubCommands::List(inner_args) => exec_list(ctx, inner_args),
+        EpochSubCommands::Edit(inner_args) => exec_edit(ctx, inner_args),
     }
 }
 
@@ -30,15 +26,21 @@ fn exec_list(ctx: &CliContext, args: EpochListArgs) -> Result<()> {
     let all_epochs = ctx.db.list_epochs()?;
     let env_epochs = ctx.db.list_environment_epochs(env.id)?;
 
-    let mut epochs = env_epochs.into_iter().map(|e| {
-        let epoch = all_epochs.iter().find(|epoch| epoch.id == e.epoch_id).unwrap();
-        EpochRow {
-            env_epoch_id: epoch.id,
-            name: epoch.name.clone(),
-            starts_at_block_height: e.starts_at_block_height,
-            ends_at_block_height: e.ends_at_block_height,
-        }
-    }).collect::<Vec<_>>();
+    let mut epochs = env_epochs
+        .into_iter()
+        .map(|e| {
+            let epoch = all_epochs
+                .iter()
+                .find(|epoch| epoch.id == e.epoch_id)
+                .unwrap();
+            EpochRow {
+                env_epoch_id: epoch.id,
+                name: epoch.name.clone(),
+                starts_at_block_height: e.starts_at_block_height,
+                ends_at_block_height: e.ends_at_block_height,
+            }
+        })
+        .collect::<Vec<_>>();
     epochs.sort_by_key(|e| e.starts_at_block_height);
 
     let mut table = comfy_table::Table::new();
@@ -53,7 +55,12 @@ fn exec_list(ctx: &CliContext, args: EpochListArgs) -> Result<()> {
         table.add_row(vec![
             Cell::new(epoch.name.magenta().bold()),
             Cell::new(epoch.starts_at_block_height.to_string()),
-            Cell::new(epoch.ends_at_block_height.map(|v| v.to_string()).unwrap_or_else(|| "N/A".to_string())),
+            Cell::new(
+                epoch
+                    .ends_at_block_height
+                    .map(|v| v.to_string())
+                    .unwrap_or_else(|| "N/A".to_string()),
+            ),
         ]);
     }
 
@@ -69,15 +76,21 @@ fn exec_edit(ctx: &CliContext, args: EpochEditArgs) -> Result<()> {
     let all_epochs = ctx.db.list_epochs()?;
     let env_epochs = ctx.db.list_environment_epochs(env.id)?;
 
-    let mut epochs = env_epochs.into_iter().map(|e| {
-        let epoch = all_epochs.iter().find(|epoch| epoch.id == e.epoch_id).unwrap();
-        EpochRow {
-            env_epoch_id: e.id,
-            name: epoch.name.clone(),
-            starts_at_block_height: e.starts_at_block_height,
-            ends_at_block_height: e.ends_at_block_height,
-        }
-    }).collect::<Vec<_>>();
+    let mut epochs = env_epochs
+        .into_iter()
+        .map(|e| {
+            let epoch = all_epochs
+                .iter()
+                .find(|epoch| epoch.id == e.epoch_id)
+                .unwrap();
+            EpochRow {
+                env_epoch_id: e.id,
+                name: epoch.name.clone(),
+                starts_at_block_height: e.starts_at_block_height,
+                ends_at_block_height: e.ends_at_block_height,
+            }
+        })
+        .collect::<Vec<_>>();
     epochs.sort_by_key(|e| e.env_epoch_id);
 
     let mut last_block_height = i32::MIN;
@@ -86,7 +99,8 @@ fn exec_edit(ctx: &CliContext, args: EpochEditArgs) -> Result<()> {
 
     for i in 0..epochs.len() {
         let epoch = &epochs[i];
-        let msg = format!("New block height for epoch '{}':", 
+        let msg = format!(
+            "New block height for epoch '{}':",
             epoch.name.magenta().bold()
         );
 
@@ -115,17 +129,14 @@ fn exec_edit(ctx: &CliContext, args: EpochEditArgs) -> Result<()> {
             help_msg = format!(
                 "Enter a block height greater than the previous epoch's block height ({last_block_height})"
             );
-            new_bh_prompt = new_bh_prompt.with_help_message(
-                &help_msg
-            );
+            new_bh_prompt = new_bh_prompt.with_help_message(&help_msg);
         } else {
-            help_msg = "This is the first epoch, it's starting block height must be zero.".to_string();
-            new_bh_prompt = new_bh_prompt.with_help_message(
-                &help_msg
-            );
+            help_msg =
+                "This is the first epoch, it's starting block height must be zero.".to_string();
+            new_bh_prompt = new_bh_prompt.with_help_message(&help_msg);
         }
         new_bh_prompt = new_bh_prompt.with_help_message(&help_msg);
-        
+
         // Prompt the user.
         let new_bh = new_bh_prompt.prompt()?;
 
@@ -135,15 +146,18 @@ fn exec_edit(ctx: &CliContext, args: EpochEditArgs) -> Result<()> {
     }
 
     println!("");
-    let do_update = Confirm::new("Are you sure you want to update the block heights for these epochs?")
-        .prompt()?;
+    let do_update =
+        Confirm::new("Are you sure you want to update the block heights for these epochs?")
+            .prompt()?;
     if do_update {
         ctx.db.update_environment_epochs(updates)?;
         println!("");
         warn("If you have services which are set to perform actions at certain block heights or epochs, note that these changes may affect their order of operations.");
         println!("");
         finished(&format!(
-            "Epochs for environment {} have been updated.", env_name.magenta().bold()));
+            "Epochs for environment {} have been updated.",
+            env_name.magenta().bold()
+        ));
     }
 
     Ok(())

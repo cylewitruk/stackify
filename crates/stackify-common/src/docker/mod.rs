@@ -4,6 +4,8 @@ use color_eyre::eyre::{eyre, Result};
 
 use crate::EnvironmentName;
 
+pub mod containers;
+pub mod images;
 pub mod stackify_docker;
 #[cfg(test)]
 pub mod tests;

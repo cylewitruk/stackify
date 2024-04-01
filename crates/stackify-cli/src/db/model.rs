@@ -65,7 +65,6 @@ pub struct ServiceTypeFile {
     pub destination_dir: String,
     pub description: String,
     pub default_contents: Vec<u8>,
-
 }
 
 #[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, QueryableByName)]
@@ -117,6 +116,16 @@ pub struct EnvironmentService {
     pub service_version_id: i32,
     pub name: String,
     pub comment: Option<String>,
+}
+
+#[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, QueryableByName)]
+#[diesel(table_name = environment_service_file)]
+pub struct EnvironmentServiceFile {
+    pub id: i32,
+    pub environment_id: i32,
+    pub environment_service_id: i32,
+    pub service_type_file_id: i32,
+    pub contents: Vec<u8>,
 }
 
 #[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, QueryableByName)]

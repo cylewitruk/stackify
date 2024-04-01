@@ -179,6 +179,19 @@ CREATE TABLE environment_service (
     FOREIGN KEY (service_version_id) REFERENCES service_version (id)
 );
 
+CREATE TABLE environment_service_file (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    environment_id INTEGER NOT NULL,
+    environment_service_id INTEGER NOT NULL,
+    service_type_file_id INTEGER NOT NULL,
+    contents BINARY NOT NULL,
+
+    UNIQUE (environment_id, environment_service_id, service_type_file_id),
+    FOREIGN KEY (environment_id) REFERENCES environment (id),
+    FOREIGN KEY (environment_service_id) REFERENCES environment_service (id),
+    FOREIGN KEY (service_type_file_id) REFERENCES service_type_file (id)
+);
+
 CREATE TABLE service_action_type (
     id INTEGER PRIMARY KEY,
     name TEXT NOT NULL,

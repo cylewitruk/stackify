@@ -19,13 +19,13 @@ use self::theme::theme;
 // Top-level command handlers
 pub mod clean;
 pub mod config;
+pub mod context;
 pub mod env;
 pub mod info;
 pub mod init;
 pub mod network;
 pub mod show;
 pub mod theme;
-pub mod context;
 
 pub mod clap_color_flag;
 pub mod clap_verbosity_flag;
@@ -120,7 +120,7 @@ pub enum Commands {
         shell: clap_complete_command::Shell,
     },
     #[clap(hide = true)]
-    MarkdownHelp
+    MarkdownHelp,
 }
 
 fn styles() -> Styles {
