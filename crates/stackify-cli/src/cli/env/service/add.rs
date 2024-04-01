@@ -1,6 +1,6 @@
 use clap::Args;
 use color_eyre::Result;
-use stackify_common::{util::random_hex, EnvironmentName, ServiceAction};
+use stackify_common::{types::EnvironmentName, util::random_hex, ServiceAction};
 
 use crate::{
     cli::{context::CliContext, theme::ThemedObject},
@@ -131,6 +131,12 @@ pub fn exec(ctx: &CliContext, args: ServiceAddArgs) -> Result<()> {
         .required(false)
         .interact()?;
 
+    let comment = if comment.is_empty() {
+        None
+    } else {
+        Some(comment)
+    };
+
     random_hex(4);
     let name = format!(
         "{}-{}-{}",
@@ -156,7 +162,7 @@ pub fn exec(ctx: &CliContext, args: ServiceAddArgs) -> Result<()> {
     // Add the service
     let env_service =
         ctx.db
-            .add_environment_service(env.id, service_version.id, &name, Some(&comment))?;
+            .add_environment_service(env.id, service_version.id, &name, comment.as_deref())?;
 
     if let StartAt::BlockHeight(block_height) = start_at {
         ctx.db.add_environment_service_action(

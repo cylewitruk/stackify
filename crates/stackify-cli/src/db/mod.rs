@@ -179,13 +179,19 @@ impl AppDb {
         Ok(())
     }
 
-    pub fn list_environment_services(
+    pub fn list_environment_services_for_environment_id(
         &self,
         environment_id: i32,
     ) -> Result<Vec<EnvironmentService>> {
         Ok(environment_service::table
             .filter(environment_service::environment_id.eq(environment_id))
             .get_results::<EnvironmentService>(&mut *self.conn.borrow_mut())?)
+    }
+
+    pub fn list_environment_services(&self) -> Result<Vec<EnvironmentService>> {
+        Ok(environment_service::table
+            .order_by(environment_service::name.asc())
+            .load(&mut *self.conn.borrow_mut())?)
     }
 
     pub fn list_environment_service_files(
@@ -218,6 +224,14 @@ pub struct InsertServiceFile {
 
 /// Configuration
 impl AppDb {
+    pub fn list_service_type_params_for_service_type(
+        &self,
+        service_type_id: i32,
+    ) -> Result<Vec<ServiceTypeParam>> {
+        Ok(service_type_param::table
+            .filter(service_type_param::service_type_id.eq(service_type_id))
+            .load(&mut *self.conn.borrow_mut())?)
+    }
     pub fn check_if_service_type_file_exists(
         &self,
         service_type_id: i32,

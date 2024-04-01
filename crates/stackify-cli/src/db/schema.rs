@@ -66,6 +66,21 @@ table! {
 }
 
 table! {
+    service_type_param (id) {
+        id -> Integer,
+        service_type_id -> Integer,
+        name -> Text,
+        key -> Text,
+        description -> Text,
+        default_value -> Nullable<Text>,
+        is_required -> Bool,
+        value_type_id -> Integer,
+        allowed_values -> Nullable<Text>,
+
+    }
+}
+
+table! {
     service_version (id) {
         id -> Integer,
         service_type_id -> Integer,

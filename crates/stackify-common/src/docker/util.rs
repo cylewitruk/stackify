@@ -6,7 +6,7 @@ use futures_util::{Stream, TryStreamExt};
 use rand::{thread_rng, Rng};
 use tokio::runtime::Runtime;
 
-use crate::EnvironmentName;
+use crate::types::EnvironmentName;
 
 use super::LabelKey;
 

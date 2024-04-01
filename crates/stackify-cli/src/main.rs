@@ -15,6 +15,8 @@ mod util;
 fn main() -> Result<()> {
     let context = initialize()?;
 
+    cliclack::clear_screen()?;
+
     match Cli::try_parse() {
         Ok(cli) => match cli.command {
             Commands::Initialize(args) => {

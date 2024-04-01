@@ -151,26 +151,26 @@ pub struct ServiceRemoveArgs {
 #[derive(Debug, Args)]
 pub struct ServiceListArgs {
     /// The name of the environment to list services for.
-    #[arg(required = true, value_name = "NAME")]
-    pub env_name: String,
+    #[arg(required = false, value_name = "ENVIRONMENT")]
+    pub env_name: Option<String>,
 }
 
 #[derive(Debug, Args)]
 pub struct BuildArgs {
-    #[arg(required = true, value_name = "NAME")]
+    #[arg(required = true, value_name = "ENVIRONMENT")]
     pub env_name: String,
 }
 
 #[derive(Debug, Args)]
 pub struct DownArgs {
-    #[arg(required = true, value_name = "NAME")]
+    #[arg(required = true, value_name = "ENVIRONMENT")]
     pub env_name: String,
 }
 
 #[derive(Debug, Args)]
 pub struct InspectArgs {
     /// The name of the environment to inspect.
-    #[arg(required = true, value_name = "NAME")]
+    #[arg(required = true, value_name = "ENVIRONMENT")]
     pub env_name: String,
 }
 

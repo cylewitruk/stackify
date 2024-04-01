@@ -2,7 +2,7 @@ use std::{collections::HashMap, path::Path};
 
 use color_eyre::eyre::{eyre, Result};
 
-use crate::EnvironmentName;
+use crate::types::EnvironmentName;
 
 pub mod containers;
 pub mod files;

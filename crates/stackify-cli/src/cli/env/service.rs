@@ -1,14 +1,13 @@
 use color_eyre::Result;
-use stackify_common::EnvironmentName;
+use stackify_common::types::EnvironmentName;
 
 use super::CliContext;
 
-use super::args::{
-    ServiceArgs, ServiceInspectArgs, ServiceListArgs, ServiceRemoveArgs, ServiceSubCommands,
-};
+use super::args::{ServiceArgs, ServiceInspectArgs, ServiceListArgs, ServiceSubCommands};
 
 pub mod add;
 pub mod config;
+pub mod list;
 pub mod remove;
 
 pub fn exec_service(ctx: &CliContext, args: ServiceArgs) -> Result<()> {
@@ -23,7 +22,7 @@ pub fn exec_service(ctx: &CliContext, args: ServiceArgs) -> Result<()> {
             exec_inspect(ctx, inner_args)?;
         }
         ServiceSubCommands::List(inner_args) => {
-            exec_list(ctx, inner_args)?;
+            list::exec(ctx, inner_args)?;
         }
         ServiceSubCommands::Config(inner_args) => {
             config::exec(ctx, inner_args)?;
@@ -33,11 +32,6 @@ pub fn exec_service(ctx: &CliContext, args: ServiceArgs) -> Result<()> {
 }
 
 fn exec_inspect(_ctx: &CliContext, args: ServiceInspectArgs) -> Result<()> {
-    let _env_name = EnvironmentName::new(&args.env_name)?;
-    todo!()
-}
-
-fn exec_list(_ctx: &CliContext, args: ServiceListArgs) -> Result<()> {
     let _env_name = EnvironmentName::new(&args.env_name)?;
     todo!()
 }

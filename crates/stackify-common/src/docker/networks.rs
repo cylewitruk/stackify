@@ -3,10 +3,11 @@ use std::collections::HashMap;
 use bollard::network::{CreateNetworkOptions, ListNetworksOptions};
 use color_eyre::{eyre::eyre, Result};
 
-use crate::EnvironmentName;
+use crate::types::EnvironmentName;
 
 use super::{
-    stackify_docker::StackifyDocker, LabelKey, NewStacksNetworkResult, StackifyNetwork, StackifyLabel,
+    stackify_docker::StackifyDocker, LabelKey, NewStacksNetworkResult, StackifyLabel,
+    StackifyNetwork,
 };
 
 impl StackifyDocker {

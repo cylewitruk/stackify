@@ -8,7 +8,7 @@ use comfy_table::presets::UTF8_FULL;
 use comfy_table::Cell;
 use inquire::validator::Validation;
 use inquire::{Confirm, Text};
-use stackify_common::EnvironmentName;
+use stackify_common::types::EnvironmentName;
 
 use super::args::{EpochArgs, EpochEditArgs, EpochListArgs, EpochSubCommands};
 

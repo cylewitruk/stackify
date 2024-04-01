@@ -3,7 +3,7 @@ use std::{collections::HashMap, path::Path};
 use bollard::container::{Config, CreateContainerOptions};
 use color_eyre::Result;
 
-use crate::{docker::util::AddLabelFilter, EnvironmentName};
+use crate::{docker::util::AddLabelFilter, types::EnvironmentName};
 
 use super::{
     stackify_docker::StackifyDocker, util::make_filters, ContainerService, ContainerState,

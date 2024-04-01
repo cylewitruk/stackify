@@ -1,5 +1,5 @@
 use color_eyre::{eyre::eyre, Result};
-use stackify_common::EnvironmentName;
+use stackify_common::types::EnvironmentName;
 
 use crate::cli::{context::CliContext, env::args::ServiceRemoveArgs, theme::ThemedObject};
 
@@ -7,7 +7,9 @@ pub fn exec(ctx: &CliContext, args: ServiceRemoveArgs) -> Result<()> {
     let env_name = EnvironmentName::new(&args.env_name)?;
     let env = ctx.db.get_environment_by_name(env_name.as_ref())?;
 
-    let services = ctx.db.list_environment_services(env.id)?;
+    let services = ctx
+        .db
+        .list_environment_services_for_environment_id(env.id)?;
     let service_types = ctx.db.list_service_types()?;
     let service_versions = ctx.db.list_service_versions()?;
 

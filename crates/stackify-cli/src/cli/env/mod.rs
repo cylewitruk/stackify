@@ -1,7 +1,7 @@
 use color_eyre::eyre::{eyre, Result};
 use comfy_table::{Cell, Color, ColumnConstraint, Table, Width};
 use console::style;
-use stackify_common::{docker::ListStackifyContainerOpts, EnvironmentName};
+use stackify_common::{docker::ListStackifyContainerOpts, types::EnvironmentName};
 
 use crate::cli::context::CliContext;
 use crate::cli::{warn, PAD_WIDTH};
@@ -102,7 +102,9 @@ fn exec_start(ctx: &CliContext, args: args::StartArgs) -> Result<()> {
     let env = ctx.db.get_environment_by_name(env_name.as_ref())?;
 
     // Check if the environment has any services defined. If not, return an error.
-    let env_services = ctx.db.list_environment_services(env.id)?;
+    let env_services = ctx
+        .db
+        .list_environment_services_for_environment_id(env.id)?;
     if env_services.is_empty() {
         warn(format!(
             "The '{}' environment has no services defined, so there is nothing to start.\n",

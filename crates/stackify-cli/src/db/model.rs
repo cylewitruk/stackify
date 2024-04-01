@@ -68,6 +68,20 @@ pub struct ServiceTypeFile {
 }
 
 #[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, QueryableByName)]
+#[diesel(table_name = service_type_param)]
+pub struct ServiceTypeParam {
+    pub id: i32,
+    pub service_type_id: i32,
+    pub name: String,
+    pub key: String,
+    pub description: String,
+    pub default_value: Option<String>,
+    pub is_required: bool,
+    pub value_type_id: i32,
+    pub allowed_values: Option<String>,
+}
+
+#[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, QueryableByName)]
 #[diesel(table_name = service_version)]
 pub struct ServiceVersion {
     pub id: i32,

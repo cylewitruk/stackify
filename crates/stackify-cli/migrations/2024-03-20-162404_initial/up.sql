@@ -92,6 +92,21 @@ INSERT INTO file_type (id, name)
         (2, 'Handlebars Template')
     ;
 
+CREATE TABLE value_type (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+
+    UNIQUE (name)
+) WITHOUT ROWID;
+
+INSERT INTO value_type (id, name)
+    VALUES 
+        (0, 'String'),
+        (1, 'Integer'),
+        (2, 'Boolean'),
+        (3, 'Enum')
+    ;
+
 -- Default service configuration file templates.
 -- These will be populated by the application upon init since we use actual
 -- files as the source.
@@ -107,6 +122,34 @@ CREATE TABLE service_type_file (
     UNIQUE (service_type_id, filename),
     FOREIGN KEY (service_type_id) REFERENCES service_type (id)
 );
+
+CREATE TABLE service_type_param (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    service_type_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    key TEXT NOT NULL,
+    description TEXT NOT NULL,
+    default_value TEXT NULL,
+    is_required BOOLEAN NOT NULL DEFAULT 0,
+    value_type_id INTEGER NOT NULL,
+    allowed_values TEXT NULL,
+
+    UNIQUE (service_type_id, name),
+    FOREIGN KEY (service_type_id) REFERENCES service_type (id)
+);
+
+INSERT INTO service_type_param (service_type_id, value_type_id, name, key, description, default_value, is_required, allowed_values) 
+    VALUES
+        (
+            0,  -- service_type_id (Bitcoin Miner)
+            1,  -- value_type_id (Integer)
+            'Bitcoin Block Frequency', -- name
+            'BITCOIN_BLOCK_FREQUENCY', -- key
+            'The frequency at which the Bitcoin Miner will mine a new block (in seconds).', -- description
+            '30', -- default value 
+            1, -- is_required
+            NULL
+        );
 
 CREATE TABLE service_version (
     id INTEGER PRIMARY KEY,
