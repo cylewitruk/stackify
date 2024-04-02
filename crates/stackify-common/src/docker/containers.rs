@@ -11,9 +11,19 @@ use super::{
 };
 
 impl StackifyDocker {
+    pub fn start_build_container(&self) -> Result<()> {
+        self.runtime.block_on(async {
+            self.docker
+                .start_container::<String>("stackify-build", None)
+                .await?;
+            Ok(())
+        })
+    }
+
     pub fn create_stackify_build_container<P: AsRef<Path>>(
         &self,
         bin_dir: &P,
+        assets_dir: &P,
         entrypoint: &[u8],
     ) -> Result<CreateContainerResult> {
         let container_name = "stackify-build";
@@ -28,13 +38,16 @@ impl StackifyDocker {
 
         let mut volumes: HashMap<String, HashMap<(), ()>> = HashMap::new();
         volumes.insert(
-            format!("{}:~/.stackify/bin", bin_dir.as_ref().display()),
+            format!("{}:~/.stackify/bin", bin_dir.as_ref().to_string_lossy()),
             HashMap::new(),
         );
         volumes.insert(
             format!(
-                "{}/build-entrypoint.sh:/entrypoint.sh",
-                bin_dir.as_ref().display()
+                "{}:/entrypoint.sh",
+                assets_dir
+                    .as_ref()
+                    .join("build-entrypoint.sh")
+                    .to_string_lossy()
             ),
             HashMap::new(),
         );
@@ -43,7 +56,7 @@ impl StackifyDocker {
             image: Some("stackify-build:latest".to_string()),
             hostname: Some(container_name.to_string()),
             volumes: Some(volumes),
-            entrypoint: Some(vec!["/entrypoint.sh".into()]),
+            entrypoint: Some(vec!["/bin/sh".into(), "/entrypoint.sh".into()]),
             labels: Some(labels),
             ..Default::default()
         };

@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, ops::Deref};
 
 use color_eyre::{eyre::bail, Result};
 use regex::Regex;
@@ -30,6 +30,14 @@ impl EnvironmentName {
 impl Display for EnvironmentName {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name)
+    }
+}
+
+impl Deref for EnvironmentName {
+    type Target = str;
+
+    fn deref(&self) -> &Self::Target {
+        &self.name
     }
 }
 

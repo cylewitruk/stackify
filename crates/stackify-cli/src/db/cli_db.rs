@@ -6,8 +6,9 @@ use stackify_common::types::{self, EnvironmentName};
 use super::{diesel::model, diesel::schema::*, AppDb};
 
 pub trait CliDatabase {
+    fn load_all_environments(&self) -> Result<Vec<types::Environment>>;
     fn load_environment(&self, name: &str) -> Result<Option<types::Environment>>;
-    fn list_service_types(&self) -> Result<Vec<types::ServiceTypeFull>>;
+    fn load_all_service_types(&self) -> Result<Vec<types::ServiceTypeFull>>;
 }
 
 impl AppDb {
@@ -17,6 +18,17 @@ impl AppDb {
 }
 
 impl CliDatabase for AppDb {
+    fn load_all_environments(&self) -> Result<Vec<types::Environment>> {
+        let environments =
+            environment::table.load::<model::Environment>(&mut *self.conn.borrow_mut())?;
+
+        environments
+            .into_iter()
+            .map(|env| Ok(self.load_environment(&env.name)?.unwrap()))
+            .collect::<Result<Vec<_>>>()
+    }
+
+    /// Loads an environment by name.
     fn load_environment(&self, name: &str) -> Result<Option<types::Environment>> {
         let env_name = EnvironmentName::new(name)?;
 
@@ -32,14 +44,15 @@ impl CliDatabase for AppDb {
         let service_types =
             service_type::table.load::<model::ServiceType>(&mut *self.conn.borrow_mut())?;
 
-        let mut epochs = epoch::table
+        let epochs = epoch::table
             .load::<model::Epoch>(&mut *self.conn.borrow_mut())?
             .into_iter()
             .map(|e| types::Epoch {
                 id: e.id,
                 default_block_height: e.default_block_height as u32,
                 name: e.name,
-            });
+            })
+            .collect::<Vec<_>>();
 
         let service_type_versions =
             service_version::table.load::<model::ServiceVersion>(&mut *self.conn.borrow_mut())?;
@@ -59,13 +72,13 @@ impl CliDatabase for AppDb {
                     .expect("Service version not found");
 
                 let min_epoch = if let Some(min_epoch) = db_service_version.minimum_epoch_id {
-                    epochs.find(|e| e.id == min_epoch)
+                    epochs.iter().find(|e| e.id == min_epoch).cloned()
                 } else {
                     None
                 };
 
                 let max_epoch = if let Some(max_epoch) = db_service_version.maximum_epoch_id {
-                    epochs.find(|e| e.id == max_epoch)
+                    epochs.iter().find(|e| e.id == max_epoch).cloned()
                 } else {
                     None
                 };
@@ -86,11 +99,8 @@ impl CliDatabase for AppDb {
                         .clone(),
                 };
 
-                let git_target = db_service_version
-                    .git_target
-                    .as_ref()
-                    .map(|gt| types::GitTarget::parse(gt))
-                    .ok_or(eyre!("Invalid git target"))?;
+                let git_target =
+                    types::GitTarget::parse_opt(db_service_version.git_target.as_ref());
 
                 let service = types::EnvironmentService {
                     id: es.id,
@@ -114,7 +124,9 @@ impl CliDatabase for AppDb {
             .iter()
             .map(|ee| {
                 let epoch = epochs
+                    .iter()
                     .find(|e| e.id == ee.epoch_id)
+                    .cloned()
                     .ok_or(eyre!("Epoch not found"))?;
 
                 Ok(types::EnvironmentEpoch {
@@ -136,7 +148,7 @@ impl CliDatabase for AppDb {
         Ok(Some(ret))
     }
 
-    fn list_service_types(&self) -> Result<Vec<types::ServiceTypeFull>> {
+    fn load_all_service_types(&self) -> Result<Vec<types::ServiceTypeFull>> {
         let service_types =
             service_type::table.load::<model::ServiceType>(&mut *self.conn.borrow_mut())?;
 

@@ -103,6 +103,7 @@ pub struct ServiceVersion {
     pub maximum_epoch_id: Option<i32>,
     pub git_target: Option<String>,
     pub cli_name: String,
+    // pub rebuild_required: bool,
 }
 
 #[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, QueryableByName)]

@@ -13,8 +13,6 @@ mod includes;
 mod util;
 
 fn main() -> Result<()> {
-    cliclack::clear_screen()?;
-
     let context = initialize()?;
 
     match Cli::try_parse() {

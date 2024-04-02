@@ -4,6 +4,7 @@ use stackify_common::types::EnvironmentName;
 
 use crate::{
     cli::{context::CliContext, env::args::ServiceListArgs, theme::ThemedObject},
+    db::cli_db::CliDatabase as _,
     util::FindById as _,
 };
 
@@ -18,8 +19,45 @@ pub fn exec(ctx: &CliContext, args: ServiceListArgs) -> Result<()> {
     if env.is_some() {
         list_for_environment_id(ctx, env.unwrap().id)
     } else {
-        list_for_all_environments(ctx)
+        list_for_all_environments_2(ctx)
     }
+}
+
+fn list_for_all_environments_2(ctx: &CliContext) -> Result<()> {
+    println!("{}", "Listing services for all environments:");
+    let db = ctx.clidb();
+
+    let environments = db.load_all_environments()?;
+    for env in environments {
+        println!("");
+
+        let mut main_table = prettytable::Table::new();
+        main_table.set_format(*prettytable::format::consts::FORMAT_NO_BORDER);
+        main_table.add_row(row![env.name.bold()]);
+
+        let mut svc_table = prettytable::Table::new();
+        svc_table.set_format(*prettytable::format::consts::FORMAT_BOX_CHARS);
+        svc_table.set_titles(row![
+            "Service (Name)".cyan().bold(),
+            "Type".cyan().bold(),
+            "Version".cyan().bold(),
+            "Remark".cyan().bold()
+        ]);
+
+        for svc in env.services.iter() {
+            svc_table.add_row(row![
+                svc.name,
+                svc.service_type.name,
+                svc.version.version,
+                svc.remark.clone().unwrap_or("<none>".to_string()).gray()
+            ]);
+        }
+
+        main_table.add_row(row![svc_table]);
+        main_table.printstd();
+    }
+
+    Ok(())
 }
 
 fn list_for_all_environments(ctx: &CliContext) -> Result<()> {

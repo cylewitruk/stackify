@@ -159,6 +159,7 @@ CREATE TABLE service_version (
     maximum_epoch_id INTEGER NULL,
     git_target TEXT NULL,
     cli_name TEXT NOT NULL,
+    rebuild_required BOOLEAN NOT NULL DEFAULT 0,
 
     UNIQUE (service_type_id, version),
     UNIQUE (cli_name),

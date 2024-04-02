@@ -48,7 +48,7 @@ pub fn test_load_empty_environment() -> Result<()> {
 }
 
 #[test]
-pub fn test_list_service_types() -> Result<()> {
+pub fn test_load_all_service_types() -> Result<()> {
     let db = get_db()?;
 
     let db_service_types = db.list_service_types()?;
@@ -57,7 +57,7 @@ pub fn test_list_service_types() -> Result<()> {
     assert!(service_count > 0);
 
     let db = db.as_clidb();
-    let service_types = db.list_service_types()?;
+    let service_types = db.load_all_service_types()?;
     assert_eq!(service_types.len(), service_count);
 
     for st in service_types.iter() {

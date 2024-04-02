@@ -118,8 +118,11 @@ runtime binaries, initialize the database and copy assets to the appropriate dir
 
         let mut spinner = cliclack::spinner();
         spinner.start("Creating build container...");
-        ctx.docker
-            .create_stackify_build_container(&ctx.bin_dir, STACKIFY_BUILD_ENTRYPOINT)?;
+        ctx.docker.create_stackify_build_container(
+            &ctx.bin_dir,
+            &ctx.assets_dir,
+            STACKIFY_BUILD_ENTRYPOINT,
+        )?;
         spinner.stop("Build container created");
 
         // NOTE: We don't create runtime containers here because they are
