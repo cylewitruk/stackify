@@ -1,15 +1,15 @@
-use crate::db::model::{Epoch, ServiceType, ServiceUpgradePath, ServiceVersion};
+use crate::db::diesel::model::{Epoch, ServiceType, ServiceUpgradePath, ServiceVersion};
 use color_eyre::eyre::{bail, eyre, Result};
 use console::style;
 use inquire::{Select, Text};
-use stackify_common::util::to_alphanumeric_snake;
+use stackify_common::{
+    types::{GitTarget, GitTargetKind},
+    util::to_alphanumeric_snake,
+};
 
 use crate::{
     cli::context::CliContext,
-    util::{
-        git::{GitTarget, TargetType},
-        FilterByServiceType, FilterByServiceVersion, FindById,
-    },
+    util::{FilterByServiceType, FilterByServiceVersion, FindById},
 };
 
 use super::args::{
@@ -193,9 +193,9 @@ fn print_maximum_epoch(epoch: &Epoch) {
 
 fn print_git_target(target: &GitTarget) {
     let git_type = match target.target_type {
-        TargetType::Tag => format!("{}", style("(git tag)").dim()),
-        TargetType::Branch => format!("{}", style("(git branch)").dim()),
-        TargetType::Commit => format!("{}", style("(git commit)").dim()),
+        GitTargetKind::Tag => format!("{}", style("(git tag)").dim()),
+        GitTargetKind::Branch => format!("{}", style("(git branch)").dim()),
+        GitTargetKind::Commit => format!("{}", style("(git commit)").dim()),
     };
 
     println!(

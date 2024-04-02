@@ -3,7 +3,7 @@ use stackify_common::types::EnvironmentName;
 
 use super::CliContext;
 
-use super::args::{ServiceArgs, ServiceInspectArgs, ServiceListArgs, ServiceSubCommands};
+use super::args::{ServiceArgs, ServiceInspectArgs, ServiceSubCommands};
 
 pub mod add;
 pub mod config;

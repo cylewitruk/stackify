@@ -1,4 +1,4 @@
-use crate::db::model::{Epoch, ServiceType, ServiceUpgradePath, ServiceVersion};
+use crate::db::diesel::model::{Epoch, ServiceType, ServiceUpgradePath, ServiceVersion};
 
 pub mod git;
 pub mod print;

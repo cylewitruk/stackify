@@ -4,7 +4,7 @@ use stackify_common::{types::EnvironmentName, util::random_hex, ServiceAction};
 
 use crate::{
     cli::{context::CliContext, theme::ThemedObject},
-    db::model::Epoch,
+    db::diesel::model::Epoch,
     util::FilterByServiceType,
 };
 

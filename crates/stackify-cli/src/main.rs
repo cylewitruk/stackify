@@ -13,9 +13,9 @@ mod includes;
 mod util;
 
 fn main() -> Result<()> {
-    let context = initialize()?;
-
     cliclack::clear_screen()?;
+
+    let context = initialize()?;
 
     match Cli::try_parse() {
         Ok(cli) => match cli.command {

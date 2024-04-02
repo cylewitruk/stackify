@@ -67,25 +67,101 @@ impl TryFrom<String> for EnvironmentName {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EnvironmentService {
     pub id: i32,
-    pub service_type: ServiceType,
+    pub service_type: ServiceTypeSimple,
     pub version: ServiceVersion,
+    pub name: String,
+    pub remark: Option<String>,
 }
 
-pub struct ServiceType {
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EnvironmentEpoch {
+    pub id: i32,
+    pub epoch: Epoch,
+    pub starts_at_block_height: u32,
+    pub ends_at_block_height: Option<u32>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ServiceTypeSimple {
     pub id: i32,
     pub name: String,
     pub cli_name: String,
 }
 
-pub struct ServiceVersion {
-    id: i32,
-    name: String,
-    version: String,
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ServiceTypeFull {
+    pub id: i32,
+    pub name: String,
+    pub cli_name: String,
+    pub allow_max_epoch: bool,
+    pub allow_min_epoch: bool,
+    pub allow_git_target: bool,
+    pub versions: Vec<ServiceVersion>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ServiceVersion {
+    pub id: i32,
+    pub version: String,
+    pub min_epoch: Option<Epoch>,
+    pub max_epoch: Option<Epoch>,
+    pub git_target: Option<GitTarget>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Epoch {
+    pub id: i32,
+    pub name: String,
+    pub default_block_height: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Environment {
     pub name: EnvironmentName,
     pub services: Vec<EnvironmentService>,
+    pub epochs: Vec<EnvironmentEpoch>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum GitTargetKind {
+    Tag,
+    Branch,
+    Commit,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GitTarget {
+    pub target_type: GitTargetKind,
+    pub target: String,
+}
+
+impl GitTarget {
+    pub fn parse<T: AsRef<str>>(s: T) -> Option<GitTarget> {
+        let s = s.as_ref();
+        let split = s.split(":").collect::<Vec<_>>();
+        if split.len() < 2 {
+            return None;
+        }
+        let target_type = match split[0] {
+            "tag" => GitTargetKind::Tag,
+            "branch" => GitTargetKind::Branch,
+            "commit" => GitTargetKind::Commit,
+            _ => return None,
+        };
+        Some(GitTarget {
+            target_type,
+            target: split[1].to_string(),
+        })
+    }
+
+    pub fn parse_opt<T: AsRef<str>>(s: Option<T>) -> Option<GitTarget> {
+        if let Some(s) = s {
+            Self::parse(s)
+        } else {
+            None
+        }
+    }
 }

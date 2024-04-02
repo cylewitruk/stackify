@@ -3,24 +3,27 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 
+use ::diesel::connection::SimpleConnection;
+use ::diesel::prelude::*;
+use ::diesel::{delete, insert_into, update};
 use color_eyre::eyre::bail;
 use color_eyre::eyre::Report;
 use color_eyre::eyre::Result;
-use diesel::connection::SimpleConnection;
-use diesel::insert_into;
-use diesel::prelude::*;
 use diesel_migrations::embed_migrations;
 use diesel_migrations::EmbeddedMigrations;
 use diesel_migrations::MigrationHarness;
 use log::info;
 
-pub mod model;
+pub mod cli_db;
+pub mod diesel;
 pub mod opts;
-pub mod schema;
 
-use self::model::*;
+#[cfg(test)]
+mod tests;
+
+use self::diesel::model::*;
+use self::diesel::schema::*;
 use self::opts::NewServiceVersionOpts;
-use self::schema::*;
 
 pub const DB_MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
 
@@ -45,7 +48,7 @@ impl AppDb {
         name: &str,
         comment: Option<&str>,
     ) -> Result<EnvironmentService> {
-        Ok(diesel::insert_into(environment_service::table)
+        Ok(insert_into(environment_service::table)
             .values((
                 environment_service::environment_id.eq(environment_id),
                 environment_service::service_version_id.eq(service_version_id),
@@ -62,7 +65,7 @@ impl AppDb {
         at_block_height: Option<i32>,
         at_epoch_id: Option<i32>,
     ) -> Result<()> {
-        diesel::insert_into(environment_service_action::table)
+        insert_into(environment_service_action::table)
             .values((
                 environment_service_action::environment_service_id.eq(environment_service_id),
                 environment_service_action::service_action_type_id.eq(service_action_type_id),
@@ -81,7 +84,7 @@ impl AppDb {
         service_type_file_id: i32,
         contents: &[u8],
     ) -> Result<()> {
-        diesel::insert_into(environment_service_file::table)
+        insert_into(environment_service_file::table)
             .values((
                 environment_service_file::environment_id.eq(environment_id),
                 environment_service_file::environment_service_id.eq(environment_service_id),
@@ -105,7 +108,7 @@ impl AppDb {
 
         conn.transaction(|tx| {
             for (env_epoch_id, height) in epochs {
-                diesel::update(environment_epoch::table)
+                update(environment_epoch::table)
                     .filter(environment_epoch::id.eq(env_epoch_id))
                     .set(environment_epoch::starts_at_block_height.eq(height))
                     .execute(tx)
@@ -127,7 +130,7 @@ impl AppDb {
         let conn = &mut *self.conn.borrow_mut();
 
         conn.transaction(|tx| {
-            let env = diesel::insert_into(environment::table)
+            let env = insert_into(environment::table)
                 .values((
                     environment::name.eq(name),
                     environment::bitcoin_block_speed.eq(bitcoin_block_speed as i32),
@@ -137,7 +140,7 @@ impl AppDb {
             let epochs = epoch::table.order_by(epoch::id.asc()).load::<Epoch>(tx)?;
 
             for epoch in epochs {
-                diesel::insert_into(environment_epoch::table)
+                insert_into(environment_epoch::table)
                     .values((
                         environment_epoch::environment_id.eq(env.id),
                         environment_epoch::epoch_id.eq(epoch.id),
@@ -163,13 +166,13 @@ impl AppDb {
                 .filter(environment_service::environment_id.eq(environment_id))
                 .load::<i32>(&mut *self.conn.borrow_mut())?;
 
-            diesel::delete(
+            delete(
                 environment_service_action::table
                     .filter(environment_service_action::id.eq_any(environment_service_ids)),
             )
             .execute(&mut *self.conn.borrow_mut())?;
 
-            diesel::delete(
+            delete(
                 environment_service::table
                     .filter(environment_service::environment_id.eq(environment_id)),
             )
@@ -299,7 +302,7 @@ impl AppDb {
     }
 
     pub fn new_service_version(&self, opts: NewServiceVersionOpts) -> Result<ServiceVersion> {
-        Ok(diesel::insert_into(service_version::table)
+        Ok(insert_into(service_version::table)
             .values((
                 service_version::service_type_id.eq(opts.service_type_id),
                 service_version::version.eq(&opts.version),
@@ -312,7 +315,7 @@ impl AppDb {
     }
 
     pub fn new_epoch(&self, name: &str, default_block_height: u32) -> Result<Epoch> {
-        Ok(diesel::insert_into(epoch::table)
+        Ok(insert_into(epoch::table)
             .values((
                 epoch::name.eq(name),
                 epoch::default_block_height.eq(default_block_height as i32),

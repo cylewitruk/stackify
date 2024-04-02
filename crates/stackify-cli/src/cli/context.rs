@@ -1,7 +1,7 @@
 use stackify_common::docker::stackify_docker::StackifyDocker;
 use std::path::PathBuf;
 
-use crate::db::AppDb;
+use crate::db::{cli_db::CliDatabase, AppDb};
 
 pub struct CliContext {
     /// The configuration directory for Stackify. Defaults to `$HOME/.stackify`
@@ -29,4 +29,10 @@ pub struct CliContext {
     pub group_id: u32,
     /// Instance of Stackify's Docker client.
     pub docker: StackifyDocker,
+}
+
+impl CliContext {
+    pub fn clidb(&self) -> &impl CliDatabase {
+        self.db.as_clidb()
+    }
 }

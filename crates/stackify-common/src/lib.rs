@@ -1,7 +1,6 @@
 pub mod docker;
 
 pub mod api;
-pub mod cli_db;
 pub mod download;
 #[cfg(test)]
 pub mod tests;

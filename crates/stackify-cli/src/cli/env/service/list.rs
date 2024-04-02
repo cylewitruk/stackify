@@ -1,10 +1,9 @@
 use color_eyre::{eyre::eyre, Result};
-use prettytable::{row, table};
+use prettytable::row;
 use stackify_common::types::EnvironmentName;
 
 use crate::{
     cli::{context::CliContext, env::args::ServiceListArgs, theme::ThemedObject},
-    db::schema::{environment::table, service_type},
     util::FindById as _,
 };
 
@@ -24,6 +23,7 @@ pub fn exec(ctx: &CliContext, args: ServiceListArgs) -> Result<()> {
 }
 
 fn list_for_all_environments(ctx: &CliContext) -> Result<()> {
+    let db = ctx.clidb();
     let services = ctx.db.list_environment_services()?;
     let mut environments = ctx.db.list_environments()?;
     let service_versions = ctx.db.list_service_versions()?;

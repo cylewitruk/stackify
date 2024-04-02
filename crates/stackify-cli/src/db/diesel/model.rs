@@ -1,5 +1,6 @@
 use super::schema::*;
 use diesel::prelude::*;
+use stackify_common::types;
 use time::PrimitiveDateTime;
 
 #[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, QueryableByName)]
@@ -48,6 +49,16 @@ pub struct ServiceType {
     pub allow_git_target: bool,
 }
 
+impl From<ServiceType> for types::ServiceTypeSimple {
+    fn from(value: ServiceType) -> Self {
+        types::ServiceTypeSimple {
+            id: value.id,
+            name: value.name,
+            cli_name: value.cli_name,
+        }
+    }
+}
+
 #[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, QueryableByName)]
 #[diesel(table_name = file_type)]
 pub struct FileType {
@@ -81,6 +92,7 @@ pub struct ServiceTypeParam {
     pub allowed_values: Option<String>,
 }
 
+// TODO: Change this to `ServiceTypeVersion` like the other models which aren't directly connected to an environment.
 #[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, QueryableByName)]
 #[diesel(table_name = service_version)]
 pub struct ServiceVersion {
