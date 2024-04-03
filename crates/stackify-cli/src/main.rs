@@ -3,32 +3,35 @@ use cli::context::CliContext;
 use color_eyre::eyre::{eyre, Result};
 use db::{apply_db_migrations, AppDb};
 use diesel::{Connection, SqliteConnection};
+use docker::api::DockerApi;
 use stackify_common::docker::stackify_docker::StackifyDocker;
 
 use crate::cli::{Cli, Commands};
 
 mod cli;
 mod db;
+mod docker;
 mod includes;
 mod util;
 
-fn main() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
     let context = initialize()?;
 
     match Cli::try_parse() {
         Ok(cli) => match cli.command {
             Commands::Initialize(args) => {
-                cli::init::exec(&context, args)?;
+                cli::init::exec(&context, args).await?;
             }
             Commands::Environment(args) => {
-                cli::env::exec(&context, args)?;
+                cli::env::exec(&context, args).await?;
             }
             Commands::Info(args) => {
-                cli::info::exec(&context, args)?;
+                cli::info::exec(&context, args).await?;
             }
             Commands::Clean(args) => {
                 println!("Clean");
-                cli::clean::exec(&context, args)?;
+                cli::clean::exec(&context, args).await?;
             }
             Commands::Config(args) => {
                 cli::config::exec(&context, args)?;
@@ -85,7 +88,22 @@ fn initialize() -> Result<CliContext> {
 
     let app_db = AppDb::new(connection);
 
-    let docker = StackifyDocker::new()?;
+    //let docker = StackifyDocker::new()?;
+
+    let docker_api = DockerApi::new(
+        docker::StackifyHostDirs {
+            bin_dir: bin_dir.clone(),
+            tmp_dir: tmp_dir.clone(),
+            assets_dir: assets_dir.clone(),
+        },
+        docker::StackifyContainerDirs {
+            home_dir: std::path::PathBuf::from("/home/stackify/"),
+            bin_dir: std::path::PathBuf::from("/home/stackify/bin/"),
+            data_dir: std::path::PathBuf::from("/home/stackify/data/"),
+            config_dir: std::path::PathBuf::from("/home/stackify/config/"),
+            logs_dir: std::path::PathBuf::from("/home/stackify/logs/"),
+        },
+    )?;
 
     let context = CliContext {
         config_dir,
@@ -98,7 +116,8 @@ fn initialize() -> Result<CliContext> {
         db: app_db,
         user_id: uid,
         group_id: gid,
-        docker,
+        //docker,
+        docker_api,
     };
 
     Ok(context)

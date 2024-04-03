@@ -2,15 +2,37 @@ use std::{collections::HashMap, path::Path};
 
 use bollard::container::{Config, CreateContainerOptions};
 use color_eyre::Result;
+use futures_util::{Stream, StreamExt};
 
 use crate::{docker::util::AddLabelFilter, types::EnvironmentName};
 
 use super::{
     stackify_docker::StackifyDocker, util::make_filters, ContainerService, ContainerState,
-    CreateContainerResult, LabelKey, ListStackifyContainerOpts, StackifyContainer, StackifyLabel,
+    CreateContainerResult, LabelKey, ListStackifyContainerOpts, LogEntry, StackifyContainer,
+    StackifyLabel,
 };
 
 impl StackifyDocker {
+    pub fn stream_container_logs(
+        &self,
+        container_id: &str,
+    ) -> Result<impl Stream<Item = Result<LogEntry>> + Unpin + '_> {
+        let logopts = bollard::container::LogsOptions::<String> {
+            follow: true,
+            stdout: true,
+            stderr: true,
+            ..Default::default()
+        };
+        self.runtime.block_on(async {
+            let stream = self.docker.logs::<String>(container_id, Some(logopts));
+            Ok(stream.map(|log| {
+                Ok(LogEntry {
+                    message: log?.to_string(),
+                })
+            }))
+        })
+    }
+
     pub fn start_build_container(&self) -> Result<()> {
         self.runtime.block_on(async {
             self.docker
@@ -25,6 +47,10 @@ impl StackifyDocker {
         bin_dir: &P,
         assets_dir: &P,
         entrypoint: &[u8],
+        build_sbtc: bool,
+        build_clarinet: bool,
+        build_stacks_node: Option<String>,
+        build_stacks_signer: bool,
     ) -> Result<CreateContainerResult> {
         let container_name = "stackify-build";
         let opts = CreateContainerOptions {
@@ -38,7 +64,7 @@ impl StackifyDocker {
 
         let mut volumes: HashMap<String, HashMap<(), ()>> = HashMap::new();
         volumes.insert(
-            format!("{}:~/.stackify/bin", bin_dir.as_ref().to_string_lossy()),
+            format!("{}:/out:rw", bin_dir.as_ref().to_string_lossy()),
             HashMap::new(),
         );
         volumes.insert(
@@ -51,6 +77,10 @@ impl StackifyDocker {
             ),
             HashMap::new(),
         );
+        let mut env_vars = vec![];
+        if let Some(version) = build_stacks_node {
+            env_vars.push(format!("BUILD_STACKS={}", version));
+        }
 
         let config = Config {
             image: Some("stackify-build:latest".to_string()),
@@ -58,6 +88,8 @@ impl StackifyDocker {
             volumes: Some(volumes),
             entrypoint: Some(vec!["/bin/sh".into(), "/entrypoint.sh".into()]),
             labels: Some(labels),
+            tty: Some(true),
+            env: Some(env_vars),
             ..Default::default()
         };
 

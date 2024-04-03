@@ -23,11 +23,19 @@ if [ "${BUILD_CLARINET}" = "true" ]; then
     && mv -f /target/x86_64-unknown-linux-gnu/docker/clarinet /out/clarinet
 fi
 
-if [ "${BUILD_STACKS}" = "true" ]; then
-  echo "Building Stacks binaries" \
-    && find ./ ! -name '.' -delete \
-    && cp -rT ~/repos/stacks-core /src \
-    && git checkout "${STACKS_BRANCH_TAG_REV}" \
-    && cargo --config ~/.cargo/config.toml build --profile docker --package stacks-node --bin stacks-node \
-    && mv -f /target/x86_64-unknown-linux-gnu/docker/stacks-node /out/stacks-node-"${STACKS_BRANCH_TAG_REV}"
+if [ -n "${BUILD_STACKS}" ]; then
+  echo "Building Stacks binaries"
+  while : ; do echo "sleep 5" && sleep 5; done
+  echo "Removing existing source files (if any)"
+  find ./ ! -name '.' -delete 
+  echo "Copying stacks-core source files"
+  cp -rT ~/repos/stacks-core /src 
+  echo "Checking out the specified tag/branch/commit (${BUILD_STACKS})"
+  git checkout "${BUILD_STACKS}" 
+  echo "Pulling the latest changes"
+  git pull
+  echo "Building stacks-node"
+  cargo --config ~/.cargo/config.toml build --profile docker --package stacks-node --bin stacks-node
+  echo "Moving the built binary to the output directory"
+  mv -f /target/x86_64-unknown-linux-gnu/docker/stacks-node /out/stacks-node-"${BUILD_STACKS}"
 fi

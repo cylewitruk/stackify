@@ -1,51 +1,53 @@
 use color_eyre::eyre::{eyre, Result};
 use comfy_table::{Cell, Color, ColumnConstraint, Table, Width};
 use console::style;
-use stackify_common::{docker::ListStackifyContainerOpts, types::EnvironmentName};
+use docker_api::opts::{
+    ContainerCreateOpts, ContainerListOpts, ContainerStopOpts, NetworkCreateOpts,
+};
+use stackify_common::types::EnvironmentName;
 
 use crate::cli::context::CliContext;
-use crate::cli::{warn, PAD_WIDTH};
-use crate::util::print::{print_fail, print_ok};
-use crate::util::progressbar::PbWrapper;
+use crate::cli::warn;
+use crate::docker::opts::{CreateContainer, CreateNetwork, ListContainers};
 
 use self::args::EnvArgs;
 use self::epoch::exec_epoch;
 use self::service::exec_service;
 
-use super::{error, info};
+use super::info;
 
 pub mod args;
 pub mod build;
 pub mod epoch;
 pub mod service;
 
-pub fn exec(ctx: &CliContext, args: EnvArgs) -> Result<()> {
+pub async fn exec(ctx: &CliContext, args: EnvArgs) -> Result<()> {
     match args.commands {
-        args::EnvSubCommands::List(inner_args) => exec_list(ctx, inner_args),
-        args::EnvSubCommands::Create(inner_args) => exec_create(ctx, inner_args),
-        args::EnvSubCommands::Delete(inner_args) => exec_delete(ctx, inner_args),
-        args::EnvSubCommands::Start(inner_args) => exec_start(ctx, inner_args),
-        args::EnvSubCommands::Stop(inner_args) => exec_stop(ctx, inner_args),
-        args::EnvSubCommands::Inspect(inner_args) => exec_inspect(ctx, inner_args),
-        args::EnvSubCommands::Down(inner_args) => exec_down(ctx, inner_args),
-        args::EnvSubCommands::Build(inner_args) => build::exec(ctx, inner_args),
+        args::EnvSubCommands::List(inner_args) => exec_list(ctx, inner_args).await,
+        args::EnvSubCommands::Create(inner_args) => exec_create(ctx, inner_args).await,
+        args::EnvSubCommands::Delete(inner_args) => exec_delete(ctx, inner_args).await,
+        args::EnvSubCommands::Start(inner_args) => exec_start(ctx, inner_args).await,
+        args::EnvSubCommands::Stop(inner_args) => exec_stop(ctx, inner_args).await,
+        args::EnvSubCommands::Inspect(inner_args) => exec_inspect(ctx, inner_args).await,
+        args::EnvSubCommands::Down(inner_args) => exec_down(ctx, inner_args).await,
+        args::EnvSubCommands::Build(inner_args) => build::exec(ctx, inner_args).await,
         args::EnvSubCommands::Service(inner_args) => exec_service(ctx, inner_args),
         args::EnvSubCommands::Epoch(inner_args) => exec_epoch(ctx, inner_args),
-        args::EnvSubCommands::Set(inner_args) => exec_set(ctx, inner_args),
+        args::EnvSubCommands::Set(inner_args) => exec_set(ctx, inner_args).await,
     }
 }
 
-fn exec_set(_ctx: &CliContext, args: args::SetArgs) -> Result<()> {
+async fn exec_set(_ctx: &CliContext, args: args::SetArgs) -> Result<()> {
     println!("Set environment: {}", args.env_name);
     Ok(())
 }
 
-fn exec_inspect(_ctx: &CliContext, args: args::InspectArgs) -> Result<()> {
+async fn exec_inspect(_ctx: &CliContext, args: args::InspectArgs) -> Result<()> {
     println!("Inspect environment: {}", args.env_name);
     Ok(())
 }
 
-fn exec_list(ctx: &CliContext, _args: args::ListArgs) -> Result<()> {
+async fn exec_list(ctx: &CliContext, _args: args::ListArgs) -> Result<()> {
     let environments = ctx.db.list_environments()?;
 
     if environments.is_empty() {
@@ -83,7 +85,7 @@ fn exec_list(ctx: &CliContext, _args: args::ListArgs) -> Result<()> {
     Ok(())
 }
 
-fn exec_create(ctx: &CliContext, args: args::CreateArgs) -> Result<()> {
+async fn exec_create(ctx: &CliContext, args: args::CreateArgs) -> Result<()> {
     let env_name = EnvironmentName::new(&args.env_name)?;
     let env = ctx
         .db
@@ -92,12 +94,12 @@ fn exec_create(ctx: &CliContext, args: args::CreateArgs) -> Result<()> {
     Ok(())
 }
 
-fn exec_delete(_ctx: &CliContext, _args: args::DeleteArgs) -> Result<()> {
+async fn exec_delete(_ctx: &CliContext, _args: args::DeleteArgs) -> Result<()> {
     println!("Delete environment");
     Ok(())
 }
 
-fn exec_start(ctx: &CliContext, args: args::StartArgs) -> Result<()> {
+async fn exec_start(ctx: &CliContext, args: args::StartArgs) -> Result<()> {
     let env_name = EnvironmentName::new(&args.env_name)?;
     let env = ctx.db.get_environment_by_name(env_name.as_ref())?;
 
@@ -120,51 +122,52 @@ fn exec_start(ctx: &CliContext, args: args::StartArgs) -> Result<()> {
 
     // Assert that the environment is not already running.
     let existing_containers = ctx
-        .docker
-        .list_stackify_containers(ListStackifyContainerOpts {
-            environment_name: Some(env_name.clone()),
-            only_running: Some(true),
-        })?;
+        .docker()
+        .api()
+        .containers()
+        .list(&ContainerListOpts::for_all_stackify_containers())
+        .await?;
 
     // If there are any running containers, we can't start the environment.
     if !existing_containers.is_empty() {
-        error("The environment is already running.");
+        cliclack::log::error("The environment is already running.");
     }
 
     // Create the environment container. This is our "lock file" for the environment
     // within Docker -- it's the first resource we create and the last one we delete.
-    PbWrapper::new_spinner("Create environment container").exec(|pb| {
-        let env_container = ctx.docker.create_environment_container(&env_name)?;
-        pb.finish_success_with_meta(&env_container.id);
-        if !env_container.warnings.is_empty() {
-            warn("Warnings were generated while creating the environment container:");
-            env_container
-                .warnings
-                .iter()
-                .for_each(|w| println!("  - {}", w));
-        }
-        Ok(())
-    })?;
+    let mut spinner = cliclack::spinner();
+    spinner.start("Creating environment container...");
+    ctx.docker()
+        .api()
+        .containers()
+        .create(&ContainerCreateOpts::for_stackify_environment_container(
+            &env_name,
+        ))
+        .await?;
+    spinner.stop("Environment container created");
 
     // Create the network for the environment.
-    PbWrapper::new_spinner("Creating environment network").exec(|pb| {
-        let network = ctx.docker.create_stackify_network(&env_name)?;
-        pb.finish_success_with_meta(&network.id);
-        Ok(())
-    })?;
+    let mut spinner = cliclack::spinner();
+    spinner.start("Creating environment network...");
+    ctx.docker()
+        .api()
+        .networks()
+        .create(&NetworkCreateOpts::for_stackify_environment(&env_name))
+        .await?;
+    spinner.stop("Environment network created");
 
     Ok(())
 }
 
-fn exec_stop(ctx: &CliContext, args: args::StopArgs) -> Result<()> {
+async fn exec_stop(ctx: &CliContext, args: args::StopArgs) -> Result<()> {
     let env_name = EnvironmentName::new(&args.env_name)?;
 
     let containers = ctx
-        .docker
-        .list_stackify_containers(ListStackifyContainerOpts {
-            environment_name: Some(env_name.clone()),
-            only_running: Some(true),
-        })?;
+        .docker()
+        .api()
+        .containers()
+        .list(&ContainerListOpts::running_in_environment(&env_name))
+        .await?;
 
     if containers.is_empty() {
         info("There are no running containers for the environment.\n");
@@ -176,25 +179,32 @@ fn exec_stop(ctx: &CliContext, args: args::StopArgs) -> Result<()> {
     }
 
     for container in containers {
-        print!("Stopping container: {:PAD_WIDTH$}", container.name);
-        match ctx.docker.stop_container(&container.id) {
-            Ok(_) => print_ok(None),
-            Err(_) => print_fail(None),
-        }
+        let mut spinner = cliclack::spinner();
+        let container_id = container.id.ok_or(eyre!("Container ID not found."))?;
+        let container_names = container.names.ok_or(eyre!("Container name not found."))?;
+        let container_name = container_names.join(", ");
+        spinner.start(format!("Stopping container: {}", container_name));
+        ctx.docker()
+            .api()
+            .containers()
+            .get(container_id)
+            .stop(&ContainerStopOpts::default())
+            .await?;
+        spinner.stop(format!("Container {} stopped", container_name));
     }
 
     Ok(())
 }
 
-fn exec_down(ctx: &CliContext, args: args::DownArgs) -> Result<()> {
+async fn exec_down(ctx: &CliContext, args: args::DownArgs) -> Result<()> {
     let env_name = EnvironmentName::new(&args.env_name)?;
 
     let containers = ctx
-        .docker
-        .list_stackify_containers(ListStackifyContainerOpts {
-            environment_name: Some(env_name.clone()),
-            only_running: Some(false),
-        })?;
+        .docker()
+        .api()
+        .containers()
+        .list(&ContainerListOpts::for_environment(&env_name))
+        .await?;
 
     if containers.is_empty() {
         info("There are no built containers for this environment.\n");
@@ -206,8 +216,18 @@ fn exec_down(ctx: &CliContext, args: args::DownArgs) -> Result<()> {
     }
 
     for container in containers {
-        PbWrapper::new_spinner(format!("Removing container: {}", container.name))
-            .exec(|_| ctx.docker.rm_container(&container.id))?;
+        let mut spinner = cliclack::spinner();
+        let container_id = container.id.ok_or(eyre!("Container ID not found."))?;
+        let container_names = container.names.ok_or(eyre!("Container name not found."))?;
+        let container_name = container_names.join(", ");
+        spinner.start(format!("Removing container: {}", container_name));
+        ctx.docker()
+            .api()
+            .containers()
+            .get(container_id)
+            .delete()
+            .await?;
+        spinner.stop(format!("Container {} removed", container_name));
     }
 
     Ok(())

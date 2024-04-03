@@ -7,6 +7,7 @@ use color_eyre::{
 };
 use comfy_table::{Cell, CellAlignment, ColumnConstraint, Table, Width};
 use console::style;
+use docker_api::opts::ImageListOpts;
 use regex::Regex;
 
 use super::context::CliContext;
@@ -23,7 +24,7 @@ pub struct InfoArgs {
     services: bool,
 }
 
-pub fn exec(ctx: &CliContext, args: InfoArgs) -> Result<()> {
+pub async fn exec(ctx: &CliContext, args: InfoArgs) -> Result<()> {
     println!(
         "{}",
         format!("Stackify CLI v{}", env!("CARGO_PKG_VERSION")).fg_rgb::<255, 165, 0>()
@@ -33,12 +34,17 @@ pub fn exec(ctx: &CliContext, args: InfoArgs) -> Result<()> {
     println!("‣ Environments: {}", ctx.db.list_environments()?.len());
     println!(
         "‣ Docker Images: {}",
-        ctx.docker.list_stackify_images()?.len()
+        ctx.docker()
+            .api()
+            .images()
+            .list(&ImageListOpts::default())
+            .await?
+            .len()
     );
 
     if args.docker {
         println!("");
-        exec_display_docker_info(ctx)?;
+        exec_display_docker_info(ctx).await?;
     }
 
     if args.epochs {
@@ -49,17 +55,32 @@ pub fn exec(ctx: &CliContext, args: InfoArgs) -> Result<()> {
     Ok(())
 }
 
-fn exec_display_docker_info(ctx: &CliContext) -> Result<()> {
-    let docker_version = ctx.docker.get_docker_version()?;
+async fn exec_display_docker_info(ctx: &CliContext) -> Result<()> {
+    let docker_version = ctx.docker().api().version().await?;
 
     println!("{}", style("Docker Information:").bold().white());
-    println!("‣ Version: {}", docker_version.version);
-    println!("‣ API Version: {}", docker_version.api_version);
-    println!("‣ Min API Version: {}", docker_version.min_api_version);
+    println!(
+        "‣ Version: {}",
+        docker_version.kernel_version.unwrap_or_default()
+    );
+    println!(
+        "‣ API Version: {}",
+        docker_version.api_version.unwrap_or_default()
+    );
+    println!(
+        "‣ Min API Version: {}",
+        docker_version.min_api_version.unwrap_or_default()
+    );
     println!("");
 
     println!("{}", "Stackify Images:".bold());
-    let images = ctx.docker.list_stackify_images()?;
+    let images = ctx
+        .docker()
+        .api()
+        .images()
+        //TODO: Add filter for stackify images
+        .list(&ImageListOpts::default())
+        .await?;
     if images.is_empty() {
         println!("‣ No images found");
     } else {
@@ -95,7 +116,7 @@ fn exec_display_docker_info(ctx: &CliContext) -> Result<()> {
 
         let regex = Regex::new(r#"^([^:]+)(:(.+))?$"#)?;
         for image in images {
-            for tag in image.tags {
+            for tag in image.repo_tags {
                 let captures = regex
                     .captures(&tag)
                     .ok_or(eyre!("Failed to capture regex"))?;
@@ -107,10 +128,10 @@ fn exec_display_docker_info(ctx: &CliContext) -> Result<()> {
                 table.add_row(vec![
                     Cell::new(&repository),
                     Cell::new(&tag),
-                    Cell::new(if image.container_count == -1 {
+                    Cell::new(if image.containers == -1 {
                         "0".to_string()
                     } else {
-                        image.container_count.to_string()
+                        image.containers.to_string()
                     }),
                     Cell::new((image.size / 1024 / 1024).to_string() + "MB"),
                 ]);

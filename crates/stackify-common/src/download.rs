@@ -13,7 +13,7 @@ use reqwest::{header, Client, Url};
 use tar::Archive;
 use tokio::runtime::Runtime;
 
-pub fn download_file<P: AsRef<Path> + Debug>(
+pub async fn download_file<P: AsRef<Path> + Debug>(
     url_str: &str,
     tmp_dir: &P,
     dl_start: impl FnOnce(u64),
@@ -31,28 +31,25 @@ pub fn download_file<P: AsRef<Path> + Debug>(
     let download_size = get_download_size(url)?;
     dl_start(download_size);
 
-    Runtime::new()?.block_on(async {
-        let mut tmp_file = File::create(&tmp_file_path)?;
+    let mut tmp_file = File::create(&tmp_file_path)?;
 
-        let client = Client::builder()
-            .timeout(Duration::from_secs(500))
-            .build()?;
+    let client = Client::builder()
+        .timeout(Duration::from_secs(500))
+        .build()?;
 
-        let request = client.get(url_str);
-        let mut download = request.send().await?;
-        while let Some(chunk) = download.chunk().await? {
-            dl_chunk(chunk.len() as u64, download_size);
-            tmp_file.write(&chunk)?;
-        }
+    let request = client.get(url_str);
+    let mut download = request.send().await?;
+    while let Some(chunk) = download.chunk().await? {
+        dl_chunk(chunk.len() as u64, download_size);
+        tmp_file.write(&chunk)?;
+    }
 
-        tmp_file.flush()?;
-        Ok::<(), color_eyre::Report>(())
-    })?;
+    tmp_file.flush()?;
 
     Ok(tmp_file_path)
 }
 
-pub fn download_bitcoin_core_binaries<P: AsRef<Path> + Debug>(
+pub async fn download_bitcoin_core_binaries<P: AsRef<Path> + Debug>(
     version: &str,
     tmp_dir: &P,
     dest_dir: &P,
@@ -60,8 +57,6 @@ pub fn download_bitcoin_core_binaries<P: AsRef<Path> + Debug>(
     mut dl_chunk: impl FnMut(u64, u64),
     dl_finished: impl FnOnce(),
 ) -> Result<()> {
-    let rt = Runtime::new()?;
-
     let filename = format!("bitcoin-{version}-x86_64-linux-gnu.tar.gz");
     let url_str = format!("https://bitcoincore.org/bin/bitcoin-core-{version}/{filename}");
 
@@ -72,24 +67,21 @@ pub fn download_bitcoin_core_binaries<P: AsRef<Path> + Debug>(
     let download_size = get_download_size(url)?;
     dl_start(download_size);
 
-    rt.block_on(async {
-        let mut tmp_file = File::create(&tmp_file_path)?;
+    let mut tmp_file = File::create(&tmp_file_path)?;
 
-        let client = Client::builder()
-            .timeout(Duration::from_secs(500))
-            .build()?;
+    let client = Client::builder()
+        .timeout(Duration::from_secs(500))
+        .build()?;
 
-        let request = client.get(&url_str);
-        let mut download = request.send().await?;
-        while let Some(chunk) = download.chunk().await? {
-            dl_chunk(chunk.len() as u64, download_size);
-            tmp_file.write(&chunk)?;
-        }
+    let request = client.get(&url_str);
+    let mut download = request.send().await?;
+    while let Some(chunk) = download.chunk().await? {
+        dl_chunk(chunk.len() as u64, download_size);
+        tmp_file.write(&chunk)?;
+    }
 
-        tmp_file.flush()?;
-        dl_finished();
-        Ok::<(), color_eyre::Report>(())
-    })?;
+    tmp_file.flush()?;
+    dl_finished();
 
     let tmp_file = File::open(&tmp_file_path)?;
     let gz = GzDecoder::new(BufReader::new(tmp_file));

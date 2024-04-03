@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::Path};
+use std::{collections::HashMap, ops::Deref, path::Path};
 
 use color_eyre::eyre::{eyre, Result};
 
@@ -119,6 +119,26 @@ impl std::fmt::Display for LabelKey {
     }
 }
 
+impl Deref for LabelKey {
+    type Target = str;
+
+    fn deref(&self) -> &Self::Target {
+        match self {
+            LabelKey::Stackify => "local.stackify",
+            LabelKey::EnvironmentName => "local.stackify.environment",
+            LabelKey::Service => "local.stackify.service",
+            LabelKey::NodeVersion => "local.stackify.node_version",
+            LabelKey::IsLeader => "local.stackify.is_leader",
+        }
+    }
+}
+
+impl Into<String> for LabelKey {
+    fn into(self) -> String {
+        self.to_string()
+    }
+}
+
 #[derive(Debug)]
 pub struct StackifyLabel<T>(LabelKey, T)
 where
@@ -176,6 +196,10 @@ pub struct BuildInfo {
     pub error: Option<String>,
     /// Progress tuple (current, total).
     pub progress: Option<Progress>,
+}
+
+pub struct LogEntry {
+    pub message: String,
 }
 
 #[derive(Debug, Default)]

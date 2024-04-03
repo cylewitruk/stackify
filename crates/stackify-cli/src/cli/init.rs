@@ -7,6 +7,7 @@ use std::{
 use clap::Args;
 use color_eyre::Result;
 use console::style;
+use docker_api::{models::ImageBuildChunk, opts::ImageBuildOpts};
 use flate2::bufread::GzDecoder;
 use futures_util::StreamExt;
 use regex::Regex;
@@ -52,13 +53,12 @@ pub struct InitArgs {
     /// Only build the images, do not download runtime binaries.
     #[arg(long, default_value = "false", required = false)]
     pub no_build: bool,
+    /// Do not copy local assets to the assets directory.
     #[arg(long, default_value = "false", required = false)]
     pub no_assets: bool,
-    #[arg(long, default_value = "false", required = false)]
-    pub no_create_containers: bool,
 }
 
-pub fn exec(ctx: &CliContext, args: InitArgs) -> Result<()> {
+pub async fn exec(ctx: &CliContext, args: InitArgs) -> Result<()> {
     let disk_space_usage = match args.pre_compile {
         true => "~9GB",
         false => "~2.3GB",
@@ -94,40 +94,21 @@ runtime binaries, initialize the database and copy assets to the appropriate dir
     if !args.no_download {
         // Download and extract Bitcoin Core and copy 'bitcoin-cli' and 'bitcoind'
         // to the bin directory.
-        download_and_extract_bitcoin_core(ctx, &args.bitcoin_version)?;
+        download_and_extract_bitcoin_core(ctx, &args.bitcoin_version).await?;
 
         // Download Dasel (a jq-like tool for working with json,yaml,toml,xml,etc.).
-        download_dasel(ctx, &args.dasel_version)?;
+        download_dasel(ctx, &args.dasel_version).await?;
     }
 
     if !args.no_build {
         // Build the build image.
         cliclack::log::info("Building Docker images...")?;
-        build_build_image(ctx, &args.bitcoin_version, args.pre_compile)?;
+        build_build_image(ctx, &args.bitcoin_version, args.pre_compile).await?;
         // Build the runtime image.
-        build_runtime_image(ctx)?;
+        build_runtime_image(ctx).await?;
     }
 
     load_default_configuration_files(ctx)?;
-
-    if !args.no_create_containers {
-        if let Some(build_container) = ctx.docker.find_container_by_name("/stackify-build")? {
-            cliclack::log::warning("Removing existing build container...")?;
-            ctx.docker.rm_container(&build_container.id)?;
-        }
-
-        let mut spinner = cliclack::spinner();
-        spinner.start("Creating build container...");
-        ctx.docker.create_stackify_build_container(
-            &ctx.bin_dir,
-            &ctx.assets_dir,
-            STACKIFY_BUILD_ENTRYPOINT,
-        )?;
-        spinner.stop("Build container created");
-
-        // NOTE: We don't create runtime containers here because they are
-        // created together with environments.
-    }
 
     Ok(())
 }
@@ -135,7 +116,7 @@ runtime binaries, initialize the database and copy assets to the appropriate dir
 /// Downloads the Dasel binary, which is a jq-like tool for working with json,
 /// yaml, toml, xml, etc. and is useful to have in the runtime image for shell-
 /// scripts to manipulate configuration files.
-fn download_dasel(ctx: &CliContext, version: &str) -> Result<()> {
+async fn download_dasel(ctx: &CliContext, version: &str) -> Result<()> {
     let multi = cliclack::progressbar_multi("Dasel");
     let dl = multi.add_downloadbar();
     let mut download_size = 0;
@@ -158,7 +139,8 @@ fn download_dasel(ctx: &CliContext, version: &str) -> Result<()> {
             dl.increment(chunk);
             progress += chunk;
         },
-    )?;
+    )
+    .await?;
 
     std::fs::copy(ctx.tmp_dir.join(&dasel_bin), ctx.bin_dir.join("dasel"))?;
 
@@ -172,7 +154,7 @@ fn download_dasel(ctx: &CliContext, version: &str) -> Result<()> {
 /// Downloads the specified version of Bitcore Core (full) and extracts the binaries
 /// 'bitcoin-cli' and 'bitcoind' to the bin directory, which are needed for Bitcoin
 /// miner+follower nodes.
-fn download_and_extract_bitcoin_core(ctx: &CliContext, version: &str) -> Result<()> {
+async fn download_and_extract_bitcoin_core(ctx: &CliContext, version: &str) -> Result<()> {
     let bitcoin_archive_filename = format!("bitcoin-{}-x86_64-linux-gnu.tar.gz", version);
 
     let bitcoin_url = format!(
@@ -197,7 +179,8 @@ fn download_and_extract_bitcoin_core(ctx: &CliContext, version: &str) -> Result<
             dl.increment(chunk);
             progress += chunk;
         },
-    )?;
+    )
+    .await?;
     dl.stop(format!(
         "{} {}",
         style("✔").green(),
@@ -236,85 +219,125 @@ fn download_and_extract_bitcoin_core(ctx: &CliContext, version: &str) -> Result<
 
 /// Builds the Stackfiy build image, which is used to compile the different versions
 /// of runtime binaries.
-fn build_build_image(ctx: &CliContext, bitcoin_version: &str, pre_compile: bool) -> Result<()> {
-    let build = BuildStackifyBuildImage {
-        user_id: ctx.user_id,
-        group_id: ctx.group_id,
-        bitcoin_version: bitcoin_version.into(),
-        pre_compile,
-        stackify_build_dockerfile: STACKIFY_BUILD_DOCKERFILE,
-        stackify_cargo_config: STACKIFY_CARGO_CONFIG,
-    };
+async fn build_build_image(
+    ctx: &CliContext,
+    bitcoin_version: &str,
+    pre_compile: bool,
+) -> Result<()> {
+    // let build = BuildStackifyBuildImage {
+    //     user_id: ctx.user_id,
+    //     group_id: ctx.group_id,
+    //     bitcoin_version: bitcoin_version.into(),
+    //     pre_compile,
+    //     stackify_build_dockerfile: STACKIFY_BUILD_DOCKERFILE,
+    //     stackify_cargo_config: STACKIFY_CARGO_CONFIG,
+    // };
 
     let regex = Regex::new(r#"^Step (\d+)\/(\d+) :(.*)$"#)?;
-    let stream = ctx.docker.build_stackify_build_image(build)?;
+    let mut spinner = cliclack::spinner();
+    spinner.start("Building build image...");
 
-    let multi = cliclack::progressbar_multi("Stackify Build Image");
-    let pb = multi.add_progressbar();
-
-    tokio::runtime::Runtime::new()?.block_on(async {
-        stream
-            .for_each(|result| async {
-                match result {
-                    Ok(info) => {
-                        if let Some(captures) = regex.captures(&info.message) {
-                            let step: u64 = captures.get(1).unwrap().as_str().parse().unwrap();
-                            let total: u64 = captures.get(2).unwrap().as_str().parse().unwrap();
-                            //let msg = captures.get(3).unwrap().as_str();
-                            if pb.get_length() == 0 {
-                                pb.set_length(total);
-                            }
-                            pb.increment(step - pb.get_position());
-                            //pb.(Cow::Owned(truncate(msg, 70).to_owned()));
+    ctx.docker()
+        .api()
+        .images()
+        .build(&ImageBuildOpts::default())
+        .for_each(|result| async {
+            match result {
+                Ok(info) => {
+                    match info {
+                        ImageBuildChunk::Digest { aux, .. } => {
+                            //spinner.start(format!("Digest: {}", aux.id));
+                        }
+                        ImageBuildChunk::Error {
+                            error,
+                            error_detail,
+                        } => {
+                            eprintln!("Error: {}", error);
+                            eprintln!("Error Detail: {:?}", error_detail);
+                        }
+                        ImageBuildChunk::PullStatus {
+                            status,
+                            id,
+                            progress,
+                            progress_detail,
+                        } => {
+                            //spinner.start(format!("Pulling: {}", status));
+                        }
+                        ImageBuildChunk::Update { stream } => {
+                            regex.captures(&stream).map(|captures| {
+                                let step = captures.get(1).unwrap().as_str();
+                                let total = captures.get(2).unwrap().as_str();
+                                let msg = captures.get(3).unwrap().as_str();
+                                //spinner.start(format!("[{}/{}]: {}", step, total, msg));
+                            });
                         }
                     }
-                    Err(e) => eprintln!("Error: {}", e),
                 }
-            })
-            .await
-    });
+                Err(e) => eprintln!("Error: {}", e),
+            }
+        })
+        .await;
 
-    pb.stop("Stackify Build Image")?;
+    spinner.stop("Build image complete");
 
     Ok(())
 }
 
 /// Builds the Stackify runtime image, which is used to run the different
 /// environment services.
-fn build_runtime_image(ctx: &CliContext) -> Result<()> {
-    let build = BuildStackifyRuntimeImage {
-        user_id: ctx.user_id,
-        group_id: ctx.group_id,
-        stackify_runtime_dockerfile: STACKIFY_RUN_DOCKERFILE,
-    };
+async fn build_runtime_image(ctx: &CliContext) -> Result<()> {
+    // let build = BuildStackifyRuntimeImage {
+    //     user_id: ctx.user_id,
+    //     group_id: ctx.group_id,
+    //     stackify_runtime_dockerfile: STACKIFY_RUN_DOCKERFILE,
+    // };
 
     let regex = Regex::new(r#"^Step (\d+)\/(\d+) :(.*)$"#)?;
-    let pb = new_progressbar(
-        "{spinner:.dim.bold} runtime image: {wide_msg}",
-        "Starting...",
-    );
+    let mut spinner = cliclack::spinner();
+    spinner.start("Building build image...");
 
-    let stream = ctx.docker.build_stackify_runtime_image(build)?;
-
-    tokio::runtime::Runtime::new()?.block_on(async {
-        stream
-            .for_each(|result| async {
-                match result {
-                    Ok(info) => {
-                        regex.captures(&info.message).map(|captures| {
-                            let step = captures.get(1).unwrap().as_str();
-                            let total = captures.get(2).unwrap().as_str();
-                            let msg = captures.get(3).unwrap().as_str();
-                            pb.set_message(format!("[{}/{}]: {}", step, total, msg));
-                        });
+    ctx.docker()
+        .api()
+        .images()
+        .build(&ImageBuildOpts::default())
+        .for_each(|result| async {
+            match result {
+                Ok(info) => {
+                    match info {
+                        ImageBuildChunk::Digest { aux, .. } => {
+                            //spinner.start(format!("Digest: {}", aux.id));
+                        }
+                        ImageBuildChunk::Error {
+                            error,
+                            error_detail,
+                        } => {
+                            eprintln!("Error: {}", error);
+                            eprintln!("Error Detail: {:?}", error_detail);
+                        }
+                        ImageBuildChunk::PullStatus {
+                            status,
+                            id,
+                            progress,
+                            progress_detail,
+                        } => {
+                            //spinner.start(format!("Pulling: {}", status));
+                        }
+                        ImageBuildChunk::Update { stream } => {
+                            regex.captures(&stream).map(|captures| {
+                                let step = captures.get(1).unwrap().as_str();
+                                let total = captures.get(2).unwrap().as_str();
+                                let msg = captures.get(3).unwrap().as_str();
+                                //spinner.start(format!("[{}/{}]: {}", step, total, msg));
+                            });
+                        }
                     }
-                    Err(e) => eprintln!("Error: {}", e),
                 }
-            })
-            .await
-    });
-    pb.finish_and_clear();
-    println!("{} Docker runtime image", style("✔️").green());
+                Err(e) => eprintln!("Error: {}", e),
+            }
+        })
+        .await;
+
+    spinner.stop("Build image complete");
 
     Ok(())
 }
