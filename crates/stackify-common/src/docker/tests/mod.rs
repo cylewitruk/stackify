@@ -32,14 +32,15 @@ impl std::fmt::Display for TestNetwork {
 
 impl Drop for TestNetwork {
     fn drop(&mut self) {
-        debug!("Dropping test network: {}", self.0);
+        let name = self.0.clone();
+        debug!("Dropping test network: {}", name);
         let ctx = StackifyDocker::new().unwrap();
-        let _ = ctx.runtime.block_on(async {
-            if ctx.docker.remove_network(self).await.is_err() {
+        tokio::spawn(async move {
+            if ctx.docker.remove_network(&name).await.is_err() {
                 return;
             }
+            debug!("Dropped test network: {}", name)
         });
-        debug!("Dropped test network: {}", self.0)
     }
 }
 
@@ -67,19 +68,19 @@ impl std::fmt::Display for TestContainer {
 
 impl Drop for TestContainer {
     fn drop(&mut self) {
-        debug!("Dropping test container: {}", self.0);
+        let name = self.0.clone();
+        debug!("Dropping test container: {}", name);
         let ctx = StackifyDocker::new().unwrap();
-        ctx.runtime.block_on(async {
+        tokio::spawn(async move {
             ctx.docker
-                .remove_container(self, None)
+                .remove_container(&name, None)
                 .await
-                .expect(&format!("failed to stop container: {}", self));
+                .expect(&format!("failed to stop container: {}", name));
         });
-        debug!("Dropped test container: {}", self.0)
     }
 }
 
-fn create_test_container(docker: &StackifyDocker) -> TestContainer {
+async fn create_test_container(docker: &StackifyDocker) -> TestContainer {
     debug!("Creating test container");
 
     let busybox_image = "busybox:latest";
@@ -106,13 +107,11 @@ fn create_test_container(docker: &StackifyDocker) -> TestContainer {
         ..Default::default()
     };
 
-    docker.runtime.block_on(async {
-        docker
-            .docker
-            .create_container(Some(opts), config)
-            .await
-            .expect("failed to create test busybox container");
-    });
+    docker
+        .docker
+        .create_container(Some(opts), config)
+        .await
+        .expect("failed to create test busybox container");
 
     debug!("Created test container: {}", container_name);
 

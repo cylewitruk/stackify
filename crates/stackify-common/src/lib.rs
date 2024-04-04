@@ -64,6 +64,10 @@ impl ServiceType {
             _ => bail!("Invalid service type value: {}", value),
         }
     }
+
+    pub fn is(&self, other: i32) -> bool {
+        self.clone() as i32 == other
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]

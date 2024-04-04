@@ -13,7 +13,7 @@ use super::{
 };
 
 impl StackifyDocker {
-    pub fn stream_container_logs(
+    pub async fn stream_container_logs(
         &self,
         container_id: &str,
     ) -> Result<impl Stream<Item = Result<LogEntry>> + Unpin + '_> {
@@ -23,26 +23,24 @@ impl StackifyDocker {
             stderr: true,
             ..Default::default()
         };
-        self.runtime.block_on(async {
-            let stream = self.docker.logs::<String>(container_id, Some(logopts));
-            Ok(stream.map(|log| {
-                Ok(LogEntry {
-                    message: log?.to_string(),
-                })
-            }))
-        })
+
+        let stream = self.docker.logs::<String>(container_id, Some(logopts));
+
+        Ok(stream.map(|log| {
+            Ok(LogEntry {
+                message: log?.to_string(),
+            })
+        }))
     }
 
-    pub fn start_build_container(&self) -> Result<()> {
-        self.runtime.block_on(async {
-            self.docker
-                .start_container::<String>("stackify-build", None)
-                .await?;
-            Ok(())
-        })
+    pub async fn start_build_container(&self) -> Result<()> {
+        self.docker
+            .start_container::<String>("stackify-build", None)
+            .await?;
+        Ok(())
     }
 
-    pub fn create_stackify_build_container<P: AsRef<Path>>(
+    pub async fn create_stackify_build_container<P: AsRef<Path>>(
         &self,
         bin_dir: &P,
         assets_dir: &P,
@@ -93,24 +91,22 @@ impl StackifyDocker {
             ..Default::default()
         };
 
-        let result = self.runtime.block_on(async {
-            let container = self.docker.create_container(Some(opts), config).await?;
-            Ok(CreateContainerResult {
-                id: container.id,
-                warnings: container.warnings,
-            })
-        });
+        let container = self.docker.create_container(Some(opts), config).await?;
 
         self.upload_ephemeral_file_to_container(
             container_name,
             Path::new("/entrypoint.sh"),
             entrypoint,
-        )?;
+        )
+        .await?;
 
-        result
+        Ok(CreateContainerResult {
+            id: container.id,
+            warnings: container.warnings,
+        })
     }
 
-    pub fn find_container_by_name(
+    pub async fn find_container_by_name(
         &self,
         container_name: &str,
     ) -> Result<Option<StackifyContainer>> {
@@ -120,29 +116,27 @@ impl StackifyDocker {
             ..Default::default()
         };
 
-        self.runtime.block_on(async {
-            let containers = self.docker.list_containers(Some(opts)).await?;
-            if let Some(container) = containers.iter().find(|c| {
-                c.names
-                    .as_ref()
-                    .map(|names| names.iter().any(|n| n == container_name))
-                    .unwrap_or(false)
-            }) {
-                Ok(Some(StackifyContainer {
-                    id: container.id.clone().unwrap(),
-                    name: container.names.clone().unwrap().join(", "),
-                    labels: container.labels.clone().unwrap_or_default(),
-                    state: ContainerState::parse(&container.state.clone().unwrap_or_default())
-                        .expect("Failed to parse container state."),
-                    status_readable: container.status.clone().unwrap_or_default(),
-                }))
-            } else {
-                Ok(None)
-            }
-        })
+        let containers = self.docker.list_containers(Some(opts)).await?;
+        if let Some(container) = containers.iter().find(|c| {
+            c.names
+                .as_ref()
+                .map(|names| names.iter().any(|n| n == container_name))
+                .unwrap_or(false)
+        }) {
+            Ok(Some(StackifyContainer {
+                id: container.id.clone().unwrap(),
+                name: container.names.clone().unwrap().join(", "),
+                labels: container.labels.clone().unwrap_or_default(),
+                state: ContainerState::parse(&container.state.clone().unwrap_or_default())
+                    .expect("Failed to parse container state."),
+                status_readable: container.status.clone().unwrap_or_default(),
+            }))
+        } else {
+            Ok(None)
+        }
     }
 
-    pub fn create_environment_container(
+    pub async fn create_environment_container(
         &self,
         environment_name: &EnvironmentName,
     ) -> Result<CreateContainerResult> {
@@ -174,33 +168,27 @@ impl StackifyDocker {
             ..Default::default()
         };
 
-        self.runtime.block_on(async {
-            let container = self.docker.create_container(Some(opts), config).await?;
-            Ok(CreateContainerResult {
-                id: container.id,
-                warnings: container.warnings,
-            })
+        let container = self.docker.create_container(Some(opts), config).await?;
+        Ok(CreateContainerResult {
+            id: container.id,
+            warnings: container.warnings,
         })
     }
 
-    pub fn rm_container(&self, container_id: &str) -> Result<()> {
-        self.runtime.block_on(async {
-            self.docker.remove_container(container_id, None).await?;
-            Ok(())
-        })
+    pub async fn rm_container(&self, container_id: &str) -> Result<()> {
+        self.docker.remove_container(container_id, None).await?;
+        Ok(())
     }
 
-    pub fn stop_container(&self, container_id: &str) -> Result<()> {
-        self.runtime.block_on(async {
-            self.docker.stop_container(container_id, None).await?;
-            Ok(())
-        })
+    pub async fn stop_container(&self, container_id: &str) -> Result<()> {
+        self.docker.stop_container(container_id, None).await?;
+        Ok(())
     }
 
     /// Lists all containers with the label "local.stackify".
     /// By default, this method will only return RUNNING containers. To get all
     /// containers, set `only_running` to `false`.
-    pub fn list_stackify_containers(
+    pub async fn list_stackify_containers(
         &self,
         args: ListStackifyContainerOpts,
     ) -> Result<Vec<StackifyContainer>> {
@@ -222,25 +210,23 @@ impl StackifyDocker {
 
         eprintln!("opts: {:?}", opts);
 
-        self.runtime.block_on(async {
-            let containers = self.docker.list_containers(Some(opts)).await?;
-            eprintln!("containers: {:?}", containers);
-            Ok(containers
-                .iter()
-                .map(|c| {
-                    let state = ContainerState::parse(&c.state.clone().unwrap_or_default())
-                        .expect("Failed to parse container state.");
+        let containers = self.docker.list_containers(Some(opts)).await?;
+        eprintln!("containers: {:?}", containers);
+        Ok(containers
+            .iter()
+            .map(|c| {
+                let state = ContainerState::parse(&c.state.clone().unwrap_or_default())
+                    .expect("Failed to parse container state.");
 
-                    StackifyContainer {
-                        id: c.id.clone().unwrap(),
-                        name: c.names.clone().unwrap().join(", "),
-                        labels: c.labels.clone().unwrap_or_default(),
-                        state,
-                        status_readable: c.status.clone().unwrap_or_default(),
-                    }
-                })
-                .collect::<Vec<_>>())
-        })
+                StackifyContainer {
+                    id: c.id.clone().unwrap(),
+                    name: c.names.clone().unwrap().join(", "),
+                    labels: c.labels.clone().unwrap_or_default(),
+                    state,
+                    status_readable: c.status.clone().unwrap_or_default(),
+                }
+            })
+            .collect::<Vec<_>>())
     }
 
     pub fn create_stacks_node_container(&self, _environment_name: &EnvironmentName) -> Result<()> {

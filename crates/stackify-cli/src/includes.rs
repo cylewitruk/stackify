@@ -8,6 +8,6 @@ pub const STACKIFY_BUILD_ENTRYPOINT: &[u8] = include_bytes!("../assets/build-ent
 pub const BITCOIN_ENTRYPOINT: &[u8] = include_bytes!("../assets/bitcoin-entrypoint.sh");
 
 // These are loaded into the database
-pub const BITCOIN_CONF: &str = include_str!("../assets/bitcoin.conf.hbs");
-pub const STACKS_NODE_CONF: &str = include_str!("../assets/stacks-node.toml.hbs");
-pub const STACKS_SIGNER_CONF: &str = include_str!("../assets/stacks-signer.toml.hbs");
+pub const BITCOIN_CONF: &[u8] = include_bytes!("../assets/bitcoin.conf.hbs");
+pub const STACKS_NODE_CONF: &[u8] = include_bytes!("../assets/stacks-node.toml.hbs");
+pub const STACKS_SIGNER_CONF: &[u8] = include_bytes!("../assets/stacks-signer.toml.hbs");

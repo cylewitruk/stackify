@@ -13,7 +13,7 @@ use super::{
 
 impl StackifyDocker {
     /// Lists all images with the label "local.stackify".
-    pub fn list_stackify_images(&self) -> Result<Vec<StackifyImage>> {
+    pub async fn list_stackify_images(&self) -> Result<Vec<StackifyImage>> {
         let mut filters = HashMap::new();
         filters.insert("label".to_string(), vec![LabelKey::Stackify.to_string()]);
 
@@ -22,21 +22,19 @@ impl StackifyDocker {
             ..Default::default()
         };
 
-        self.runtime.block_on(async {
-            let images = self
-                .docker
-                .list_images(Some(opts))
-                .await?
-                .iter()
-                .map(|image| StackifyImage {
-                    id: image.id.clone(),
-                    tags: image.repo_tags.clone(),
-                    container_count: image.containers,
-                    size: image.size,
-                })
-                .collect::<Vec<_>>();
-            Ok(images)
-        })
+        let images = self
+            .docker
+            .list_images(Some(opts))
+            .await?
+            .iter()
+            .map(|image| StackifyImage {
+                id: image.id.clone(),
+                tags: image.repo_tags.clone(),
+                container_count: image.containers,
+                size: image.size,
+            })
+            .collect::<Vec<_>>();
+        Ok(images)
     }
 
     /// Builds the Stackify build image.
@@ -162,22 +160,19 @@ impl StackifyDocker {
     }
 
     /// Pulls a remote image.
-    pub fn pull_image(&self, image: &str) {
+    pub async fn pull_image(&self, image: &str) {
         let ctx = StackifyDocker::new().unwrap();
-
-        ctx.runtime.block_on(async {
-            ctx.docker
-                .create_image(
-                    Some(bollard::image::CreateImageOptions {
-                        from_image: image,
-                        ..Default::default()
-                    }),
-                    None,
-                    None,
-                )
-                .try_collect::<Vec<_>>()
-                .await
-                .expect("Failed to pull image");
-        });
+        ctx.docker
+            .create_image(
+                Some(bollard::image::CreateImageOptions {
+                    from_image: image,
+                    ..Default::default()
+                }),
+                None,
+                None,
+            )
+            .try_collect::<Vec<_>>()
+            .await
+            .expect("Failed to pull image");
     }
 }

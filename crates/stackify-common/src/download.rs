@@ -11,7 +11,6 @@ use color_eyre::eyre::{eyre, Result};
 use flate2::bufread::GzDecoder;
 use reqwest::{header, Client, Url};
 use tar::Archive;
-use tokio::runtime::Runtime;
 
 pub async fn download_file<P: AsRef<Path> + Debug>(
     url_str: &str,
@@ -28,7 +27,7 @@ pub async fn download_file<P: AsRef<Path> + Debug>(
 
     let tmp_file_path = tmp_dir.as_ref().join(filename);
 
-    let download_size = get_download_size(url)?;
+    let download_size = get_download_size(url).await?;
     dl_start(download_size);
 
     let mut tmp_file = File::create(&tmp_file_path)?;
@@ -64,7 +63,7 @@ pub async fn download_bitcoin_core_binaries<P: AsRef<Path> + Debug>(
 
     let tmp_file_path = tmp_dir.as_ref().join(filename);
 
-    let download_size = get_download_size(url)?;
+    let download_size = get_download_size(url).await?;
     dl_start(download_size);
 
     let mut tmp_file = File::create(&tmp_file_path)?;
@@ -140,12 +139,12 @@ pub fn set_executable<P: AsRef<Path>>(path: &P) -> Result<()> {
 }
 
 // Help from https://github.com/benkay86/async-applied/blob/master/indicatif-reqwest-tokio/src/bin/indicatif-reqwest-tokio-single.rs
-fn get_download_size(url: Url) -> Result<u64> {
-    let client = reqwest::blocking::Client::new();
+async fn get_download_size(url: Url) -> Result<u64> {
+    let client = reqwest::Client::new();
     // We need to determine the file size before we download so we can create a ProgressBar
     // A Header request for the CONTENT_LENGTH header gets us the file size
     let download_size = {
-        let resp = client.head(url.as_str()).send()?;
+        let resp = client.head(url.as_str()).send().await?;
         if resp.status().is_success() {
             resp.headers() // Gives is the HeaderMap
                 .get(header::CONTENT_LENGTH) // Gives us an Option containing the HeaderValue

@@ -4,7 +4,6 @@ use std::path::PathBuf;
 use bollard::{Docker, API_DEFAULT_VERSION};
 
 use color_eyre::eyre::{eyre, Result};
-use tokio::runtime::Runtime;
 
 use super::DockerVersion;
 
@@ -16,7 +15,6 @@ use super::DockerVersion;
 #[allow(dead_code)]
 pub struct StackifyDocker {
     pub(crate) docker: bollard::Docker,
-    pub(crate) runtime: Runtime,
     pub(crate) user_id: u32,
     pub(crate) group_id: u32,
     pub(crate) stackify_root_dir: PathBuf,
@@ -84,7 +82,6 @@ impl StackifyDocker {
 
         Ok(StackifyDocker {
             docker: docker.unwrap(),
-            runtime: Runtime::new()?,
             user_id: uid,
             group_id: gid,
             stackify_root_dir: stackify_root_dir.clone(),
@@ -97,24 +94,22 @@ impl StackifyDocker {
 
 impl StackifyDocker {
     /// Retrieves the version of the currently running Docker daemon.
-    pub fn get_docker_version(&self) -> Result<DockerVersion> {
-        self.runtime.block_on(async {
-            let version = self.docker.version().await?;
-            let ret = DockerVersion {
-                version: version.version.unwrap_or("--".to_string()),
-                api_version: version.api_version.unwrap_or("--".to_string()),
-                min_api_version: version.min_api_version.unwrap_or("--".to_string()),
-                components: version
-                    .components
-                    .map(|comp| {
-                        comp.iter()
-                            .map(|c| format!("{}: {}", c.name, c.version))
-                            .collect::<Vec<_>>()
-                    })
-                    .unwrap_or_default(),
-            };
+    pub async fn get_docker_version(&self) -> Result<DockerVersion> {
+        let version = self.docker.version().await?;
+        let ret = DockerVersion {
+            version: version.version.unwrap_or("--".to_string()),
+            api_version: version.api_version.unwrap_or("--".to_string()),
+            min_api_version: version.min_api_version.unwrap_or("--".to_string()),
+            components: version
+                .components
+                .map(|comp| {
+                    comp.iter()
+                        .map(|c| format!("{}: {}", c.name, c.version))
+                        .collect::<Vec<_>>()
+                })
+                .unwrap_or_default(),
+        };
 
-            Ok(ret)
-        })
+        Ok(ret)
     }
 }

@@ -20,7 +20,7 @@ pub struct DockerApi {
 impl DockerApi {
     pub fn new(host_dirs: StackifyHostDirs, container_dirs: StackifyContainerDirs) -> Result<Self> {
         Ok(Self {
-            docker: ::docker_api::Docker::new("tcp://127.0.0.1:2375")?,
+            docker: ::docker_api::Docker::new("unix:///var/run/user/1000/docker.sock")?,
             host_dirs,
             container_dirs,
         })
@@ -84,8 +84,9 @@ impl DockerApi {
         let list_opts = ContainerListOpts::builder()
             .filter([
                 ContainerFilter::Name(container_name.to_string()),
-                ContainerFilter::LabelKey(format!("label={}", LabelKey::Stackify)),
+                ContainerFilter::LabelKey(LabelKey::Stackify.into()),
             ])
+            .all(true)
             .build();
 
         let containers = self.docker.containers().list(&list_opts).await?;

@@ -4,7 +4,6 @@ use bytes::Bytes;
 use color_eyre::Result;
 use futures_util::{Stream, TryStreamExt};
 use rand::{thread_rng, Rng};
-use tokio::runtime::Runtime;
 
 use crate::types::EnvironmentName;
 
@@ -34,19 +33,17 @@ pub fn get_new_name(environment_name: &EnvironmentName) -> String {
 // Stream helpers
 // =============================================================================
 
-pub fn concat_byte_stream<S>(rt: &Runtime, s: S) -> Result<Vec<u8>>
+pub async fn concat_byte_stream<S>(s: S) -> Result<Vec<u8>>
 where
     S: Stream<Item = std::result::Result<Bytes, bollard::errors::Error>>,
 {
-    rt.block_on(async {
-        let result = s
-            .try_fold(Vec::new(), |mut acc, chunk| async move {
-                acc.extend_from_slice(&chunk[..]);
-                Ok(acc)
-            })
-            .await?;
-        Ok(result)
-    })
+    let result = s
+        .try_fold(Vec::new(), |mut acc, chunk| async move {
+            acc.extend_from_slice(&chunk[..]);
+            Ok(acc)
+        })
+        .await?;
+    Ok(result)
 }
 
 // =============================================================================

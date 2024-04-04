@@ -11,7 +11,7 @@ use super::{
 };
 
 impl StackifyDocker {
-    pub fn list_stacks_networks(&self) -> Result<Vec<StackifyNetwork>> {
+    pub async fn list_stacks_networks(&self) -> Result<Vec<StackifyNetwork>> {
         let mut filters = HashMap::new();
         filters.insert(
             "label".to_string(),
@@ -19,56 +19,48 @@ impl StackifyDocker {
         );
         let opts = ListNetworksOptions { filters };
 
-        self.runtime.block_on(async {
-            let networks = self
-                .docker
-                .list_networks(Some(opts))
-                .await?
-                .iter()
-                .map(|n| {
-                    let id =
-                        n.id.as_ref()
-                            .ok_or_else(|| eyre!("Failed to get network ID."))?;
-                    let name = n
-                        .name
-                        .as_ref()
-                        .ok_or_else(|| eyre!("Failed to get network name."))?;
-                    Ok(StackifyNetwork {
-                        id: id.clone(),
-                        name: name.clone(),
-                    })
+        let networks = self
+            .docker
+            .list_networks(Some(opts))
+            .await?
+            .iter()
+            .map(|n| {
+                let id =
+                    n.id.as_ref()
+                        .ok_or_else(|| eyre!("Failed to get network ID."))?;
+                let name = n
+                    .name
+                    .as_ref()
+                    .ok_or_else(|| eyre!("Failed to get network name."))?;
+                Ok(StackifyNetwork {
+                    id: id.clone(),
+                    name: name.clone(),
                 })
-                .collect::<Result<Vec<_>>>()?;
-            Ok(networks)
-        })
+            })
+            .collect::<Result<Vec<_>>>()?;
+        Ok(networks)
     }
 
-    pub fn rm_stacks_network(&self, environment_name: &EnvironmentName) -> Result<()> {
+    pub async fn rm_stacks_network(&self, environment_name: &EnvironmentName) -> Result<()> {
         let network_name = format!("stackify-{}", environment_name);
-        self.runtime.block_on(async {
-            self.docker.remove_network(&network_name).await?;
-            Ok(())
-        })
+        self.docker.remove_network(&network_name).await?;
+        Ok(())
     }
 
-    pub fn rm_all_stacks_networks(&self) -> Result<()> {
-        let networks = self.list_stacks_networks()?;
-        self.runtime.block_on(async {
-            for network in networks {
-                self.docker.remove_network(&network.id).await?;
-            }
-            Ok(())
-        })
+    pub async fn rm_all_stacks_networks(&self) -> Result<()> {
+        let networks = self.list_stacks_networks().await?;
+        for network in networks {
+            self.docker.remove_network(&network.id).await?;
+        }
+        Ok(())
     }
 
-    pub fn rm_network(&self, network_name: &str) -> Result<()> {
-        self.runtime.block_on(async {
-            self.docker.remove_network(network_name).await?;
-            Ok(())
-        })
+    pub async fn rm_network(&self, network_name: &str) -> Result<()> {
+        self.docker.remove_network(network_name).await?;
+        Ok(())
     }
 
-    pub fn create_stackify_network(
+    pub async fn create_stackify_network(
         &self,
         environment_name: &EnvironmentName,
     ) -> Result<NewStacksNetworkResult> {
@@ -89,15 +81,13 @@ impl StackifyDocker {
             ..Default::default()
         };
 
-        self.runtime.block_on(async {
-            let result = self.docker.create_network(opts).await?;
-            let id = result
-                .id
-                .ok_or_else(|| eyre!("Failed to create network."))?;
-            Ok(NewStacksNetworkResult {
-                id,
-                name: network_name,
-            })
+        let result = self.docker.create_network(opts).await?;
+        let id = result
+            .id
+            .ok_or_else(|| eyre!("Failed to create network."))?;
+        Ok(NewStacksNetworkResult {
+            id,
+            name: network_name,
         })
     }
 }

@@ -6,7 +6,7 @@ use color_eyre::{eyre::eyre, Result};
 use super::{stackify_docker::StackifyDocker, util::concat_byte_stream};
 
 impl StackifyDocker {
-    pub fn download_file_from_container(
+    pub async fn download_file_from_container(
         &self,
         container_name: &str,
         file_path: &Path,
@@ -15,17 +15,15 @@ impl StackifyDocker {
             path: file_path.to_string_lossy().to_string(),
         };
 
-        self.runtime.block_on(async {
-            let stream = self
-                .docker
-                .download_from_container(container_name, Some(opts));
+        let stream = self
+            .docker
+            .download_from_container(container_name, Some(opts));
 
-            let result = concat_byte_stream(&self.runtime, stream)?;
-            Ok(result)
-        })
+        let result = concat_byte_stream(stream).await?;
+        Ok(result)
     }
 
-    pub fn upload_ephemeral_file_to_container(
+    pub async fn upload_ephemeral_file_to_container(
         &self,
         container_name: &str,
         destination_path: &Path,
@@ -53,15 +51,13 @@ impl StackifyDocker {
             ..Default::default()
         };
 
-        self.runtime.block_on(async {
-            self.docker
-                .upload_to_container(container_name, Some(opts), bytes.into())
-                .await?;
-            Ok(())
-        })
+        self.docker
+            .upload_to_container(container_name, Some(opts), bytes.into())
+            .await?;
+        Ok(())
     }
 
-    pub fn upload_ephemeral_files_to_container(
+    pub async fn upload_ephemeral_files_to_container(
         &self,
         container_name: &str,
         destination_dir: &Path,
@@ -84,11 +80,9 @@ impl StackifyDocker {
             ..Default::default()
         };
 
-        self.runtime.block_on(async {
-            self.docker
-                .upload_to_container(container_name, Some(opts), bytes.into())
-                .await?;
-            Ok(())
-        })
+        self.docker
+            .upload_to_container(container_name, Some(opts), bytes.into())
+            .await?;
+        Ok(())
     }
 }

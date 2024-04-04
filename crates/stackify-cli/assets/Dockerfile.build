@@ -20,7 +20,7 @@ RUN rustup component add rustfmt
 # Create our non-root user & group ('stacks')
 RUN groupadd -r -g ${GROUP_ID} stackify \
     && useradd -r -m --uid ${GROUP_ID} -g ${GROUP_ID} stackify \
-    && install -d -m 0755 -o stackify -g stackify \
+    && install -d -m 0777 -o stackify -g stackify \
         /src \
         /target \
         /out
