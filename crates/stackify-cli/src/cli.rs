@@ -57,7 +57,7 @@ pub fn finished(msg: &str) {
     println!("{} {}", "Finished:".success().bold(), msg);
 }
 
-const ABOUT: &str = r#"  ____  _             _    _  __       
+const ABOUT: &str = r#" ____  _             _    _  __       
 / ___|| |_ __ _  ___| | _(_)/ _|_   _ 
 \___ \| __/ _` |/ __| |/ / | |_| | | |
  ___) | || (_| | (__|   <| |  _| |_| |

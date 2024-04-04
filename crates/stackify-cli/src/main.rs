@@ -4,7 +4,6 @@ use color_eyre::eyre::{eyre, Result};
 use db::{apply_db_migrations, AppDb};
 use diesel::{Connection, SqliteConnection};
 use docker::api::DockerApi;
-use stackify_common::docker::stackify_docker::StackifyDocker;
 
 use crate::cli::{Cli, Commands};
 

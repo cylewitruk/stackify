@@ -7,7 +7,7 @@ use flate2::bufread::GzDecoder;
 use stackify_common::download::download_file;
 use tar::Archive;
 
-use crate::cli::context::CliContext;
+use crate::cli::{context::CliContext, theme::ThemedObject};
 
 /// Downloads the Dasel binary, which is a jq-like tool for working with json,
 /// yaml, toml, xml, etc. and is useful to have in the runtime image for shell-
@@ -18,6 +18,7 @@ pub async fn download_dasel(ctx: &CliContext, version: &str) -> Result<()> {
     //let dl = multi.add_downloadbar();
     let mut download_size = 0;
     let mut progress = 0;
+
     dl.start("Downloading...");
     let dasel_filename = "dasel_linux_amd64";
     let url = format!(
@@ -30,20 +31,28 @@ pub async fn download_dasel(ctx: &CliContext, version: &str) -> Result<()> {
         &ctx.tmp_dir,
         |size| {
             download_size = size;
-            dl.bar().set_length(size);
+            dl.set_length(size);
         },
         |chunk, _| {
-            dl.bar().inc(chunk);
+            dl.inc(chunk);
             progress += chunk;
         },
     )
     .await?;
-
-    std::fs::copy(ctx.tmp_dir.join(&dasel_bin), ctx.bin_dir.join("dasel"))?;
-
-    std::fs::remove_file(&dasel_bin)?;
-
     dl.stop(format!("{} {}", style("✔").green(), "Download Dasel"));
+
+    let cp = multi.add(spinner());
+    cp.start("Installing...");
+    std::fs::copy(ctx.tmp_dir.join(&dasel_bin), ctx.bin_dir.join("dasel"))?;
+    std::fs::remove_file(&dasel_bin)?;
+    cp.stop(format!(
+        "{} {} {}",
+        style("✔").green(),
+        "Installed",
+        format!("({}/)", ctx.bin_dir.display()).dimmed()
+    ));
+
+    multi.stop();
 
     Ok(())
 }
@@ -71,33 +80,33 @@ pub async fn download_and_extract_bitcoin_core(ctx: &CliContext, version: &str) 
         &ctx.tmp_dir,
         |size| {
             total_size = size.clone();
-            dl.bar().set_message("Downloading...");
-            dl.bar().set_length(total_size);
+            dl.set_message("Downloading...");
+            dl.set_length(total_size);
         },
         |chunk, _| {
-            dl.bar().inc(chunk);
+            dl.inc(chunk);
             progress += chunk;
         },
     )
     .await?;
 
     dl.stop(format!(
-        " {} {}",
+        "{} {}",
         style("✔").green(),
         "Download Bitcoin Core"
     ));
 
     let unpack = multi.add(spinner());
-    unpack.start("copying files...");
+    unpack.start("Installing...");
 
     let tmp_file = File::open(&bitcoin_core_archive)?;
     let gz = GzDecoder::new(BufReader::new(tmp_file));
 
     Archive::new(gz).unpack(&ctx.tmp_dir)?;
-    unpack.stop(format!(" {} {}", style("✔").green(), "Extract archive"));
+    unpack.stop(format!("{} {}", style("✔").green(), "Extract archive"));
 
     let cp = multi.add(spinner());
-    cp.start("opying files...");
+    cp.start("Installed");
     let extracted_bin_dir = ctx.tmp_dir.join(format!("bitcoin-{}", version)).join("bin");
 
     std::fs::copy(
@@ -112,10 +121,14 @@ pub async fn download_and_extract_bitcoin_core(ctx: &CliContext, version: &str) 
 
     std::fs::remove_dir_all(&ctx.tmp_dir)?;
     std::fs::create_dir(&ctx.tmp_dir)?;
-    cp.stop(format!(" {} {}", style("✔").green(), "Copy binaries"));
+    cp.stop(format!(
+        "{} {} {}",
+        style("✔").green(),
+        "Installed",
+        format!("({}/)", ctx.bin_dir.display()).dimmed()
+    ));
 
     multi.stop();
-    outro("Finished")?;
 
     Ok(())
 }

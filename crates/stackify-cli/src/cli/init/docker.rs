@@ -7,8 +7,8 @@ use crate::cli::{context::CliContext, theme::ThemedObject};
 
 pub async fn build_image(ctx: &CliContext, name: &str, opts: &ImageBuildOpts) -> Result<()> {
     let regex = Regex::new(r#"^Step (\d+)\/(\d+) :(.*)$"#)?;
-    let spinner = cliclack::spinner();
-    spinner.start(format!("Building {} image...", name.bold()));
+    //let spinner = cliclack::spinner();
+    //spinner.start(format!("Building {} image...", name.bold()));
 
     ctx.docker()
         .api()
@@ -51,7 +51,7 @@ pub async fn build_image(ctx: &CliContext, name: &str, opts: &ImageBuildOpts) ->
         })
         .await;
 
-    spinner.stop("Build image complete");
+    //spinner.stop("Build image complete");
 
     Ok(())
 }

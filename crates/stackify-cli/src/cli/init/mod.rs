@@ -1,8 +1,12 @@
 use clap::Args;
+use cliclack::{multi_progress, outro, spinner};
 use color_eyre::Result;
 use docker_api::opts::ImageBuildOpts;
 
-use crate::{cli::context::CliContext, docker::opts::BuildImage};
+use crate::{
+    cli::{context::CliContext, ABOUT},
+    docker::opts::BuildImage,
+};
 
 use self::{
     assets::copy_assets,
@@ -52,6 +56,8 @@ pub async fn exec(ctx: &CliContext, args: InitArgs) -> Result<()> {
         false => "~2.3GB",
     };
 
+    println!("{}\n", ABOUT);
+
     cliclack::intro("Initialize Stackify".bold())?;
     cliclack::log::remark(
         "This operation will prepare your system for running Stackify.
@@ -89,26 +95,46 @@ runtime binaries, initialize the database and copy assets to the appropriate dir
     }
 
     if !args.no_build {
+        let multi = multi_progress("Build Docker images");
+
         // Build the build image.
-        cliclack::log::info("Building Docker images...")?;
-        //build_build_image(ctx, &args.bitcoin_version, args.pre_compile).await?;
+        let build_spinner = multi.add(spinner());
+        build_spinner.start("Building build image...");
         build_image(
             ctx,
             "stackify-build:latest",
             &ImageBuildOpts::for_build_image(&ctx.assets_dir),
         )
         .await?;
+        build_spinner.stop(format!(
+            "{} {} {}",
+            "✔".green(),
+            "Build image",
+            "stackify-build:latest".dimmed()
+        ));
+
         // Build the runtime image.
-        //build_runtime_image(ctx).await?;
+        let runtime_spinner = multi.add(spinner());
+        runtime_spinner.start("Building runtime image...");
         build_image(
             ctx,
             "stackify-runtime:latest",
             &ImageBuildOpts::for_runtime_image(&ctx.assets_dir),
         )
         .await?;
+        runtime_spinner.stop(format!(
+            "{} {} {}",
+            "✔".green(),
+            "Runtime image",
+            "stackify-runtime:latest".dimmed()
+        ));
+
+        multi.stop();
     }
 
     load_default_configuration_files(ctx)?;
+
+    outro("Finished!".bold().green())?;
 
     Ok(())
 }
