@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use color_eyre::{eyre::eyre, Result};
+use color_eyre::{eyre::eyre, owo_colors::OwoColorize, Result};
 use docker_api::{
     models::{ContainerSummary, Network},
     opts::{ContainerFilter, ContainerListOpts, NetworkCreateOpts, NetworkFilter, NetworkListOpts},
@@ -11,36 +11,59 @@ use stackify_common::docker::{LabelKey, StackifyNetwork};
 
 use crate::cli::StackifyHostDirs;
 
-use super::StackifyContainerDirs;
+use super::{ContainerUser, StackifyContainerDirs};
 
 #[derive(Clone)]
 pub struct DockerApi {
     docker: ::docker_api::Docker,
     host_dirs: StackifyHostDirs,
     container_dirs: StackifyContainerDirs,
-}
-
-impl Default for DockerApi {
-    fn default() -> Self {
-        Self {
-            docker: ::docker_api::Docker::new("unix:///var/run/user/1000/docker.sock").unwrap(),
-            host_dirs: StackifyHostDirs::default(),
-            container_dirs: StackifyContainerDirs::default(),
-        }
-    }
+    container_user: ContainerUser,
+    rootless: bool,
 }
 
 impl DockerApi {
-    pub fn new(host_dirs: StackifyHostDirs, container_dirs: StackifyContainerDirs) -> Result<Self> {
+    pub async fn new(
+        host_dirs: StackifyHostDirs,
+        container_dirs: StackifyContainerDirs,
+    ) -> Result<Self> {
+        let docker = docker_api::Docker::new("unix:///var/run/user/1000/docker.sock")?;
+
+        let docker_info = docker.info().await?;
+        let rootless = docker_info.security_options.map_or(false, |sec_opts| {
+            sec_opts.iter().any(|opt| opt == "name=rootless")
+        });
+
+        let container_user = if rootless {
+            println!(
+                "{} {}",
+                "Note:".dimmed().bold(),
+                "Docker is running in rootless mode, using root user for containers."
+            );
+            ContainerUser::root()
+        } else {
+            unsafe { ContainerUser::new(libc::geteuid(), libc::getegid()) }
+        };
+
         Ok(Self {
-            docker: ::docker_api::Docker::new("unix:///var/run/user/1000/docker.sock")?,
+            docker,
             host_dirs,
             container_dirs,
+            container_user,
+            rootless,
         })
     }
 
     pub fn api(&self) -> &::docker_api::Docker {
         &self.docker
+    }
+
+    pub fn container_dirs(&self) -> &StackifyContainerDirs {
+        &self.container_dirs
+    }
+
+    pub fn user(&self) -> &ContainerUser {
+        &self.container_user
     }
 }
 

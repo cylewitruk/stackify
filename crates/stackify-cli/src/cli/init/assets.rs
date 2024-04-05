@@ -12,54 +12,56 @@ use crate::{
     cli::{context::CliContext, theme::ThemedObject},
     includes::{
         BITCOIN_ENTRYPOINT, STACKIFY_BUILD_DOCKERFILE, STACKIFY_BUILD_ENTRYPOINT,
-        STACKIFY_CARGO_CONFIG, STACKIFY_RUN_DOCKERFILE, STACKS_NODE_CONF, STACKS_SIGNER_CONF,
+        STACKIFY_BUILD_SETUP, STACKIFY_CARGO_CONFIG, STACKIFY_RUN_DOCKERFILE, STACKS_NODE_CONF,
+        STACKS_SIGNER_CONF,
     },
 };
 
-pub fn copy_assets(ctx: &CliContext) -> Result<()> {
+pub fn copy_assets(ctx: &CliContext, force: bool) -> Result<()> {
     let multi = multi_progress("Default assets");
 
     install_asset_executable(
         ctx,
         &multi,
-        "build-entrypoint.sh",
-        false,
-        STACKIFY_BUILD_ENTRYPOINT,
+        "bitcoin-miner-entrypoint.sh",
+        force,
+        BITCOIN_ENTRYPOINT,
     )?;
     install_asset_executable(
         ctx,
         &multi,
-        "bitcoin-miner-entrypoint.sh",
-        false,
-        BITCOIN_ENTRYPOINT,
+        "build-entrypoint.sh",
+        force,
+        STACKIFY_BUILD_ENTRYPOINT,
     )?;
+    install_asset_executable(ctx, &multi, "build-setup.sh", force, STACKIFY_BUILD_SETUP)?;
     install_asset(
         ctx,
         &multi,
         "Dockerfile.build",
-        false,
+        force,
         STACKIFY_BUILD_DOCKERFILE,
     )?;
     install_asset(
         ctx,
         &multi,
         "Dockerfile.runtime",
-        false,
+        force,
         STACKIFY_RUN_DOCKERFILE,
     )?;
     install_asset(
         ctx,
         &multi,
         "cargo-config.toml",
-        false,
+        force,
         STACKIFY_CARGO_CONFIG,
     )?;
-    install_asset(ctx, &multi, "stacks-node.toml.hbs", false, STACKS_NODE_CONF)?;
+    install_asset(ctx, &multi, "stacks-node.toml.hbs", force, STACKS_NODE_CONF)?;
     install_asset(
         ctx,
         &multi,
         "stacks-signer.toml.hbs",
-        false,
+        force,
         STACKS_SIGNER_CONF,
     )?;
 
@@ -73,10 +75,10 @@ fn install_asset_executable(
     ctx: &CliContext,
     multi: &cliclack::MultiProgress,
     filename: &str,
-    replace: bool,
+    force: bool,
     data: &[u8],
 ) -> Result<()> {
-    install_asset(ctx, multi, filename, replace, data)?;
+    install_asset(ctx, multi, filename, force, data)?;
     let file = File::options()
         .write(true)
         .open(ctx.host_dirs.assets_dir.join(filename))?;
@@ -91,7 +93,7 @@ fn install_asset(
     ctx: &CliContext,
     multi: &cliclack::MultiProgress,
     filename: &str,
-    replace: bool,
+    force: bool,
     data: &[u8],
 ) -> Result<()> {
     let spinner = multi.add(cliclack::spinner());
@@ -99,7 +101,8 @@ fn install_asset(
 
     let mut file = match File::options()
         .create(true)
-        .create_new(!replace)
+        .create_new(!force)
+        .truncate(true)
         .write(true)
         .open(ctx.host_dirs.assets_dir.join(filename))
     {
@@ -110,7 +113,7 @@ fn install_asset(
                     "{} {} {}",
                     style("⊖").dim(),
                     filename,
-                    style("skipped (already exists)").dimmed()
+                    style("skipped (exists)").dimmed()
                 ));
                 return Ok(());
             } else {

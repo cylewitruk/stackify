@@ -4,16 +4,13 @@
 FROM rust:1.76-slim-bookworm as build-base
 ARG USER_ID
 ARG GROUP_ID
-ARG BITCOIN_VERSION
-ARG PRE_COMPILE="false"
+ARG PRE_COMPILE=false
 
 ENV PRE_COMPILE=${PRE_COMPILE}
 
 # Update and install packages
 RUN apt update \
-#    && apt upgrade -y \
-    && apt install -y build-essential libclang-dev git wget tree \
-        clang mold
+    && apt install -y build-essential libclang-dev git wget tree clang mold
 
 RUN rustup component add rustfmt
 
@@ -23,30 +20,31 @@ RUN groupadd -r -g ${GROUP_ID} stackify \
     && install -d -m 0777 -o stackify -g stackify \
         /src \
         /target \
-        /out
+        /out \
+        /repos
 
 USER stackify
-COPY --chown=stackify:stackify ./cargo-config.toml /home/stackify/.cargo/config.toml
+COPY --chown=stackify:stackify ./build-setup.sh /build-setup.sh
+RUN /build-setup.sh
 
-RUN mkdir ~/repos
+# USER stackify
 
-# Clone 'stacks-core'
-RUN cd ~/repos \
-    && git clone https://github.com/stacks-network/stacks-core.git
-# Build 'stacks-node' from 'stacks-core' to cache dependencies.
-RUN cd ~/repos/stacks-core \
-    && if [ "$PRE_COMPILE" = "true" ]; then cargo build --profile docker --package stacks-node --bin stacks-node; fi \
-    && cd ..
-# Clone 'sbtc'.
-RUN cd ~/repos \
-    git clone https://github.com/stacks-network/sbtc.git
-# Clone 'clarinet'.
-RUN cd ~/repos \
-    && git clone https://github.com/hirosystems/clarinet.git --recursive 
-# Build the 'clarinet' binary to cache dependencies.
-RUN cd ~/repos/clarinet \
-    && git submodule update --recursive --init \
-    && if [ "$PRE_COMPILE" = "true" ]; then cargo build --profile docker && cd ..; fi
+# # Clone 'stacks-core'
+# RUN cd /repos \
+#     && git clone https://github.com/stacks-network/stacks-core.git
+# # Build 'stacks-node' from 'stacks-core' to cache dependencies.
+# RUN cd /repos/stacks-core \
+#     && if [ "$PRE_COMPILE" = "true" ]; then cargo build --config /cargo-config.toml --profile docker --package stacks-node --bin stacks-node; fi
+# # Clone 'sbtc'.
+# RUN cd /repos \
+#     git clone https://github.com/stacks-network/sbtc.git
+# # Clone 'clarinet'.
+# RUN cd /repos \
+#     && git clone https://github.com/hirosystems/clarinet.git --recursive 
+# # Build the 'clarinet' binary to cache dependencies.
+# RUN cd /repos/clarinet \
+#     && git submodule update --recursive --init \
+#     && if [ "$PRE_COMPILE" = "true" ]; then cargo build --config /cargo-config.toml --profile docker; fi
 
 ENV CARGO_INCREMENTAL 1
 ENV CARGO_TARGET_DIR /target

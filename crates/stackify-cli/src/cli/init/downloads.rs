@@ -1,4 +1,8 @@
-use std::{fs::File, io::BufReader};
+use std::{
+    fs::{File, Permissions},
+    io::BufReader,
+    os::unix::fs::PermissionsExt,
+};
 
 use cliclack::{progress_bar, spinner};
 use color_eyre::Result;
@@ -43,11 +47,18 @@ pub async fn download_dasel(ctx: &CliContext, version: &str) -> Result<()> {
 
     let cp = multi.add(spinner());
     cp.start("Installing...");
+    let filename = format!("dasel-{}", version);
     std::fs::copy(
         ctx.host_dirs.tmp_dir.join(&dasel_bin),
-        ctx.host_dirs.bin_dir.join("dasel"),
+        ctx.host_dirs.bin_dir.join(&filename),
     )?;
     std::fs::remove_file(&dasel_bin)?;
+    let file = File::options()
+        .write(true)
+        .open(ctx.host_dirs.bin_dir.join(&filename))?;
+    file.sync_all()?;
+    file.set_permissions(Permissions::from_mode(0o755))?;
+    file.sync_all()?;
     cp.stop(format!(
         "{} {} {}",
         style("✔").green(),
@@ -116,14 +127,16 @@ pub async fn download_and_extract_bitcoin_core(ctx: &CliContext, version: &str) 
         .join(format!("bitcoin-{}", version))
         .join("bin");
 
+    let cli_filename = format!("bitcoin-cli-{}", version);
     std::fs::copy(
         extracted_bin_dir.join("bitcoin-cli"),
-        ctx.host_dirs.bin_dir.join("bitcoin-cli"),
+        ctx.host_dirs.bin_dir.join(cli_filename),
     )?;
 
+    let bitcoind_filename = format!("bitcoind-{}", version);
     std::fs::copy(
         extracted_bin_dir.join("bitcoind"),
-        ctx.host_dirs.bin_dir.join("bitcoind"),
+        ctx.host_dirs.bin_dir.join(bitcoind_filename),
     )?;
 
     std::fs::remove_dir_all(&ctx.host_dirs.tmp_dir)?;

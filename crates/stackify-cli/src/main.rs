@@ -18,7 +18,7 @@ mod util;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let context = initialize()?;
+    let context = initialize().await?;
 
     match Cli::try_parse() {
         Ok(cli) => match cli.command {
@@ -54,7 +54,7 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-fn initialize() -> Result<CliContext> {
+async fn initialize() -> Result<CliContext> {
     env_logger::init();
     color_eyre::install().unwrap();
 
@@ -99,23 +99,16 @@ fn initialize() -> Result<CliContext> {
             config_dir: std::path::PathBuf::from("/home/stackify/config/"),
             logs_dir: std::path::PathBuf::from("/home/stackify/logs/"),
         },
-    )?;
+    )
+    .await?;
 
     let (tx, _) = broadcast::channel::<()>(10);
 
-    let context = CliContext {
-        host_dirs,
-        db_file,
-        db: app_db,
-        //docker,
-        docker_api,
-        tx: Some(tx.clone()),
-        ..Default::default()
-    };
+    let context = CliContext::new(host_dirs, docker_api, tx.clone()).await?;
 
     tokio::spawn(async move {
         tokio::signal::ctrl_c().await.unwrap();
-        tx.send(()).unwrap();
+        let _ = tx.send(());
     });
 
     Ok(context)

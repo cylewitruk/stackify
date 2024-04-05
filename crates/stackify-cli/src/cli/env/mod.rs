@@ -130,24 +130,27 @@ async fn exec_start(ctx: &CliContext, args: args::StartArgs) -> Result<()> {
 
     // If there are any running containers, we can't start the environment.
     if !existing_containers.is_empty() {
-        cliclack::log::error("The environment is already running.");
+        cliclack::log::error("The environment is already running.")?;
     }
 
     // Create the environment container. This is our "lock file" for the environment
     // within Docker -- it's the first resource we create and the last one we delete.
-    let mut spinner = cliclack::spinner();
+    let spinner = cliclack::spinner();
     spinner.start("Creating environment container...");
     ctx.docker()
         .api()
         .containers()
         .create(&ContainerCreateOpts::for_stackify_environment_container(
             &env_name,
+            ctx.docker().user(),
+            &ctx.host_dirs,
+            &ctx.docker().container_dirs(),
         ))
         .await?;
     spinner.stop("Environment container created");
 
     // Create the network for the environment.
-    let mut spinner = cliclack::spinner();
+    let spinner = cliclack::spinner();
     spinner.start("Creating environment network...");
     ctx.docker()
         .api()
@@ -179,7 +182,7 @@ async fn exec_stop(ctx: &CliContext, args: args::StopArgs) -> Result<()> {
     }
 
     for container in containers {
-        let mut spinner = cliclack::spinner();
+        let spinner = cliclack::spinner();
         let container_id = container.id.ok_or(eyre!("Container ID not found."))?;
         let container_names = container.names.ok_or(eyre!("Container name not found."))?;
         let container_name = container_names.join(", ");
@@ -216,7 +219,7 @@ async fn exec_down(ctx: &CliContext, args: args::DownArgs) -> Result<()> {
     }
 
     for container in containers {
-        let mut spinner = cliclack::spinner();
+        let spinner = cliclack::spinner();
         let container_id = container.id.ok_or(eyre!("Container ID not found."))?;
         let container_names = container.names.ok_or(eyre!("Container name not found."))?;
         let container_name = container_names.join(", ");

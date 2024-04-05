@@ -1,4 +1,7 @@
-use std::path::PathBuf;
+use std::{
+    fmt::{Display, Formatter},
+    path::PathBuf,
+};
 
 use stackify_common::types::EnvironmentName;
 
@@ -38,10 +41,44 @@ impl Default for StackifyContainerDirs {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct ContainerUser {
+    pub uid: u32,
+    pub gid: u32,
+}
+
+impl ContainerUser {
+    pub fn new(uid: u32, gid: u32) -> Self {
+        Self { uid, gid }
+    }
+
+    pub fn root() -> Self {
+        Self::new(0, 0)
+    }
+}
+
+impl Display for ContainerUser {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        write!(f, "{}:{}", self.uid, self.gid)
+    }
+}
+
 pub fn format_container_name(env_name: &EnvironmentName, container_name: &str) -> String {
     format!("{}{}", STACKIFY_PREFIX, env_name)
 }
 
 pub fn format_network_name(env_name: &EnvironmentName) -> String {
     format!("{}{}", STACKIFY_PREFIX, env_name)
+}
+
+pub enum ActionResult {
+    Success,
+    Failed(i64, Vec<String>),
+    Cancelled,
+}
+
+pub enum BuildResult {
+    Success(String),
+    Failed(String, String),
+    Cancelled,
 }

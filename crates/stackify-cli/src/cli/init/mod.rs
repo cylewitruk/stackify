@@ -1,11 +1,11 @@
 use clap::Args;
 use cliclack::{multi_progress, outro, spinner};
-use color_eyre::Result;
+use color_eyre::{eyre::bail, Result};
 use docker_api::opts::ImageBuildOpts;
 
 use crate::{
-    cli::{context::CliContext, ABOUT},
-    docker::opts::BuildImage,
+    cli::{context::CliContext, init::docker::clean_images, ABOUT},
+    docker::{opts::BuildImage, BuildResult},
 };
 
 use self::{
@@ -48,6 +48,8 @@ pub struct InitArgs {
     /// Do not copy local assets to the assets directory.
     #[arg(long, default_value = "false", required = false)]
     pub no_assets: bool,
+    #[arg(short, long, default_value = "false", required = false)]
+    pub force: bool,
 }
 
 pub async fn exec(ctx: &CliContext, args: InitArgs) -> Result<()> {
@@ -67,10 +69,10 @@ runtime binaries, initialize the database and copy assets to the appropriate dir
 
     if !args.no_build {
         cliclack::log::warning(format!(
-            "{}\n{} {}",
-            "This operation can take a while and consume a lot of disk space.".yellow(),
-            "Estimated disk space usage:",
-            disk_space_usage.red().bold()
+            "{} {} {}",
+            "This can take several minutes and will consume".yellow(),
+            disk_space_usage.red().bold(),
+            "of disk space.".yellow()
         ))?;
 
         let confirm = cliclack::confirm("Are you sure you want to continue?").interact()?;
@@ -82,7 +84,7 @@ runtime binaries, initialize the database and copy assets to the appropriate dir
     }
 
     if !args.no_assets {
-        copy_assets(ctx)?;
+        copy_assets(ctx, args.force)?;
     }
 
     if !args.no_download {
@@ -97,37 +99,64 @@ runtime binaries, initialize the database and copy assets to the appropriate dir
     if !args.no_build {
         let multi = multi_progress("Build Docker images");
 
+        let clean_spinner = multi.add(spinner());
+        clean_spinner.start("Cleaning up existing images...");
+        clean_images(ctx).await?;
+        clean_spinner.stop(format!("{} {}", "✔".green(), "Clean up existing images"));
+
         // Build the build image.
         let build_spinner = multi.add(spinner());
-        build_spinner.start("Building build image...");
-        build_image(
+
+        build_spinner.start("Preparing build image...");
+        match build_image(
             ctx,
-            "stackify-build:latest",
-            &ImageBuildOpts::for_build_image(&ctx.host_dirs.assets_dir),
+            &ImageBuildOpts::for_build_image(&ctx.host_dirs, args.pre_compile, args.force),
         )
-        .await?;
-        build_spinner.stop(format!(
-            "{} {} {}",
-            "✔".green(),
-            "Build image",
-            "stackify-build:latest".dimmed()
-        ));
+        .await?
+        {
+            BuildResult::Success(id) => {
+                build_spinner.stop(format!("{} {} {}", "✔".green(), "Build image", id.dimmed()));
+            }
+            BuildResult::Failed(error, message) => {
+                build_spinner.stop(format!("{} {}", "✖".red(), "Build image failed"));
+                bail!("Build image failed: {} - {}", error, message);
+            }
+            BuildResult::Cancelled => {
+                build_spinner.stop(format!("{} {}", "✖".red(), "Build image cancelled"));
+                bail!("Build image cancelled");
+            }
+        }
 
         // Build the runtime image.
         let runtime_spinner = multi.add(spinner());
-        runtime_spinner.start("Building runtime image...");
-        build_image(
+        runtime_spinner.start("Preparing runtime image...");
+        match build_image(
             ctx,
-            "stackify-runtime:latest",
-            &ImageBuildOpts::for_runtime_image(&ctx.host_dirs.assets_dir),
+            &ImageBuildOpts::for_runtime_image(&ctx.host_dirs, args.force),
         )
-        .await?;
-        runtime_spinner.stop(format!(
-            "{} {} {}",
-            "✔".green(),
-            "Runtime image",
-            "stackify-runtime:latest".dimmed()
-        ));
+        .await?
+        {
+            BuildResult::Success(id) => {
+                runtime_spinner.stop(format!(
+                    "{} {} {}",
+                    "✔".green(),
+                    "Runtime image",
+                    id.dimmed()
+                ));
+            }
+            BuildResult::Failed(error, message) => {
+                runtime_spinner.stop(format!("{} {}", "✖".red(), "Failed to build runtime image"));
+                bail!("Build image failed: {} - {}", error, message);
+            }
+            BuildResult::Cancelled => {
+                runtime_spinner.stop(format!(
+                    "{} {}",
+                    "✖".red(),
+                    "Operation was cancelled by the user"
+                ));
+                bail!("Build image cancelled");
+            }
+        }
 
         multi.stop();
     }
