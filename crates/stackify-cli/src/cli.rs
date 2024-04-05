@@ -1,4 +1,5 @@
 use std::fmt::Display;
+use std::path::PathBuf;
 
 use clap::builder::styling::{Effects, Styles};
 use clap::{command, Parser, Subcommand};
@@ -143,4 +144,33 @@ fn styles() -> Styles {
 
 fn owo_to_anstyle_color(color: owo_colors::Rgb) -> anstyle::RgbColor {
     anstyle::RgbColor(color.0, color.1, color.2)
+}
+
+#[derive(Debug, Clone)]
+pub struct StackifyHostDirs {
+    pub app_root: PathBuf,
+    /// The local directory where Stackify binaries are stored. This includes
+    /// built artifacts which are mounted to containers.
+    /// Default: `~/.stackify/bin/`.
+    pub bin_dir: PathBuf,
+    /// The local directory where Stackify temporary data is stored.
+    /// Default: `~/.stackify/tmp/`.
+    pub tmp_dir: PathBuf,
+    /// The local directory where Stackify assets are stored. These are additional
+    /// files such as configuration file templates, shell scripts, etc.
+    /// Default: `~/.stackify/assets/`.
+    pub assets_dir: PathBuf,
+}
+
+impl Default for StackifyHostDirs {
+    fn default() -> Self {
+        let home_dir = home::home_dir().unwrap();
+
+        Self {
+            app_root: home_dir.join(".stackify"),
+            bin_dir: home_dir.join(".stackify/bin"),
+            tmp_dir: home_dir.join(".stackify/tmp"),
+            assets_dir: home_dir.join(".stackify/assets"),
+        }
+    }
 }

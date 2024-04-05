@@ -7,20 +7,7 @@ pub mod opts;
 
 pub const STACKIFY_PREFIX: &str = "stx-";
 
-pub struct StackifyHostDirs {
-    /// The local directory where Stackify binaries are stored. This includes
-    /// built artifacts which are mounted to containers.
-    /// Default: `~/.stackify/bin/`.
-    pub bin_dir: PathBuf,
-    /// The local directory where Stackify temporary data is stored.
-    /// Default: `~/.stackify/tmp/`.
-    pub tmp_dir: PathBuf,
-    /// The local directory where Stackify assets are stored. These are additional
-    /// files such as configuration file templates, shell scripts, etc.
-    /// Default: `~/.stackify/assets/`.
-    pub assets_dir: PathBuf,
-}
-
+#[derive(Clone, Debug)]
 pub struct StackifyContainerDirs {
     /// The home directory of the 'stackify' user within the container.
     /// For example: `/home/stackify/`.
@@ -37,6 +24,18 @@ pub struct StackifyContainerDirs {
     /// The directory where the 'stackify' user's logs are stored.
     /// For example: `/home/stackify/logs/`.
     pub logs_dir: PathBuf,
+}
+
+impl Default for StackifyContainerDirs {
+    fn default() -> Self {
+        Self {
+            home_dir: PathBuf::from("/home/stackify"),
+            bin_dir: PathBuf::from("/home/stackify/bin"),
+            data_dir: PathBuf::from("/home/stackify/data"),
+            config_dir: PathBuf::from("/home/stackify/config"),
+            logs_dir: PathBuf::from("/home/stackify/logs"),
+        }
+    }
 }
 
 pub fn format_container_name(env_name: &EnvironmentName, container_name: &str) -> String {

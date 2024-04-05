@@ -103,7 +103,7 @@ runtime binaries, initialize the database and copy assets to the appropriate dir
         build_image(
             ctx,
             "stackify-build:latest",
-            &ImageBuildOpts::for_build_image(&ctx.assets_dir),
+            &ImageBuildOpts::for_build_image(&ctx.host_dirs.assets_dir),
         )
         .await?;
         build_spinner.stop(format!(
@@ -119,7 +119,7 @@ runtime binaries, initialize the database and copy assets to the appropriate dir
         build_image(
             ctx,
             "stackify-runtime:latest",
-            &ImageBuildOpts::for_runtime_image(&ctx.assets_dir),
+            &ImageBuildOpts::for_runtime_image(&ctx.host_dirs.assets_dir),
         )
         .await?;
         runtime_spinner.stop(format!(

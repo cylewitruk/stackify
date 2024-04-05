@@ -9,12 +9,25 @@ use docker_api::{
 
 use stackify_common::docker::{LabelKey, StackifyNetwork};
 
-use super::{StackifyContainerDirs, StackifyHostDirs};
+use crate::cli::StackifyHostDirs;
 
+use super::StackifyContainerDirs;
+
+#[derive(Clone)]
 pub struct DockerApi {
     docker: ::docker_api::Docker,
     host_dirs: StackifyHostDirs,
     container_dirs: StackifyContainerDirs,
+}
+
+impl Default for DockerApi {
+    fn default() -> Self {
+        Self {
+            docker: ::docker_api::Docker::new("unix:///var/run/user/1000/docker.sock").unwrap(),
+            host_dirs: StackifyHostDirs::default(),
+            container_dirs: StackifyContainerDirs::default(),
+        }
+    }
 }
 
 impl DockerApi {

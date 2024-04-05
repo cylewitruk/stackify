@@ -1,6 +1,6 @@
 use std::{fs::File, io::BufReader};
 
-use cliclack::{outro, progress_bar, spinner};
+use cliclack::{progress_bar, spinner};
 use color_eyre::Result;
 use console::style;
 use flate2::bufread::GzDecoder;
@@ -28,7 +28,7 @@ pub async fn download_dasel(ctx: &CliContext, version: &str) -> Result<()> {
 
     let dasel_bin = download_file(
         &url,
-        &ctx.tmp_dir,
+        &ctx.host_dirs.tmp_dir,
         |size| {
             download_size = size;
             dl.set_length(size);
@@ -43,13 +43,16 @@ pub async fn download_dasel(ctx: &CliContext, version: &str) -> Result<()> {
 
     let cp = multi.add(spinner());
     cp.start("Installing...");
-    std::fs::copy(ctx.tmp_dir.join(&dasel_bin), ctx.bin_dir.join("dasel"))?;
+    std::fs::copy(
+        ctx.host_dirs.tmp_dir.join(&dasel_bin),
+        ctx.host_dirs.bin_dir.join("dasel"),
+    )?;
     std::fs::remove_file(&dasel_bin)?;
     cp.stop(format!(
         "{} {} {}",
         style("✔").green(),
         "Installed",
-        format!("({}/)", ctx.bin_dir.display()).dimmed()
+        format!("({}/)", ctx.host_dirs.bin_dir.display()).dimmed()
     ));
 
     multi.stop();
@@ -77,7 +80,7 @@ pub async fn download_and_extract_bitcoin_core(ctx: &CliContext, version: &str) 
 
     let bitcoin_core_archive = download_file(
         &bitcoin_url,
-        &ctx.tmp_dir,
+        &ctx.host_dirs.tmp_dir,
         |size| {
             total_size = size.clone();
             dl.set_message("Downloading...");
@@ -102,30 +105,34 @@ pub async fn download_and_extract_bitcoin_core(ctx: &CliContext, version: &str) 
     let tmp_file = File::open(&bitcoin_core_archive)?;
     let gz = GzDecoder::new(BufReader::new(tmp_file));
 
-    Archive::new(gz).unpack(&ctx.tmp_dir)?;
+    Archive::new(gz).unpack(&ctx.host_dirs.tmp_dir)?;
     unpack.stop(format!("{} {}", style("✔").green(), "Extract archive"));
 
     let cp = multi.add(spinner());
     cp.start("Installed");
-    let extracted_bin_dir = ctx.tmp_dir.join(format!("bitcoin-{}", version)).join("bin");
+    let extracted_bin_dir = ctx
+        .host_dirs
+        .tmp_dir
+        .join(format!("bitcoin-{}", version))
+        .join("bin");
 
     std::fs::copy(
         extracted_bin_dir.join("bitcoin-cli"),
-        ctx.bin_dir.join("bitcoin-cli"),
+        ctx.host_dirs.bin_dir.join("bitcoin-cli"),
     )?;
 
     std::fs::copy(
         extracted_bin_dir.join("bitcoind"),
-        ctx.bin_dir.join("bitcoind"),
+        ctx.host_dirs.bin_dir.join("bitcoind"),
     )?;
 
-    std::fs::remove_dir_all(&ctx.tmp_dir)?;
-    std::fs::create_dir(&ctx.tmp_dir)?;
+    std::fs::remove_dir_all(&ctx.host_dirs.tmp_dir)?;
+    std::fs::create_dir(&ctx.host_dirs.tmp_dir)?;
     cp.stop(format!(
         "{} {} {}",
         style("✔").green(),
         "Installed",
-        format!("({}/)", ctx.bin_dir.display()).dimmed()
+        format!("({}/)", ctx.host_dirs.bin_dir.display()).dimmed()
     ));
 
     multi.stop();

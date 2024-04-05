@@ -79,7 +79,7 @@ fn install_asset_executable(
     install_asset(ctx, multi, filename, replace, data)?;
     let file = File::options()
         .write(true)
-        .open(ctx.assets_dir.join(filename))?;
+        .open(ctx.host_dirs.assets_dir.join(filename))?;
     file.set_permissions(Permissions::from_mode(0o744))?;
     file.sync_all()?;
 
@@ -101,7 +101,7 @@ fn install_asset(
         .create(true)
         .create_new(!replace)
         .write(true)
-        .open(ctx.assets_dir.join(filename))
+        .open(ctx.host_dirs.assets_dir.join(filename))
     {
         Ok(file) => file,
         Err(err) => {

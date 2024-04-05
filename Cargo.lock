@@ -605,7 +605,6 @@ checksum = "98cc8fbded0c607b7ba9dd60cd98df59af97e84d24e49c8557331cfc26d301ce"
 [[package]]
 name = "cliclack"
 version = "0.2.3"
-source = "git+https://github.com/fadeevab/cliclack.git#27903f0cc357bc69aefcc1058b54e0b812d0fc50"
 dependencies = [
  "console",
  "indicatif",
@@ -3504,6 +3503,7 @@ dependencies = [
  "lazy_static",
  "libc",
  "log",
+ "once_cell",
  "owo-colors 4.0.0",
  "pathdiff",
  "prettytable-rs",
@@ -3520,6 +3520,7 @@ dependencies = [
  "thiserror",
  "time",
  "tokio",
+ "tokio-util",
 ]
 
 [[package]]

@@ -1,26 +1,18 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc, time::Duration};
+
+use diesel::{Connection, SqliteConnection};
+use futures_util::Future;
+use tokio_util::sync::CancellationToken;
 
 use crate::{
     db::{cli_db::CliDatabase, AppDb},
     docker::api::DockerApi,
 };
 
+use super::StackifyHostDirs;
+
 pub struct CliContext {
-    /// The configuration directory for Stackify. Defaults to `$HOME/.stackify`
-    pub config_dir: PathBuf,
-    /// The configuration file for Stackify. Defaults to
-    /// `$HOME/.stackify/config.toml`
-    pub config_file: PathBuf,
-    /// The directory where Stackify stores environment data. Defaults to
-    /// `$HOME/.stackify/data`
-    pub data_dir: PathBuf,
-    /// The directory where Stackify stores binaries. Defaults to
-    /// `$HOME/.stackify/bin`
-    pub bin_dir: PathBuf,
-    /// The temporary directory for Stackify. Defaults to `/tmp/stackify`.
-    pub tmp_dir: PathBuf,
-    /// The directory where Stackify stores assets. Defaults to `$HOME/.stackify/assets`
-    pub assets_dir: PathBuf,
+    pub host_dirs: StackifyHostDirs,
     /// The database file for Stackify. Defaults to `$HOME/.stackify/stackify.db`
     pub db_file: PathBuf,
     /// Instance of Stackify's application database.
@@ -32,6 +24,32 @@ pub struct CliContext {
     /// Instance of Stackify's Docker client.
     //pub docker: StackifyDocker,
     pub docker_api: DockerApi,
+    pub tx: Option<tokio::sync::broadcast::Sender<()>>,
+}
+
+impl Default for CliContext {
+    fn default() -> Self {
+        let uid;
+        let gid;
+        unsafe {
+            uid = libc::geteuid();
+            gid = libc::getegid();
+        }
+
+        let host_dirs = StackifyHostDirs::default();
+
+        let db_file = host_dirs.app_root.join("stackify.db");
+        let db_conn = SqliteConnection::establish(&db_file.to_string_lossy()).unwrap();
+        Self {
+            host_dirs,
+            db_file,
+            db: AppDb::new(db_conn),
+            user_id: uid,
+            group_id: gid,
+            docker_api: DockerApi::default(),
+            tx: None,
+        }
+    }
 }
 
 impl CliContext {
@@ -41,5 +59,25 @@ impl CliContext {
 
     pub fn docker(&self) -> &DockerApi {
         &self.docker_api
+    }
+
+    pub async fn register_shutdown<F, Fut>(&self, f: F)
+    where
+        F: Send + Sync + 'static + FnOnce(DockerApi) -> Fut,
+        Fut: Future<Output = ()> + Send + Sync + 'static,
+    {
+        eprintln!("Registering shutdown hook");
+        let mut receiver = self.tx.clone().unwrap().subscribe();
+        let docker = self.docker_api.clone();
+        tokio::spawn(async move {
+            loop {
+                println!("loop");
+                if receiver.recv().await.is_ok() {
+                    f(docker).await;
+                    break;
+                }
+                std::thread::sleep(Duration::from_millis(500));
+            }
+        });
     }
 }

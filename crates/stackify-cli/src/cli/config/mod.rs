@@ -22,8 +22,8 @@ pub fn exec(ctx: &CliContext, args: ConfigArgs) -> Result<()> {
 }
 
 fn exec_reset(ctx: &CliContext) -> Result<()> {
-    if ctx.config_dir.ends_with(".stackify") {
-        std::fs::remove_dir_all(ctx.config_dir.clone()).unwrap();
+    if ctx.host_dirs.app_root.ends_with(".stackify") {
+        std::fs::remove_dir_all(ctx.host_dirs.app_root.clone()).unwrap();
     }
     Ok(())
 }
