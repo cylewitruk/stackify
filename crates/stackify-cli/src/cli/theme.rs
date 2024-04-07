@@ -1,6 +1,5 @@
 use std::fmt::Display;
 
-use comfy_table::{presets, Table};
 use inquire::ui::{Attributes, RenderConfig};
 use lazy_static::lazy_static;
 use owo_colors::{style, OwoColorize, Rgb, Style, Styled};
@@ -190,12 +189,6 @@ impl Theme {
             palette,
         }
     }
-}
-
-pub fn new_table(headers: &[&str]) -> Table {
-    let mut table = Table::new();
-    table.load_preset(presets::UTF8_FULL);
-    table
 }
 
 pub struct Inquire;

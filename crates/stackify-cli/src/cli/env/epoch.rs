@@ -4,10 +4,9 @@ use crate::cli::{context::CliContext, theme::ThemedObject};
 use crate::cli::{finished, warn};
 
 use color_eyre::Result;
-use comfy_table::presets::UTF8_FULL;
-use comfy_table::Cell;
 use inquire::validator::Validation;
 use inquire::{Confirm, Text};
+use prettytable::{row, Table};
 use stackify_common::types::EnvironmentName;
 
 use super::args::{EpochArgs, EpochEditArgs, EpochListArgs, EpochSubCommands};
@@ -43,24 +42,22 @@ fn exec_list(ctx: &CliContext, args: EpochListArgs) -> Result<()> {
         .collect::<Vec<_>>();
     epochs.sort_by_key(|e| e.starts_at_block_height);
 
-    let mut table = comfy_table::Table::new();
-    table.load_preset(UTF8_FULL);
-    table.set_header([
+    let mut table = Table::new();
+    table.set_format(*prettytable::format::consts::FORMAT_BOX_CHARS);
+    table.set_titles(row![
         "Name".table_header(),
         "Block".table_header(),
         "Ends At".table_header(),
     ]);
 
     for epoch in epochs {
-        table.add_row(vec![
-            Cell::new(epoch.name.magenta().bold()),
-            Cell::new(epoch.starts_at_block_height.to_string()),
-            Cell::new(
-                epoch
-                    .ends_at_block_height
-                    .map(|v| v.to_string())
-                    .unwrap_or_else(|| "N/A".to_string()),
-            ),
+        table.add_row(row![
+            epoch.name.magenta().bold(),
+            epoch.starts_at_block_height.to_string(),
+            epoch
+                .ends_at_block_height
+                .map(|v| v.to_string())
+                .unwrap_or_else(|| "N/A".to_string()),
         ]);
     }
 

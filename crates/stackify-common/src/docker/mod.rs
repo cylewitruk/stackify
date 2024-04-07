@@ -102,20 +102,15 @@ INSERT INTO service_type (id, name) VALUES (6, 'Stacks Stacker (Pool)'); */
 pub enum LabelKey {
     Stackify,
     EnvironmentName,
-    Service,
+    ServiceType,
     NodeVersion,
     IsLeader,
+    ServiceId,
 }
 
 impl std::fmt::Display for LabelKey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            LabelKey::Stackify => write!(f, "{}", "local.stackify"),
-            LabelKey::EnvironmentName => write!(f, "{}", "local.stackify.environment"),
-            LabelKey::Service => write!(f, "{}", "local.stackify.service"),
-            LabelKey::NodeVersion => write!(f, "{}", "local.stackify.node_version"),
-            LabelKey::IsLeader => write!(f, "{}", "local.stackify.is_leader"),
-        }
+        write!(f, "{}", *self)
     }
 }
 
@@ -126,9 +121,10 @@ impl Deref for LabelKey {
         match self {
             LabelKey::Stackify => "local.stackify",
             LabelKey::EnvironmentName => "local.stackify.environment",
-            LabelKey::Service => "local.stackify.service",
+            LabelKey::ServiceType => "local.stackify.service_type",
             LabelKey::NodeVersion => "local.stackify.node_version",
             LabelKey::IsLeader => "local.stackify.is_leader",
+            LabelKey::ServiceId => "local.stackify.service_id",
         }
     }
 }

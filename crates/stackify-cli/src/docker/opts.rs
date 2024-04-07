@@ -4,13 +4,19 @@ use docker_api::opts::{
     ContainerCreateOpts, ContainerFilter, ContainerListOpts, ContainerStatus, ImageBuildOpts,
     NetworkCreateOpts, NetworkFilter, NetworkListOpts,
 };
-use stackify_common::{docker::LabelKey, types::EnvironmentName};
+use stackify_common::{
+    docker::LabelKey,
+    types::{EnvironmentName, EnvironmentService},
+};
 
 use crate::cli::StackifyHostDirs;
 
 use super::{ContainerUser, StackifyContainerDirs};
 
 pub trait CreateContainer {
+    /// Create [`ContainerCreateOpts`] for the build container.
+    /// This container is used to compile Stacks binaries for services specified
+    /// in environments in a repeatable and consistent way.
     fn for_stackify_build_container(
         container_user: &ContainerUser,
         host_dirs: &StackifyHostDirs,
@@ -49,9 +55,30 @@ pub trait CreateContainer {
             .build()
     }
 
+    /// Create [`ContainerCreateOpts`] for an environment container. This container
+    /// is used to represent the environment itself, and is used as a "lock file"
+    /// to prevent the same environment from being started multiple times,
+    /// especially in the case where the app database is out-of-sync.
     fn for_stackify_environment_container(
         environment_name: &EnvironmentName,
+    ) -> ContainerCreateOpts {
+        let mut labels = HashMap::new();
+        labels.insert(LabelKey::Stackify.to_string(), "");
+        labels.insert(LabelKey::EnvironmentName.to_string(), environment_name);
+        labels.insert(LabelKey::ServiceType.to_string(), "environment");
+
+        ContainerCreateOpts::builder()
+            .name(format!("stx-{}-environment", environment_name.to_string()))
+            .image("busybox:latest")
+            .labels(labels)
+            .build()
+    }
+
+    /// Create [`ContainerCreateOpts`] for an environment service container.
+    fn for_stackify_runtime_container(
+        environment_name: &EnvironmentName,
         container_user: &ContainerUser,
+        service: &EnvironmentService,
         host_dirs: &StackifyHostDirs,
         container_dirs: &StackifyContainerDirs,
     ) -> ContainerCreateOpts {
@@ -64,9 +91,16 @@ pub trait CreateContainer {
         let mut labels = HashMap::new();
         labels.insert(LabelKey::Stackify.to_string(), "");
         labels.insert(LabelKey::EnvironmentName.to_string(), environment_name);
+        labels.insert(
+            LabelKey::ServiceType.to_string(),
+            &service.service_type.cli_name,
+        );
+        labels.insert(LabelKey::NodeVersion.to_string(), &service.version.version);
+        let service_id = service.id.to_string();
+        labels.insert(LabelKey::ServiceId.to_string(), &service_id);
 
         ContainerCreateOpts::builder()
-            .name(environment_name.to_string())
+            .name(format!("stx-{}", service.name))
             .user(container_user.to_string())
             .volumes([bin_mount])
             .image("stackify-runtime:latest")
@@ -78,12 +112,16 @@ pub trait CreateContainer {
 impl CreateContainer for ContainerCreateOpts {}
 
 pub trait CreateNetwork {
+    /// Create [`NetworkCreateOpts`] for a Stackify environment network.
+    /// Each Stackify environment receives its own network to ensure that
+    /// 1) the different services in the environment can communicate with eachother,
+    /// and 2) the services in different environments are isolated from eachother.
     fn for_stackify_environment(environment_name: &EnvironmentName) -> NetworkCreateOpts {
         let mut labels = HashMap::new();
         labels.insert(LabelKey::Stackify.to_string(), "");
         labels.insert(LabelKey::EnvironmentName.to_string(), environment_name);
 
-        NetworkCreateOpts::builder(environment_name.to_string())
+        NetworkCreateOpts::builder(format!("stx-{}", environment_name.to_string()))
             .labels(labels)
             .build()
     }
@@ -95,6 +133,7 @@ pub trait ListContainers {
     fn for_all_stackify_containers() -> ContainerListOpts {
         ContainerListOpts::builder()
             .filter([ContainerFilter::LabelKey(LabelKey::Stackify.into())])
+            .all(true)
             .build()
     }
 
@@ -108,12 +147,15 @@ pub trait ListContainers {
             .build()
     }
 
-    fn for_environment(environment_name: &EnvironmentName) -> ContainerListOpts {
+    /// Creates a filter for all containers in a given environment, optionally
+    /// including stopped containers (`all = true`).
+    fn for_environment(environment_name: &EnvironmentName, all: bool) -> ContainerListOpts {
         ContainerListOpts::builder()
             .filter([
                 ContainerFilter::LabelKey(format!("label={}", LabelKey::Stackify)),
                 ContainerFilter::Label(LabelKey::EnvironmentName.into(), environment_name.into()),
             ])
+            .all(all)
             .build()
     }
 }
@@ -121,6 +163,7 @@ pub trait ListContainers {
 impl ListContainers for ContainerListOpts {}
 
 pub trait ListNetworks {
+    /// Creates a filter for all networks with the Stackify label.
     fn for_all_stackify_networks() -> NetworkListOpts {
         NetworkListOpts::builder()
             .filter([NetworkFilter::LabelKey(LabelKey::Stackify.into())])
@@ -131,6 +174,9 @@ pub trait ListNetworks {
 impl ListNetworks for NetworkListOpts {}
 
 pub trait BuildImage {
+    /// Create [`ImageBuildOpts`] for the build image. This image is used to compile
+    /// Stacks binaries for services specified in environments in a repeatable and
+    /// consistent way.
     fn for_build_image(
         host_dirs: &StackifyHostDirs,
         precompile: bool,
@@ -151,6 +197,8 @@ pub trait BuildImage {
             .build()
     }
 
+    /// Create [`ImageBuildOpts`] for the runtime image. This image is used to run
+    /// environment services in a repeatable and consistent OS environment.
     fn for_runtime_image(host_dirs: &StackifyHostDirs, force: bool) -> ImageBuildOpts {
         let (uid, gid) = uid_gid();
         let mut build_args = HashMap::<String, String>::new();
@@ -169,12 +217,14 @@ pub trait BuildImage {
 
 impl BuildImage for ImageBuildOpts {}
 
+/// Helper function to create the default labels for a Stackify container.
 fn default_labels() -> HashMap<String, String> {
     let mut labels = HashMap::new();
     labels.insert(LabelKey::Stackify.to_string(), String::new());
     labels
 }
 
+/// Helper function to get the current user and group IDs.
 fn uid_gid() -> (u32, u32) {
     let uid;
     let gid;

@@ -126,6 +126,12 @@ pub struct Epoch {
     pub default_block_height: u32,
 }
 
+impl Display for Epoch {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} ({})", self.name, self.default_block_height)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Environment {
     pub name: EnvironmentName,

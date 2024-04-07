@@ -149,7 +149,7 @@ impl StackifyDocker {
         let labels = vec![
             StackifyLabel(LabelKey::EnvironmentName, environment_name.into()).into(),
             StackifyLabel(
-                LabelKey::Service,
+                LabelKey::ServiceType,
                 ContainerService::Environment.to_label_string(),
             )
             .into(),

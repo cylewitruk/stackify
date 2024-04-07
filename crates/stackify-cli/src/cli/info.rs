@@ -5,9 +5,9 @@ use color_eyre::{
     eyre::{eyre, Result},
     owo_colors::OwoColorize,
 };
-use comfy_table::{Cell, CellAlignment, ColumnConstraint, Table, Width};
 use console::style;
 use docker_api::opts::ImageListOpts;
+use prettytable::{row, Table};
 use regex::Regex;
 
 use super::context::CliContext;
@@ -85,34 +85,13 @@ async fn exec_display_docker_info(ctx: &CliContext) -> Result<()> {
         println!("‣ No images found");
     } else {
         let mut table = Table::new();
-        table
-            .set_header(vec![
-                "IMAGE".cyan(),
-                "TAG".cyan(),
-                "CONTAINERS".cyan(),
-                "SIZE".cyan(),
-            ])
-            .load_preset(comfy_table::presets::NOTHING);
-
-        table
-            .column_mut(0)
-            .ok_or(eyre!("Failed to retrieve column."))?
-            .set_constraint(ColumnConstraint::LowerBoundary(Width::Fixed(25)));
-
-        table
-            .column_mut(1)
-            .ok_or(eyre!("Failed to retrieve column."))?
-            .set_constraint(ColumnConstraint::LowerBoundary(Width::Fixed(15)));
-
-        table
-            .column_mut(2)
-            .ok_or(eyre!("Failed to retrieve column."))?
-            .set_cell_alignment(CellAlignment::Right);
-
-        table
-            .column_mut(3)
-            .ok_or(eyre!("Failed to retrieve column."))?
-            .set_cell_alignment(CellAlignment::Right);
+        table.set_format(*prettytable::format::consts::FORMAT_BOX_CHARS);
+        table.set_titles(row![
+            "Image".cyan(),
+            "Tag".cyan(),
+            "Containers".cyan(),
+            "Size".cyan(),
+        ]);
 
         let regex = Regex::new(r#"^([^:]+)(:(.+))?$"#)?;
         for image in images {
@@ -125,15 +104,15 @@ async fn exec_display_docker_info(ctx: &CliContext) -> Result<()> {
                     .ok_or(eyre!("Failed to get repository"))?
                     .as_str();
                 let tag = captures.get(3).ok_or(eyre!("Failed to get tag"))?.as_str();
-                table.add_row(vec![
-                    Cell::new(&repository),
-                    Cell::new(&tag),
-                    Cell::new(if image.containers == -1 {
+                table.add_row(row![
+                    &repository,
+                    &tag,
+                    if image.containers == -1 {
                         "0".to_string()
                     } else {
                         image.containers.to_string()
-                    }),
-                    Cell::new((image.size / 1024 / 1024).to_string() + "MB"),
+                    },
+                    (image.size / 1024 / 1024).to_string() + "MB",
                 ]);
             }
         }
