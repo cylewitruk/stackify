@@ -1,9 +1,8 @@
-use std::sync::mpsc::channel;
-
 use clap::{CommandFactory, Parser};
 use cli::{context::CliContext, StackifyHostDirs};
+
 use color_eyre::eyre::{eyre, Result};
-use db::{apply_db_migrations, AppDb};
+use db::apply_db_migrations;
 use diesel::{Connection, SqliteConnection};
 use docker::api::DockerApi;
 use tokio::sync::broadcast;
@@ -32,7 +31,6 @@ async fn main() -> Result<()> {
                 cli::info::exec(&context, args).await?;
             }
             Commands::Clean(args) => {
-                println!("Clean");
                 cli::clean::exec(&context, args).await?;
             }
             Commands::Config(args) => {
@@ -80,8 +78,6 @@ async fn initialize() -> Result<CliContext> {
         SqliteConnection::establish(&db_file.to_string_lossy()).map_err(|e| eyre!(e))?;
 
     apply_db_migrations(&mut connection)?;
-
-    let app_db = AppDb::new(connection);
 
     let host_dirs = StackifyHostDirs {
         app_root: app_root.clone(),

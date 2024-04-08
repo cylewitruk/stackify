@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use color_eyre::Result;
 use docker_api::opts::{
     ContainerCreateOpts, ContainerFilter, ContainerListOpts, ContainerStatus, ImageBuildOpts,
     NetworkCreateOpts, NetworkFilter, NetworkListOpts,
@@ -7,9 +8,13 @@ use docker_api::opts::{
 use stackify_common::{
     docker::LabelKey,
     types::{EnvironmentName, EnvironmentService},
+    ServiceType,
 };
 
-use crate::cli::StackifyHostDirs;
+use crate::{
+    cli::StackifyHostDirs,
+    util::names::{environment_container_name, service_container_name},
+};
 
 use super::{ContainerUser, StackifyContainerDirs};
 
@@ -68,7 +73,7 @@ pub trait CreateContainer {
         labels.insert(LabelKey::ServiceType.to_string(), "environment");
 
         ContainerCreateOpts::builder()
-            .name(format!("stx-{}-environment", environment_name.to_string()))
+            .name(environment_container_name(environment_name))
             .image("busybox:latest")
             .labels(labels)
             .build()
@@ -81,12 +86,14 @@ pub trait CreateContainer {
         service: &EnvironmentService,
         host_dirs: &StackifyHostDirs,
         container_dirs: &StackifyContainerDirs,
-    ) -> ContainerCreateOpts {
+    ) -> Result<ContainerCreateOpts> {
         let bin_mount = format!(
             "{}:{}:rw",
             host_dirs.bin_dir.to_string_lossy(),
             container_dirs.bin_dir.to_string_lossy()
         );
+
+        let service_type = ServiceType::from_i32(service.service_type.id)?;
 
         let mut labels = HashMap::new();
         labels.insert(LabelKey::Stackify.to_string(), "");
@@ -95,17 +102,22 @@ pub trait CreateContainer {
             LabelKey::ServiceType.to_string(),
             &service.service_type.cli_name,
         );
-        labels.insert(LabelKey::NodeVersion.to_string(), &service.version.version);
+        labels.insert(
+            LabelKey::ServiceVersion.to_string(),
+            &service.version.version,
+        );
         let service_id = service.id.to_string();
         labels.insert(LabelKey::ServiceId.to_string(), &service_id);
 
-        ContainerCreateOpts::builder()
-            .name(format!("stx-{}", service.name))
+        let opts = ContainerCreateOpts::builder()
+            .name(service_container_name(service))
             .user(container_user.to_string())
             .volumes([bin_mount])
             .image("stackify-runtime:latest")
             .labels(labels)
-            .build()
+            .build();
+
+        Ok(opts)
     }
 }
 
@@ -140,7 +152,7 @@ pub trait ListContainers {
     fn running_in_environment(environment_name: &EnvironmentName) -> ContainerListOpts {
         ContainerListOpts::builder()
             .filter([
-                ContainerFilter::LabelKey(format!("label={}", LabelKey::Stackify)),
+                ContainerFilter::LabelKey(LabelKey::Stackify.into()),
                 ContainerFilter::Label(LabelKey::EnvironmentName.into(), environment_name.into()),
                 ContainerFilter::Status(ContainerStatus::Running),
             ])
@@ -152,8 +164,11 @@ pub trait ListContainers {
     fn for_environment(environment_name: &EnvironmentName, all: bool) -> ContainerListOpts {
         ContainerListOpts::builder()
             .filter([
-                ContainerFilter::LabelKey(format!("label={}", LabelKey::Stackify)),
-                ContainerFilter::Label(LabelKey::EnvironmentName.into(), environment_name.into()),
+                ContainerFilter::LabelKey(LabelKey::Stackify.to_string()),
+                ContainerFilter::Label(
+                    LabelKey::EnvironmentName.to_string(),
+                    environment_name.to_string(),
+                ),
             ])
             .all(all)
             .build()
@@ -167,6 +182,15 @@ pub trait ListNetworks {
     fn for_all_stackify_networks() -> NetworkListOpts {
         NetworkListOpts::builder()
             .filter([NetworkFilter::LabelKey(LabelKey::Stackify.into())])
+            .build()
+    }
+
+    fn for_environment(env_name: &EnvironmentName) -> NetworkListOpts {
+        NetworkListOpts::builder()
+            .filter([
+                NetworkFilter::LabelKey(LabelKey::Stackify.into()),
+                NetworkFilter::LabelKeyVal(LabelKey::EnvironmentName.into(), env_name.into()),
+            ])
             .build()
     }
 }
@@ -218,14 +242,14 @@ pub trait BuildImage {
 impl BuildImage for ImageBuildOpts {}
 
 /// Helper function to create the default labels for a Stackify container.
-fn default_labels() -> HashMap<String, String> {
+pub fn default_labels() -> HashMap<String, String> {
     let mut labels = HashMap::new();
     labels.insert(LabelKey::Stackify.to_string(), String::new());
     labels
 }
 
 /// Helper function to get the current user and group IDs.
-fn uid_gid() -> (u32, u32) {
+pub fn uid_gid() -> (u32, u32) {
     let uid;
     let gid;
     unsafe {

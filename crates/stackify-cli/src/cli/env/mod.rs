@@ -21,6 +21,7 @@ pub mod epoch;
 pub mod list;
 pub mod service;
 pub mod start;
+pub mod stop;
 
 pub async fn exec(ctx: &CliContext, args: EnvArgs) -> Result<()> {
     match args.commands {
@@ -28,7 +29,7 @@ pub async fn exec(ctx: &CliContext, args: EnvArgs) -> Result<()> {
         args::EnvSubCommands::Create(inner_args) => exec_create(ctx, inner_args).await,
         args::EnvSubCommands::Delete(inner_args) => exec_delete(ctx, inner_args).await,
         args::EnvSubCommands::Start(inner_args) => start::exec(ctx, inner_args).await,
-        args::EnvSubCommands::Stop(inner_args) => exec_stop(ctx, inner_args).await,
+        args::EnvSubCommands::Stop(inner_args) => stop::exec(ctx, inner_args).await,
         args::EnvSubCommands::Inspect(inner_args) => exec_inspect(ctx, inner_args).await,
         args::EnvSubCommands::Down(inner_args) => exec_down(ctx, inner_args).await,
         args::EnvSubCommands::Build(inner_args) => build::exec(ctx, inner_args).await,
@@ -59,43 +60,6 @@ async fn exec_create(ctx: &CliContext, args: args::CreateArgs) -> Result<()> {
 
 async fn exec_delete(_ctx: &CliContext, _args: args::DeleteArgs) -> Result<()> {
     println!("Delete environment");
-    Ok(())
-}
-
-async fn exec_stop(ctx: &CliContext, args: args::StopArgs) -> Result<()> {
-    let env_name = EnvironmentName::new(&args.env_name)?;
-
-    let containers = ctx
-        .docker()
-        .api()
-        .containers()
-        .list(&ContainerListOpts::running_in_environment(&env_name))
-        .await?;
-
-    if containers.is_empty() {
-        info("There are no running containers for the environment.\n");
-        println!(
-            "To start the environment, use the {} command.",
-            style("stackify env start").white().bold()
-        );
-        return Ok(());
-    }
-
-    for container in containers {
-        let spinner = cliclack::spinner();
-        let container_id = container.id.ok_or(eyre!("Container ID not found."))?;
-        let container_names = container.names.ok_or(eyre!("Container name not found."))?;
-        let container_name = container_names.join(", ");
-        spinner.start(format!("Stopping container: {}", container_name));
-        ctx.docker()
-            .api()
-            .containers()
-            .get(container_id)
-            .stop(&ContainerStopOpts::default())
-            .await?;
-        spinner.stop(format!("Container {} stopped", container_name));
-    }
-
     Ok(())
 }
 

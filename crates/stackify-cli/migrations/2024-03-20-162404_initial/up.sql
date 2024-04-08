@@ -294,6 +294,17 @@ CREATE TABLE environment_service_action (
     FOREIGN KEY (service_action_type_id) REFERENCES service_action_type (id)
 );
 
+CREATE TABLE environment_service_param (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    environment_service_id INTEGER NOT NULL,
+    service_type_param_id INTEGER NOT NULL,
+    value TEXT NOT NULL,
+
+    UNIQUE (environment_service_id, service_type_param_id),
+    FOREIGN KEY (environment_service_id) REFERENCES environment_service (id),
+    FOREIGN KEY (service_type_param_id) REFERENCES service_type_param (id)
+);
+
 CREATE TABLE environment_container (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     environment_service_id INTEGER NOT NULL,

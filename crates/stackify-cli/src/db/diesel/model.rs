@@ -167,6 +167,15 @@ pub struct EnvironmentServiceAction {
 }
 
 #[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, QueryableByName)]
+#[diesel(table_name = environment_service_param)]
+pub struct EnvironmentServiceParam {
+    pub id: i32,
+    pub environment_service_id: i32,
+    pub service_type_param_id: i32,
+    pub value: String,
+}
+
+#[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, QueryableByName)]
 #[diesel(table_name = environment_container)]
 pub struct EnvironmentContainer {
     pub id: i32,

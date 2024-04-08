@@ -1,9 +1,20 @@
-use color_eyre::{eyre::eyre, Result};
+use color_eyre::{
+    eyre::{bail, eyre},
+    Result,
+};
 
 use ::diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
-use stackify_common::types::{self, EnvironmentName};
+use stackify_common::{
+    types::{self, EnvironmentName},
+    FileType, ServiceType,
+};
 
-use super::{diesel::model, diesel::schema::*, AppDb};
+use crate::db::errors::LoadEnvironmentError;
+
+use super::{
+    diesel::{model, schema::*},
+    AppDb,
+};
 
 pub trait CliDatabase {
     fn load_all_environments(&self) -> Result<Vec<types::Environment>>;
@@ -38,7 +49,7 @@ impl CliDatabase for AppDb {
             .optional()?;
 
         if !env.is_some() {
-            return Ok(None);
+            return Err(LoadEnvironmentError::NotFound.into());
         }
 
         let service_types =
@@ -67,6 +78,7 @@ impl CliDatabase for AppDb {
         let services = env_services
             .iter()
             .map(|es| {
+                // Service versions
                 let db_service_version = service_type_versions
                     .iter()
                     .find(|sv| sv.id == es.service_version_id)
@@ -103,6 +115,81 @@ impl CliDatabase for AppDb {
                 let git_target =
                     types::GitTarget::parse_opt(db_service_version.git_target.as_ref());
 
+                // Service files
+                let mut file_headers = Vec::<types::EnvironmentServiceFileHeader>::new();
+
+                let service_type_files = service_type_file::table
+                    .filter(
+                        service_type_file::service_type_id.eq(db_service_version.service_type_id),
+                    )
+                    .load::<model::ServiceTypeFile>(&mut *self.conn.borrow_mut())?;
+
+                for st_file in service_type_files {
+                    let file = types::EnvironmentServiceFileHeader {
+                        id: st_file.id,
+                        filename: st_file.filename.clone(),
+                        destination_dir: st_file.destination_dir.clone().into(),
+                        description: st_file.description.clone(),
+                        file_type: FileType::from_i32(st_file.file_type_id)
+                            .expect("File type not found"),
+                        service_type: ServiceType::from_i32(st_file.service_type_id)
+                            .expect("Service type not found"),
+                    };
+
+                    file_headers.push(file);
+                }
+
+                // Service params
+                let mut params = Vec::<types::EnvironmentServiceParam>::new();
+
+                let service_type_params = service_type_param::table
+                    .filter(
+                        service_type_param::service_type_id.eq(db_service_version.service_type_id),
+                    )
+                    .load::<model::ServiceTypeParam>(&mut *self.conn.borrow_mut())?;
+
+                for st_param in service_type_params {
+                    let allowed_values = st_param
+                        .allowed_values
+                        .clone()
+                        .map(|av| av.split(',').map(|s| s.to_string()).collect::<Vec<_>>());
+
+                    let env_value = environment_service_param::table
+                        .filter(environment_service_param::environment_service_id.eq(es.id))
+                        .filter(environment_service_param::service_type_param_id.eq(st_param.id))
+                        .select(environment_service_param::value)
+                        .first::<String>(&mut *self.conn.borrow_mut())
+                        .optional()?;
+
+                    if st_param.is_required && env_value.is_none() {
+                        bail!(
+                            "Service parameter {} is required but not set for service {}.",
+                            st_param.name,
+                            es.name
+                        );
+                    }
+
+                    let param = types::EnvironmentServiceParam {
+                        id: st_param.id,
+                        param: types::ServiceTypeParam {
+                            id: st_param.id,
+                            name: st_param.name.clone(),
+                            key: st_param.key.clone(),
+                            description: st_param.description.clone(),
+                            default_value: st_param.default_value.clone().unwrap_or_default(),
+                            is_required: st_param.is_required,
+                            value_type: stackify_common::ValueType::from_i32(
+                                st_param.value_type_id,
+                            )?,
+                            allowed_values,
+                            service_type: service_type.clone(),
+                        },
+                        value: "".to_string(),
+                    };
+
+                    params.push(param);
+                }
+
                 let service = types::EnvironmentService {
                     id: es.id,
                     service_type,
@@ -115,6 +202,8 @@ impl CliDatabase for AppDb {
                     },
                     name: es.name.clone(),
                     remark: es.comment.clone(),
+                    file_headers,
+                    params,
                 };
 
                 Ok(service)

@@ -142,7 +142,11 @@ pub async fn exec(ctx: &CliContext, args: BuildArgs) -> Result<()> {
 /// the user cancels the build using Ctrl+C.
 async fn register_shutdown(ctx: &CliContext) {
     ctx.register_shutdown(|d| async move {
-        if let Some((container_id, _)) = d.find_container_by_name("stackify-build").await.unwrap() {
+        if let Some((container_id, _)) = d
+            .find_container_by_name(&EnvironmentName::new("stackify-build").unwrap())
+            .await
+            .unwrap()
+        {
             let container = d.api().containers().get(container_id);
             let inspect = container.inspect().await.unwrap();
 
@@ -166,7 +170,7 @@ async fn register_shutdown(ctx: &CliContext) {
 async fn kill_existing_build_container(ctx: &CliContext) -> Result<()> {
     if let Some((container_id, _)) = ctx
         .docker()
-        .find_container_by_name("stackify-build")
+        .find_container_by_name(&EnvironmentName::new("stackify-build")?)
         .await?
     {
         let container = ctx.docker().api().containers().get(container_id);
@@ -235,7 +239,7 @@ async fn follow_build_logs(
                 if msg.is_empty() {
                     continue;
                 }
-                spinner.set_message(format!("\u{8}{building_text} {msg}", msg = msg.dimmed()));
+                spinner.set_message(format!("{building_text} {msg}", msg = msg.dimmed()));
             }
             Ok(TtyChunk::StdErr(chunk)) => {
                 let msg = String::from_utf8_lossy(&chunk);
@@ -244,7 +248,7 @@ async fn follow_build_logs(
                     continue;
                 }
                 accumulated_log.push(msg.to_string());
-                spinner.set_message(format!("\u{8}{building_text} {msg}", msg = msg.dimmed()));
+                spinner.set_message(format!("{building_text} {msg}", msg = msg.dimmed()));
             }
             Ok(TtyChunk::StdIn(_)) => unreachable!(),
             Err(e) => {

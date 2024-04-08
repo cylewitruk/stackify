@@ -153,6 +153,15 @@ table! {
 }
 
 table! {
+    environment_service_param (id) {
+        id -> Integer,
+        environment_service_id -> Integer,
+        service_type_param_id -> Integer,
+        value -> Text,
+    }
+}
+
+table! {
     environment_container (id) {
         id -> Integer,
         environment_id -> Integer,

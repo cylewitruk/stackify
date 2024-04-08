@@ -1,6 +1,7 @@
 use crate::db::diesel::model::{Epoch, ServiceType, ServiceUpgradePath, ServiceVersion};
 
 pub mod git;
+pub mod names;
 pub mod print;
 pub mod progressbar;
 

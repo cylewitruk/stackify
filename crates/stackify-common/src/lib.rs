@@ -7,10 +7,7 @@ pub mod tests;
 pub mod types;
 pub mod util;
 
-use std::fmt::Display;
-
 use color_eyre::eyre::{bail, Result};
-use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -88,17 +85,42 @@ pub enum ServiceAction {
     DetachNetwork = 7,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum FileType {
     Binary = 0,
     PlainText = 1,
     HandlebarsTemplate = 2,
 }
 
+impl FileType {
+    pub fn from_i32(value: i32) -> Result<Self> {
+        match value {
+            0 => Ok(Self::Binary),
+            1 => Ok(Self::PlainText),
+            2 => Ok(Self::HandlebarsTemplate),
+            _ => bail!("Invalid file type value: {}", value),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ValueType {
     String = 0,
     Integer = 1,
     Boolean = 2,
     Enum = 3,
+}
+
+impl ValueType {
+    pub fn from_i32(value: i32) -> Result<Self> {
+        match value {
+            0 => Ok(Self::String),
+            1 => Ok(Self::Integer),
+            2 => Ok(Self::Boolean),
+            3 => Ok(Self::Enum),
+            _ => bail!("Invalid value type value: {}", value),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

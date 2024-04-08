@@ -1,7 +1,9 @@
-use std::{fmt::Display, ops::Deref};
+use std::{fmt::Display, ops::Deref, path::PathBuf};
 
 use color_eyre::{eyre::bail, Result};
 use regex::Regex;
+
+use crate::{FileType, ServiceType, ValueType};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct EnvironmentName {
@@ -82,6 +84,8 @@ pub struct EnvironmentService {
     pub version: ServiceVersion,
     pub name: String,
     pub remark: Option<String>,
+    pub file_headers: Vec<EnvironmentServiceFileHeader>,
+    pub params: Vec<EnvironmentServiceParam>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -178,4 +182,49 @@ impl GitTarget {
             None
         }
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct ServiceTypeFileHeader {
+    pub id: i32,
+    pub service_type: ServiceTypeSimple,
+    pub file_type: FileType,
+    pub filename: String,
+    pub destination_dir: PathBuf,
+    pub description: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EnvironmentServiceFileHeader {
+    pub id: i32,
+    pub service_type: ServiceType,
+    pub file_type: FileType,
+    pub filename: String,
+    pub destination_dir: PathBuf,
+    pub description: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct ServiceFileContents {
+    pub contents: Vec<u8>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ServiceTypeParam {
+    pub id: i32,
+    pub service_type: ServiceTypeSimple,
+    pub name: String,
+    pub key: String,
+    pub description: String,
+    pub default_value: String,
+    pub is_required: bool,
+    pub value_type: ValueType,
+    pub allowed_values: Option<Vec<String>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EnvironmentServiceParam {
+    pub id: i32,
+    pub param: ServiceTypeParam,
+    pub value: String,
 }

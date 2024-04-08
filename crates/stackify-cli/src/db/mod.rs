@@ -16,6 +16,7 @@ use log::info;
 
 pub mod cli_db;
 pub mod diesel;
+pub mod errors;
 pub mod opts;
 
 #[cfg(test)]

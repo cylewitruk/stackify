@@ -103,14 +103,14 @@ pub enum LabelKey {
     Stackify,
     EnvironmentName,
     ServiceType,
-    NodeVersion,
+    ServiceVersion,
     IsLeader,
     ServiceId,
 }
 
 impl std::fmt::Display for LabelKey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", *self)
+        write!(f, "{}", self.deref())
     }
 }
 
@@ -122,7 +122,7 @@ impl Deref for LabelKey {
             LabelKey::Stackify => "local.stackify",
             LabelKey::EnvironmentName => "local.stackify.environment",
             LabelKey::ServiceType => "local.stackify.service_type",
-            LabelKey::NodeVersion => "local.stackify.node_version",
+            LabelKey::ServiceVersion => "local.stackify.service_version",
             LabelKey::IsLeader => "local.stackify.is_leader",
             LabelKey::ServiceId => "local.stackify.service_id",
         }

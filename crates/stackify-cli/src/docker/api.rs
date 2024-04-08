@@ -1,17 +1,24 @@
 #![allow(dead_code)]
 
+use std::collections::HashMap;
+
 use color_eyre::{eyre::eyre, owo_colors::OwoColorize, Result};
 use docker_api::{
-    models::{ContainerSummary, Network},
-    opts::{ContainerFilter, ContainerListOpts, NetworkCreateOpts, NetworkFilter, NetworkListOpts},
+    models::{ContainerSummary, Network, NetworkingConfig},
+    opts::{
+        ContainerCreateOpts, ContainerFilter, ContainerListOpts, NetworkFilter, NetworkListOpts,
+    },
     Id,
 };
 
-use stackify_common::docker::{LabelKey, StackifyNetwork};
+use stackify_common::{
+    docker::LabelKey,
+    types::{EnvironmentName, EnvironmentService},
+};
 
 use crate::cli::StackifyHostDirs;
 
-use super::{ContainerUser, StackifyContainerDirs};
+use super::{format_network_name, ContainerUser, StackifyContainerDirs};
 
 #[derive(Clone)]
 pub struct DockerApi {
@@ -68,43 +75,8 @@ impl DockerApi {
 }
 
 impl DockerApi {
-    pub async fn create_network(&self, network_name: &str) -> Result<StackifyNetwork> {
-        let opts = NetworkCreateOpts::builder(network_name).build();
-
-        let result = self.docker.networks().create(&opts).await?;
-
-        Ok(StackifyNetwork {
-            id: result.id().to_string(),
-            name: network_name.to_string(),
-        })
-    }
-
-    pub async fn delete_network(&self, network_name: &str) -> Result<()> {
-        self.docker.networks().get(network_name).delete().await?;
-
-        Ok(())
-    }
-
-    pub async fn start_container(&self, container_name: &str) -> Result<()> {
-        let (container_id, _) = self
-            .find_container_by_name(container_name)
-            .await?
-            .ok_or_else(|| eyre!("Container '{}' not found.", container_name))?;
-
-        self.docker.containers().get(container_id).start().await?;
-
-        Ok(())
-    }
-
-    pub async fn delete_container(&self, container_name: &str) -> Result<()> {
-        let (container_id, _) = self
-            .find_container_by_name(container_name)
-            .await?
-            .ok_or_else(|| eyre!("Container '{}' not found.", container_name))?;
-
-        self.docker.containers().get(container_id).delete().await?;
-
-        Ok(())
+    pub fn opts_for(&self) -> DockerOptsHelper {
+        DockerOptsHelper::new(self)
     }
 
     /// Helper function to find a container and its id from name, so that the
@@ -150,11 +122,16 @@ impl DockerApi {
     /// if no network is found, and an error if more than one network is found
     /// (which should not be possible). Otherwise this function returns a tuple
     /// of the network id and the network summary.
-    async fn find_network_by_name(&self, network_name: &str) -> Result<Option<(Id, Network)>> {
+    pub async fn find_network_for_environment(
+        &self,
+        env_name: &EnvironmentName,
+    ) -> Result<Option<(Id, Network)>> {
+        let network_name = format_network_name(env_name);
+
         let list_opts = NetworkListOpts::builder()
             .filter([
-                NetworkFilter::Name(network_name.into()),
-                NetworkFilter::LabelKey(format!("label={}", LabelKey::Stackify)),
+                NetworkFilter::Name(network_name.clone()),
+                NetworkFilter::LabelKey(LabelKey::Stackify.into()),
             ])
             .build();
 
@@ -167,7 +144,7 @@ impl DockerApi {
         if networks.len() > 1 {
             return Err(eyre!(
                 "Found more than one network with the name '{}'. This shouldn't be able to happen.",
-                network_name
+                network_name.clone()
             ));
         }
 
@@ -179,4 +156,66 @@ impl DockerApi {
 
         Ok(Some((network_id.into(), network.clone())))
     }
+}
+
+pub struct DockerOptsHelper<'a>(&'a DockerApi);
+
+impl<'a> DockerOptsHelper<'a> {
+    fn new(api: &'a DockerApi) -> Self {
+        Self(api)
+    }
+
+    pub fn create_bitcoin_miner_container(
+        &self,
+        env_name: &EnvironmentName,
+        service: &EnvironmentService,
+    ) -> ContainerCreateOpts {
+        let labels = default_labels(Some(env_name), Some(service));
+
+        let bin_mount = format!("{}:/out:rw", self.0.host_dirs.bin_dir.to_string_lossy());
+
+        let entrypoint_mount = format!(
+            "{}:/entrypoint.sh:ro",
+            self.0
+                .host_dirs
+                .assets_dir
+                .join("build-entrypoint.sh")
+                .to_string_lossy()
+        );
+
+        ContainerCreateOpts::builder()
+            .name(service.name.clone())
+            .user(self.0.container_user.to_string())
+            .volumes([bin_mount, entrypoint_mount])
+            .image("stackify-runtime:latest")
+            .labels(labels)
+            .entrypoint(["/bin/sh", "/entrypoint.sh"])
+            .build()
+    }
+}
+
+fn default_labels(
+    env_name: Option<&EnvironmentName>,
+    service: Option<&EnvironmentService>,
+) -> HashMap<String, String> {
+    let mut labels = HashMap::new();
+    labels.insert(LabelKey::Stackify.into(), "".to_string());
+
+    if let Some(env_name) = env_name {
+        labels.insert(LabelKey::EnvironmentName.into(), env_name.into());
+    }
+
+    if let Some(service) = service {
+        labels.insert(LabelKey::ServiceId.into(), service.id.to_string());
+        labels.insert(
+            LabelKey::ServiceType.into(),
+            service.service_type.cli_name.clone(),
+        );
+        labels.insert(
+            LabelKey::ServiceVersion.into(),
+            service.version.version.clone(),
+        );
+    }
+
+    labels
 }

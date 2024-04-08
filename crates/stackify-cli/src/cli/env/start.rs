@@ -1,38 +1,59 @@
-use cliclack::{intro, outro_note};
-use color_eyre::Result;
+use cliclack::{intro, log::*, multi_progress, outro_note, MultiProgress};
+use color_eyre::{eyre::eyre, Result};
 use console::style;
-use docker_api::opts::{ContainerCreateOpts, ContainerListOpts, NetworkCreateOpts};
-use stackify_common::types::EnvironmentName;
+use docker_api::{
+    models::ContainerSummary,
+    opts::{
+        ContainerConnectionOpts, ContainerConnectionOptsBuilder, ContainerCreateOpts,
+        ContainerListOpts, NetworkCreateOpts, NetworkListOpts,
+    },
+};
+use stackify_common::{
+    docker::ContainerState,
+    types::{EnvironmentName, EnvironmentService},
+};
 
 use crate::{
-    cli::{context::CliContext, theme::ThemedObject, warn},
-    docker::opts::{CreateContainer, CreateNetwork, ListContainers},
+    cli::{context::CliContext, theme::ThemedObject},
+    db::cli_db::CliDatabase,
+    docker::{
+        format_container_name,
+        opts::{CreateContainer, CreateNetwork, ListContainers, ListNetworks},
+    },
+    util::names::environment_container_name,
 };
 
 use super::args::StartArgs;
 
 pub async fn exec(ctx: &CliContext, args: StartArgs) -> Result<()> {
     let env_name = EnvironmentName::new(&args.env_name)?;
-    let env = ctx.db.get_environment_by_name(env_name.as_ref())?;
-
     intro("Start Environment".bold())?;
 
-    // Check if the environment has any services defined. If not, return an error.
-    let env_services = ctx
+    let env = ctx
         .db
-        .list_environment_services_for_environment_id(env.id)?;
-    if env_services.is_empty() {
-        warn(format!(
+        .load_environment(&env_name)?
+        .ok_or(eyre!("Environment not found."))?;
+
+    // Check if the environment has any services defined. If not, return an error.
+    if env.services.is_empty() {
+        warning(format!(
             "The '{}' environment has no services defined, so there is nothing to start.\n",
             env_name
-        ));
-        println!("Please define at least one service before starting the environment.");
-        println!(
-            "See the {} command for more information.",
-            style("stackify env service").white().bold()
-        );
+        ))?;
+
+        outro_note(
+            "No Services Defined",
+            format!(
+                "{} {} {}",
+                "To add a service to the environment, use the".bold().red(),
+                "stackify env service".bold().white(),
+                style("command.").dimmed()
+            ),
+        )?;
         return Ok(());
     }
+
+    let multi = multi_progress("Checking environment status");
 
     // Assert that the environment is not already running.
     let existing_containers = ctx
@@ -42,43 +63,167 @@ pub async fn exec(ctx: &CliContext, args: StartArgs) -> Result<()> {
         .list(&ContainerListOpts::for_environment(&env_name, true))
         .await?;
 
-    // If there are any running containers, we can't start the environment.
-    if !existing_containers.is_empty() {
-        cliclack::log::error("The environment is already running.")?;
+    assert_network(ctx, &multi, &env_name).await?;
+    assert_environment_container(ctx, &multi, &env_name, &existing_containers).await?;
+
+    multi.stop();
+
+    outro_note(
+        "Environment Started".bold().green(),
+        format!(
+            "{} {} {}",
+            style("To see the environment status, use the"),
+            style("stackify env status").bold().white(),
+            style("command.").dimmed()
+        ),
+    )?;
+
+    Ok(())
+}
+
+async fn assert_network(
+    ctx: &CliContext,
+    multi: &MultiProgress,
+    env_name: &EnvironmentName,
+) -> Result<()> {
+    // Create the network for the environment.
+    let spinner = multi.add(cliclack::spinner());
+    spinner.start("Docker network...");
+    let existing_network = ctx
+        .docker()
+        .api()
+        .networks()
+        .list(&NetworkListOpts::for_environment(&env_name))
+        .await?;
+
+    if existing_network.len() == 0 {
+        ctx.docker()
+            .api()
+            .networks()
+            .create(&NetworkCreateOpts::for_stackify_environment(&env_name))
+            .await?;
+        spinner.stop(format!("{} Docker network", "✔".green()));
+    } else if existing_network.len() == 1 {
+        spinner.stop(format!("{} Docker network", "✔".green()));
+    } else {
+        spinner.error("Multiple networks found for the environment");
         outro_note(
-            "Environment Running".bold().red(),
+            "Multiple Networks".red().bold(),
             format!(
-                "{} {} {}",
-                style("To stop the environment, use the"),
-                "stackify env stop".bold().white(),
-                style("command.").dimmed()
+                "There are multiple networks for the environment. Please remove the extra networks and try again."
             ),
         )?;
         return Ok(());
     }
 
-    // Create the environment container. This is our "lock file" for the environment
-    // within Docker -- it's the first resource we create and the last one we delete.
-    let spinner = cliclack::spinner();
-    spinner.start("Creating environment container...");
-    ctx.docker()
-        .api()
-        .containers()
-        .create(&ContainerCreateOpts::for_stackify_environment_container(
-            &env_name,
-        ))
-        .await?;
-    spinner.stop("Environment container created");
+    Ok(())
+}
 
-    // Create the network for the environment.
-    let spinner = cliclack::spinner();
-    spinner.start("Creating environment network...");
-    ctx.docker()
-        .api()
-        .networks()
-        .create(&NetworkCreateOpts::for_stackify_environment(&env_name))
-        .await?;
-    spinner.stop("Environment network created");
+async fn assert_environment_container(
+    ctx: &CliContext,
+    multi: &MultiProgress,
+    env_name: &EnvironmentName,
+    existing_containers: &[ContainerSummary],
+) -> Result<()> {
+    let spinner = multi.add(cliclack::spinner());
+    spinner.start("Environment container...");
+    let env_container = existing_containers.iter().find(|c| {
+        c.names
+            .as_ref()
+            .unwrap()
+            .contains(&environment_container_name(&env_name))
+    });
+    if let Some(container) = env_container {
+        if let Some(state) = &container.state {
+            if ContainerState::parse(state)? == ContainerState::Running {
+                spinner.error(format!(
+                    "The environment {} is already running.",
+                    env_name.magenta().bold()
+                ));
+                outro_note(
+                    "Environment Running".bold().red(),
+                    format!(
+                        "{} {} {}",
+                        style("To stop the environment, use the"),
+                        "stackify env stop".bold().white(),
+                        style("command.").dimmed()
+                    ),
+                )?;
+                return Ok(());
+            } else if ContainerState::parse(state)? == ContainerState::Created {
+                spinner.stop(format!("{} Environment container", "✔".green()));
+            }
+        }
+    } else {
+        // Create the environment container. This is our "lock file" for the environment
+        // within Docker -- it's the first resource we create and the last one we delete.
+        ctx.docker()
+            .api()
+            .containers()
+            .create(&ContainerCreateOpts::for_stackify_environment_container(
+                &env_name,
+            ))
+            .await?;
+        spinner.stop(format!("{} Environment container", "✔".green()));
+    }
+
+    Ok(())
+}
+
+async fn start_bitcoin_miner(
+    ctx: &CliContext,
+    multi: &MultiProgress,
+    env_name: &EnvironmentName,
+    service: &EnvironmentService,
+) -> Result<()> {
+    // Format the container name
+    let container_name = format_container_name(env_name, &service.name);
+
+    // Begin the progress spinner
+    let spinner = multi.add(cliclack::spinner());
+    spinner.start(format!("Starting {}...", container_name));
+
+    if let Some((id, _)) = ctx.docker().find_container_by_name(&container_name).await? {
+        // If the container already exists, start it.
+        ctx.docker().api().containers().get(id).start().await?;
+    } else {
+        // Otherwise, create the container
+        let container = ctx
+            .docker()
+            .api()
+            .containers()
+            .create(
+                &ctx.docker()
+                    .opts_for()
+                    .create_bitcoin_miner_container(&env_name, &service),
+            )
+            .await?;
+
+        container
+            .copy_file_into(
+                ctx.docker()
+                    .container_dirs()
+                    .home_dir
+                    .join(".bitcoin/bitcoin.conf"),
+                &[],
+            )
+            .await?;
+
+        // Attach the container to this environment's network
+        if let Some((network_id, _)) = ctx.docker().find_network_for_environment(env_name).await? {
+            ctx.docker()
+                .api()
+                .networks()
+                .get(network_id)
+                .connect(&ContainerConnectionOpts::builder(container.id()).build())
+                .await?;
+        }
+
+        // Start the container
+        container.start().await?;
+    }
+
+    spinner.stop(format!("{} {}", "✔".green(), container_name));
 
     Ok(())
 }

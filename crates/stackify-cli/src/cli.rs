@@ -31,8 +31,6 @@ pub mod theme;
 pub mod clap_color_flag;
 pub mod clap_verbosity_flag;
 
-pub const PAD_WIDTH: usize = 40;
-
 #[allow(dead_code)]
 pub fn error(msg: impl AsRef<str> + Display) {
     println!("{} {}", "Error:".error().bold(), msg);
