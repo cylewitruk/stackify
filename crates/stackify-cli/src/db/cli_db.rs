@@ -18,7 +18,10 @@ use super::{
 
 pub trait CliDatabase {
     fn load_all_environments(&self) -> Result<Vec<types::Environment>>;
-    fn load_environment(&self, name: &str) -> Result<Option<types::Environment>>;
+    fn load_environment(
+        &self,
+        name: &str,
+    ) -> std::result::Result<types::Environment, LoadEnvironmentError>;
     fn load_all_service_types(&self) -> Result<Vec<types::ServiceTypeFull>>;
 }
 
@@ -35,12 +38,16 @@ impl CliDatabase for AppDb {
 
         environments
             .into_iter()
-            .map(|env| Ok(self.load_environment(&env.name)?.unwrap()))
+            .map(|env| Ok(self.load_environment(&env.name)?))
             .collect::<Result<Vec<_>>>()
     }
 
     /// Loads an environment by name.
-    fn load_environment(&self, name: &str) -> Result<Option<types::Environment>> {
+    /// TODO: Really ugly, refactor later
+    fn load_environment(
+        &self,
+        name: &str,
+    ) -> std::result::Result<types::Environment, LoadEnvironmentError> {
         let env_name = EnvironmentName::new(name)?;
 
         let env = environment::table
@@ -49,7 +56,7 @@ impl CliDatabase for AppDb {
             .optional()?;
 
         if !env.is_some() {
-            return Err(LoadEnvironmentError::NotFound.into());
+            return Err(LoadEnvironmentError::NotFound);
         }
 
         let service_types =
@@ -162,11 +169,10 @@ impl CliDatabase for AppDb {
                         .optional()?;
 
                     if st_param.is_required && env_value.is_none() {
-                        bail!(
-                            "Service parameter {} is required but not set for service {}.",
-                            st_param.name,
-                            es.name
-                        );
+                        return Err(LoadEnvironmentError::MissingParam {
+                            service_name: es.name.clone(),
+                            param_name: st_param.name.clone(),
+                        });
                     }
 
                     let param = types::EnvironmentServiceParam {
@@ -208,7 +214,7 @@ impl CliDatabase for AppDb {
 
                 Ok(service)
             })
-            .collect::<Result<Vec<_>>>()?;
+            .collect::<Result<Vec<_>, LoadEnvironmentError>>()?;
 
         let epochs = env_epochs
             .iter()
@@ -235,7 +241,7 @@ impl CliDatabase for AppDb {
             epochs,
         };
 
-        Ok(Some(ret))
+        Ok(ret)
     }
 
     fn load_all_service_types(&self) -> Result<Vec<types::ServiceTypeFull>> {

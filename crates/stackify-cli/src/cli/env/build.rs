@@ -22,9 +22,7 @@ use super::args::BuildArgs;
 pub async fn exec(ctx: &CliContext, args: BuildArgs) -> Result<()> {
     let db = ctx.db.as_clidb();
     let env_name = EnvironmentName::new(&args.env_name)?;
-    let env = db
-        .load_environment(&env_name)?
-        .ok_or(eyre!("The '{}' environment does not exist.", env_name))?;
+    let env = db.load_environment(&env_name)?;
 
     intro(format!("{}", "Build Environment".bold()))?;
 

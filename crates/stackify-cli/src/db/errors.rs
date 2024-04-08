@@ -1,3 +1,4 @@
+use color_eyre::eyre::Report;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -13,4 +14,7 @@ pub enum LoadEnvironmentError {
 
     #[error("Database error: {0}")]
     DbError(#[from] diesel::result::Error),
+
+    #[error("Error loading environment: {0}")]
+    Other(#[from] Report),
 }

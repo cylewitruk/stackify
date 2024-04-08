@@ -16,9 +16,7 @@ pub fn test_load_empty_environment() -> Result<()> {
 
     db.create_environment(env_name_str, bitcoin_block_speed)?;
 
-    let loaded = db
-        .load_environment("foo")?
-        .ok_or(eyre!("Environment not found"))?;
+    let loaded = db.load_environment("foo")?;
 
     let epochs = db.list_epochs()?;
     for i in 0..epochs.len() {

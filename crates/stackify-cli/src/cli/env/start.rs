@@ -1,5 +1,8 @@
 use cliclack::{intro, log::*, multi_progress, outro_note, MultiProgress};
-use color_eyre::{eyre::eyre, Result};
+use color_eyre::{
+    eyre::{bail, eyre},
+    Result,
+};
 use console::style;
 use docker_api::{
     models::ContainerSummary,
@@ -15,7 +18,7 @@ use stackify_common::{
 
 use crate::{
     cli::{context::CliContext, theme::ThemedObject},
-    db::cli_db::CliDatabase,
+    db::{cli_db::CliDatabase, errors::LoadEnvironmentError},
     docker::{
         format_container_name,
         opts::{CreateContainer, CreateNetwork, ListContainers, ListNetworks},
@@ -29,10 +32,69 @@ pub async fn exec(ctx: &CliContext, args: StartArgs) -> Result<()> {
     let env_name = EnvironmentName::new(&args.env_name)?;
     intro("Start Environment".bold())?;
 
-    let env = ctx
-        .db
-        .load_environment(&env_name)?
-        .ok_or(eyre!("Environment not found."))?;
+    let env = match ctx.db.load_environment(&env_name) {
+        Ok(env) => env,
+        Err(err) => match err {
+            LoadEnvironmentError::NotFound => {
+                warning(format!(
+                    "The {} environment does not exist.\n",
+                    env_name.magenta()
+                ))?;
+                outro_note(
+                    "Environment Not Found".bold().red(),
+                    format!(
+                        "{} {} {}",
+                        "To create an environment, use the",
+                        "stackify env create".bold().white(),
+                        style("command.").dimmed()
+                    ),
+                )?;
+                return Ok(());
+            }
+            LoadEnvironmentError::MissingParam {
+                service_name,
+                param_name,
+            } => {
+                warning(format!(
+                    "The {} service is missing the {} parameter.\n",
+                    service_name.magenta(),
+                    param_name.cyan()
+                ))?;
+                outro_note(
+                    "Configuration Error".bold().red(),
+                    format!(
+                        "{} {} {}",
+                        "To add a parameter to the service, use the",
+                        "stackify env service config".bold().white(),
+                        style("command.").dimmed()
+                    ),
+                )?;
+                return Ok(());
+            }
+            _ => bail!(err),
+        },
+    };
+    // .map_err(|e| {
+    //     match e.downcast_ref() {
+    //         Some(LoadEnvironmentError::NotFound) => {
+    //             warning(format!(
+    //                 "The '{}' environment does not exist.\n",
+    //                 env_name
+    //             ))?;
+    //             outro_note(
+    //                 "Environment Not Found",
+    //                 format!(
+    //                     "{} {} {}",
+    //                     "To create an environment, use the".bold().red(),
+    //                     "stackify env create".bold().white(),
+    //                     style("command.").dimmed()
+    //                 ),
+    //             )?;
+    //             return Ok(());
+    //         },
+    //         _ => Err(e)
+    //     }
+    // })?;
 
     // Check if the environment has any services defined. If not, return an error.
     if env.services.is_empty() {
