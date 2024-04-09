@@ -94,10 +94,10 @@ async fn initialize() -> Result<CliContext> {
         host_dirs.clone(),
         docker::StackifyContainerDirs {
             home_dir: std::path::PathBuf::from("/home/stackify/"),
-            bin_dir: std::path::PathBuf::from("/home/stackify/bin/"),
-            data_dir: std::path::PathBuf::from("/home/stackify/data/"),
-            config_dir: std::path::PathBuf::from("/home/stackify/config/"),
-            logs_dir: std::path::PathBuf::from("/home/stackify/logs/"),
+            bin_dir: std::path::PathBuf::from("/opt/stackify/bin/"),
+            data_dir: std::path::PathBuf::from("/opt/stackify/data/"),
+            config_dir: std::path::PathBuf::from("/opt/stackify/config/"),
+            logs_dir: std::path::PathBuf::from("/var/log/stackify/"),
         },
     )
     .await?;

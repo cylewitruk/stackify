@@ -35,10 +35,10 @@ impl Default for StackifyContainerDirs {
     fn default() -> Self {
         Self {
             home_dir: PathBuf::from("/home/stackify"),
-            bin_dir: PathBuf::from("/home/stackify/bin"),
-            data_dir: PathBuf::from("/home/stackify/data"),
-            config_dir: PathBuf::from("/home/stackify/config"),
-            logs_dir: PathBuf::from("/home/stackify/logs"),
+            bin_dir: PathBuf::from("/opt/stackify/bin"),
+            data_dir: PathBuf::from("/opt/stackify/data"),
+            config_dir: PathBuf::from("/opt/stackify/config"),
+            logs_dir: PathBuf::from("/var/log/stackify"),
         }
     }
 }

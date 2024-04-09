@@ -179,14 +179,17 @@ impl<'a> DockerOptsHelper<'a> {
     ) -> ContainerCreateOpts {
         let labels = default_labels(Some(env_name), Some(service));
 
-        let bin_mount = format!("{}:/out:rw", self.0.host_dirs.bin_dir.to_string_lossy());
+        let bin_mount = format!(
+            "{}:/opt/stackify/bin:rw",
+            self.0.host_dirs.bin_dir.to_string_lossy()
+        );
 
         let entrypoint_mount = format!(
             "{}:/entrypoint.sh:ro",
             self.0
                 .host_dirs
                 .assets_dir
-                .join("bitcoin-entrypoint.sh")
+                .join("bitcoin-miner-entrypoint.sh")
                 .to_string_lossy()
         );
 
@@ -196,7 +199,9 @@ impl<'a> DockerOptsHelper<'a> {
             .volumes([bin_mount, entrypoint_mount])
             .image("stackify-runtime:latest")
             .labels(labels)
+            .env(vec![format!("BITCOIN_VERSION={}", service.version.version)])
             .entrypoint(["/bin/sh", "/entrypoint.sh"])
+            //.entrypoint(["/bin/sh", "-c", "while true; do sleep 1; done"])
             .build()
     }
 }

@@ -230,15 +230,15 @@ async fn start_bitcoin_miner(
             )
             .await?;
 
-        container
-            .copy_file_into(
-                ctx.docker()
-                    .container_dirs()
-                    .home_dir
-                    .join(".bitcoin/bitcoin.conf"),
-                &[],
-            )
-            .await?;
+        let files = ctx.db.load_files_for_environment_service(service)?;
+        for file in files {
+            container
+                .copy_file_into(
+                    &file.header.destination_dir.join(file.header.filename),
+                    &file.contents.contents,
+                )
+                .await?;
+        }
 
         // Attach the container to this environment's network
         if let Some((network_id, _)) = ctx.docker().find_network_for_environment(env_name).await? {

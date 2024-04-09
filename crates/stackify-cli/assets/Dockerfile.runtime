@@ -14,9 +14,13 @@ RUN groupadd -r -g ${GROUP_ID} stackify \
     && useradd -r -m --uid ${GROUP_ID} -g ${GROUP_ID} stackify \
     && install -d -m 0755 -o stackify -g stackify \
         /src \
-        /stackify \
-        /stackify/logs \
-        /stackify/bitcoin \
-        /stackify/conf
+        /opt/stackify \
+        /opt/stackify/logs \
+        /opt/stackify/bitcoin \
+        /opt/stackify/config \
+        /opt/bitcoin \
+        /var/log/stackify
 
-WORKDIR /home/stackify
+ENV PATH="${PATH}:/opt/stackify/bin"
+
+WORKDIR /

@@ -9,7 +9,7 @@ use stackify_common::{
     FileType, ServiceType,
 };
 
-use crate::db::errors::LoadEnvironmentError;
+use crate::{cli::env, db::errors::LoadEnvironmentError};
 
 use super::{
     diesel::{model, schema::*, InnerDb},
@@ -52,12 +52,32 @@ impl CliDatabase for AppDb {
             .filter(environment_service_file::environment_service_id.eq(service.id))
             .load::<model::EnvironmentServiceFile>(conn)?;
 
-        // let mut files = Vec::new();
-        // for st_file in service_type_files {
-        //     let env_file = env_service_files.iter().find(|esf| esf.service_type_file_id == st_file.id);
-        // };
+        let mut files = Vec::<types::EnvironmentServiceFile>::new();
+        for st_file in &service_type_files {
+            let env_file = env_service_files
+                .iter()
+                .find(|esf| esf.service_type_file_id == st_file.id);
 
-        todo!()
+            let content = env_file
+                .map(|esf| esf.contents.clone())
+                .unwrap_or(st_file.default_contents.clone());
+
+            files.push(types::EnvironmentServiceFile {
+                header: types::EnvironmentServiceFileHeader {
+                    id: st_file.id,
+                    filename: st_file.filename.clone(),
+                    destination_dir: st_file.destination_dir.clone().into(),
+                    description: st_file.description.clone(),
+                    file_type: FileType::from_i32(st_file.file_type_id)
+                        .expect("File type not found"),
+                    service_type: ServiceType::from_i32(st_file.service_type_id)
+                        .expect("Service type not found"),
+                },
+                contents: types::ServiceFileContents { contents: content },
+            })
+        }
+
+        Ok(files)
     }
 
     fn load_all_environments(&self) -> Result<Vec<types::Environment>> {
