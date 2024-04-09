@@ -3,8 +3,8 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum LoadEnvironmentError {
-    #[error("Environment not found.")]
-    NotFound,
+    #[error("Environment '{env_name}' not found.")]
+    NotFound { env_name: String },
 
     #[error("Parameter '{param_name}' is missing for service '{service_name}'.")]
     MissingParam {

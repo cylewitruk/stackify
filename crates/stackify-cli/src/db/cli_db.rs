@@ -1,28 +1,33 @@
-use color_eyre::{
-    eyre::{bail, eyre},
-    Result,
-};
+use std::collections::HashMap;
 
-use ::diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
+use color_eyre::{eyre::eyre, Result};
+
+use ::diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::SelectableHelper;
 use stackify_common::{
-    types::{self, EnvironmentName},
+    types::{self, EnvironmentName, EnvironmentService},
     FileType, ServiceType,
 };
 
 use crate::db::errors::LoadEnvironmentError;
 
 use super::{
-    diesel::{model, schema::*},
+    diesel::{model, schema::*, InnerDb},
     AppDb,
 };
 
 pub trait CliDatabase {
+    fn load_all_epochs(&self) -> Result<Vec<types::Epoch>>;
     fn load_all_environments(&self) -> Result<Vec<types::Environment>>;
     fn load_environment(
         &self,
         name: &str,
     ) -> std::result::Result<types::Environment, LoadEnvironmentError>;
     fn load_all_service_types(&self) -> Result<Vec<types::ServiceTypeFull>>;
+    fn load_files_for_environment_service(
+        &self,
+        service: &EnvironmentService,
+    ) -> Result<Vec<types::EnvironmentServiceFile>>;
 }
 
 impl AppDb {
@@ -31,7 +36,30 @@ impl AppDb {
     }
 }
 
+impl InnerDb for AppDb {}
+
 impl CliDatabase for AppDb {
+    fn load_files_for_environment_service(
+        &self,
+        service: &EnvironmentService,
+    ) -> Result<Vec<types::EnvironmentServiceFile>> {
+        let conn = &mut *self.conn.borrow_mut();
+        let service_type_files = service_type_file::table
+            .filter(service_type_file::service_type_id.eq(service.service_type.id))
+            .load::<model::ServiceTypeFile>(conn)?;
+
+        let env_service_files = environment_service_file::table
+            .filter(environment_service_file::environment_service_id.eq(service.id))
+            .load::<model::EnvironmentServiceFile>(conn)?;
+
+        // let mut files = Vec::new();
+        // for st_file in service_type_files {
+        //     let env_file = env_service_files.iter().find(|esf| esf.service_type_file_id == st_file.id);
+        // };
+
+        todo!()
+    }
+
     fn load_all_environments(&self) -> Result<Vec<types::Environment>> {
         let environments =
             environment::table.load::<model::Environment>(&mut *self.conn.borrow_mut())?;
@@ -42,6 +70,19 @@ impl CliDatabase for AppDb {
             .collect::<Result<Vec<_>>>()
     }
 
+    fn load_all_epochs(&self) -> Result<Vec<types::Epoch>> {
+        let epochs = Self::load_epochs(&mut *self.conn.borrow_mut())?
+            .into_iter()
+            .map(|e| types::Epoch {
+                id: e.id,
+                name: e.name,
+                default_block_height: e.default_block_height as u32,
+            })
+            .collect::<Vec<_>>();
+
+        Ok(epochs)
+    }
+
     /// Loads an environment by name.
     /// TODO: Really ugly, refactor later
     fn load_environment(
@@ -49,36 +90,16 @@ impl CliDatabase for AppDb {
         name: &str,
     ) -> std::result::Result<types::Environment, LoadEnvironmentError> {
         let env_name = EnvironmentName::new(name)?;
+        let env = Self::find_environment_by_name(&mut *self.conn.borrow_mut(), name)?.ok_or(
+            LoadEnvironmentError::NotFound {
+                env_name: env_name.to_string(),
+            },
+        )?;
 
-        let env = environment::table
-            .filter(environment::name.eq(name))
-            .first::<model::Environment>(&mut *self.conn.borrow_mut())
-            .optional()?;
-
-        if !env.is_some() {
-            return Err(LoadEnvironmentError::NotFound);
-        }
-
-        let service_types =
-            service_type::table.load::<model::ServiceType>(&mut *self.conn.borrow_mut())?;
-
-        let epochs = epoch::table
-            .load::<model::Epoch>(&mut *self.conn.borrow_mut())?
-            .into_iter()
-            .map(|e| types::Epoch {
-                id: e.id,
-                default_block_height: e.default_block_height as u32,
-                name: e.name,
-            })
-            .collect::<Vec<_>>();
-
-        let service_type_versions =
-            service_version::table.load::<model::ServiceVersion>(&mut *self.conn.borrow_mut())?;
-
-        let env_epochs = environment_epoch::table
-            .filter(environment_epoch::environment_id.eq(env.as_ref().unwrap().id))
-            .load::<model::EnvironmentEpoch>(&mut *self.conn.borrow_mut())?;
-
+        let service_types = Self::load_service_types(&mut *self.conn.borrow_mut())?;
+        let epochs = self.load_all_epochs()?;
+        let service_type_versions = Self::load_service_type_versions(&mut *self.conn.borrow_mut())?;
+        let env_epochs = Self::load_epochs_for_environment(&mut *self.conn.borrow_mut(), env.id)?;
         let env_services = environment_service::table
             .load::<model::EnvironmentService>(&mut *self.conn.borrow_mut())?;
 
@@ -89,7 +110,7 @@ impl CliDatabase for AppDb {
                 let db_service_version = service_type_versions
                     .iter()
                     .find(|sv| sv.id == es.service_version_id)
-                    .expect("Service version not found");
+                    .ok_or(eyre!("Service version not found"))?;
 
                 let min_epoch = if let Some(min_epoch) = db_service_version.minimum_epoch_id {
                     epochs.iter().find(|e| e.id == min_epoch).cloned()
@@ -103,20 +124,15 @@ impl CliDatabase for AppDb {
                     None
                 };
 
+                let db_service_type = service_types
+                    .iter()
+                    .find(|st| st.id == db_service_version.service_type_id)
+                    .ok_or(eyre!("Service type not found"))?;
+
                 let service_type = types::ServiceTypeSimple {
                     id: db_service_version.service_type_id,
-                    name: service_types
-                        .iter()
-                        .find(|st| st.id == db_service_version.service_type_id)
-                        .expect("Service type not found")
-                        .name
-                        .clone(),
-                    cli_name: service_types
-                        .iter()
-                        .find(|st| st.id == db_service_version.service_type_id)
-                        .expect("Service type not found")
-                        .cli_name
-                        .clone(),
+                    name: db_service_type.name.clone(),
+                    cli_name: db_service_type.cli_name.clone(),
                 };
 
                 let git_target =
@@ -129,7 +145,8 @@ impl CliDatabase for AppDb {
                     .filter(
                         service_type_file::service_type_id.eq(db_service_version.service_type_id),
                     )
-                    .load::<model::ServiceTypeFile>(&mut *self.conn.borrow_mut())?;
+                    .select(model::ServiceTypeFileHeader::as_select())
+                    .load::<model::ServiceTypeFileHeader>(&mut *self.conn.borrow_mut())?;
 
                 for st_file in service_type_files {
                     let file = types::EnvironmentServiceFileHeader {
@@ -149,31 +166,31 @@ impl CliDatabase for AppDb {
                 // Service params
                 let mut params = Vec::<types::EnvironmentServiceParam>::new();
 
-                let service_type_params = service_type_param::table
-                    .filter(
-                        service_type_param::service_type_id.eq(db_service_version.service_type_id),
-                    )
-                    .load::<model::ServiceTypeParam>(&mut *self.conn.borrow_mut())?;
+                let service_type_params = Self::load_service_type_params_for_service_type(
+                    &mut *self.conn.borrow_mut(),
+                    db_service_version.service_type_id,
+                )?;
 
                 for st_param in service_type_params {
                     let allowed_values = st_param
                         .allowed_values
                         .clone()
-                        .map(|av| av.split(',').map(|s| s.to_string()).collect::<Vec<_>>());
+                        .map(|av| av.split(',').map(str::to_owned).collect::<Vec<_>>());
 
-                    let env_value = environment_service_param::table
-                        .filter(environment_service_param::environment_service_id.eq(es.id))
-                        .filter(environment_service_param::service_type_param_id.eq(st_param.id))
-                        .select(environment_service_param::value)
-                        .first::<String>(&mut *self.conn.borrow_mut())
-                        .optional()?;
-
-                    if st_param.is_required && env_value.is_none() {
+                    let env_value = if let Some(param) = Self::find_environment_service_param(
+                        &mut *self.conn.borrow_mut(),
+                        es.id,
+                        st_param.id,
+                    )? {
+                        param.value
+                    } else if let Some(default_value) = st_param.default_value.clone() {
+                        default_value
+                    } else {
                         return Err(LoadEnvironmentError::MissingParam {
                             service_name: es.name.clone(),
                             param_name: st_param.name.clone(),
                         });
-                    }
+                    };
 
                     let param = types::EnvironmentServiceParam {
                         id: st_param.id,
@@ -190,7 +207,7 @@ impl CliDatabase for AppDb {
                             allowed_values,
                             service_type: service_type.clone(),
                         },
-                        value: "".to_string(),
+                        value: env_value,
                     };
 
                     params.push(param);
@@ -216,23 +233,21 @@ impl CliDatabase for AppDb {
             })
             .collect::<Result<Vec<_>, LoadEnvironmentError>>()?;
 
+        let epoch_map: HashMap<_, _> = epochs.iter().map(|e| (e.id, e.clone())).collect();
         let epochs = env_epochs
             .iter()
             .map(|ee| {
-                let epoch = epochs
-                    .iter()
-                    .find(|e| e.id == ee.epoch_id)
-                    .cloned()
+                let epoch = epoch_map
+                    .get(&ee.epoch_id)
                     .ok_or(eyre!("Epoch not found"))?;
 
                 Ok(types::EnvironmentEpoch {
                     id: ee.id,
-                    epoch,
+                    epoch: epoch.clone(),
                     starts_at_block_height: ee.starts_at_block_height as u32,
                     ends_at_block_height: ee.ends_at_block_height.map(|h| h as u32),
                 })
             })
-            .into_iter()
             .collect::<Result<Vec<_>>>()?;
 
         let ret = types::Environment {
@@ -245,14 +260,13 @@ impl CliDatabase for AppDb {
     }
 
     fn load_all_service_types(&self) -> Result<Vec<types::ServiceTypeFull>> {
-        let service_types =
-            service_type::table.load::<model::ServiceType>(&mut *self.conn.borrow_mut())?;
+        let conn = &mut *self.conn.borrow_mut();
+        let service_types = service_type::table.load::<model::ServiceType>(conn)?;
 
-        let service_type_versions =
-            service_version::table.load::<model::ServiceVersion>(&mut *self.conn.borrow_mut())?;
+        let service_type_versions = service_version::table.load::<model::ServiceVersion>(conn)?;
 
         let epochs = epoch::table
-            .load::<model::Epoch>(&mut *self.conn.borrow_mut())?
+            .load::<model::Epoch>(conn)?
             .into_iter()
             .map(|e| types::Epoch {
                 id: e.id,

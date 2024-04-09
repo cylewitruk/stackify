@@ -24,6 +24,7 @@ pub mod context;
 pub mod env;
 pub mod info;
 pub mod init;
+pub mod log;
 pub mod network;
 pub mod show;
 pub mod theme;

@@ -7,11 +7,15 @@ use diesel::{Connection, SqliteConnection};
 use docker::api::DockerApi;
 use tokio::sync::broadcast;
 
-use crate::cli::{Cli, Commands};
+use crate::{
+    cli::{Cli, Commands},
+    errors::ReportResultExt,
+};
 
 mod cli;
 mod db;
 mod docker;
+mod errors;
 mod includes;
 mod util;
 
@@ -25,7 +29,7 @@ async fn main() -> Result<()> {
                 cli::init::exec(&context, args).await?;
             }
             Commands::Environment(args) => {
-                cli::env::exec(&context, args).await?;
+                cli::env::exec(&context, args).await.handle()?;
             }
             Commands::Info(args) => {
                 cli::info::exec(&context, args).await?;

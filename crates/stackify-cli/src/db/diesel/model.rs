@@ -49,16 +49,6 @@ pub struct ServiceType {
     pub allow_git_target: bool,
 }
 
-impl From<ServiceType> for types::ServiceTypeSimple {
-    fn from(value: ServiceType) -> Self {
-        types::ServiceTypeSimple {
-            id: value.id,
-            name: value.name,
-            cli_name: value.cli_name,
-        }
-    }
-}
-
 #[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, QueryableByName)]
 #[diesel(table_name = file_type)]
 pub struct FileType {
@@ -76,6 +66,17 @@ pub struct ServiceTypeFile {
     pub destination_dir: String,
     pub description: String,
     pub default_contents: Vec<u8>,
+}
+
+#[derive(Queryable, PartialEq, Debug, Selectable)]
+#[diesel(table_name = service_type_file)]
+pub struct ServiceTypeFileHeader {
+    pub id: i32,
+    pub service_type_id: i32,
+    pub file_type_id: i32,
+    pub filename: String,
+    pub destination_dir: String,
+    pub description: String,
 }
 
 #[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, QueryableByName)]

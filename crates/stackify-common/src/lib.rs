@@ -1,5 +1,3 @@
-pub mod docker;
-
 pub mod api;
 pub mod download;
 #[cfg(test)]

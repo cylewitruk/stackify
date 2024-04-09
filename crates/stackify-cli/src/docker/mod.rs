@@ -1,8 +1,10 @@
 use std::{
     fmt::{Display, Formatter},
+    ops::Deref,
     path::PathBuf,
 };
 
+use color_eyre::{eyre::eyre, Result};
 use stackify_common::types::EnvironmentName;
 
 pub mod api;
@@ -63,8 +65,12 @@ impl Display for ContainerUser {
     }
 }
 
-pub fn format_container_name(env_name: &EnvironmentName, container_name: &str) -> String {
+pub fn format_environment_container_name(env_name: &EnvironmentName) -> String {
     format!("{}{}", STACKIFY_PREFIX, env_name)
+}
+
+pub fn format_service_container_name(service_name: &str) -> String {
+    format!("{}{}", STACKIFY_PREFIX, service_name)
 }
 
 pub fn format_network_name(env_name: &EnvironmentName) -> String {
@@ -81,4 +87,70 @@ pub enum BuildResult {
     Success(String),
     Failed(String, String),
     Cancelled,
+}
+
+#[derive(Debug)]
+pub enum LabelKey {
+    Stackify,
+    EnvironmentName,
+    ServiceType,
+    ServiceVersion,
+    IsLeader,
+    ServiceId,
+}
+
+impl std::fmt::Display for LabelKey {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.deref())
+    }
+}
+
+impl Deref for LabelKey {
+    type Target = str;
+
+    fn deref(&self) -> &Self::Target {
+        match self {
+            LabelKey::Stackify => "local.stackify",
+            LabelKey::EnvironmentName => "local.stackify.environment",
+            LabelKey::ServiceType => "local.stackify.service_type",
+            LabelKey::ServiceVersion => "local.stackify.service_version",
+            LabelKey::IsLeader => "local.stackify.is_leader",
+            LabelKey::ServiceId => "local.stackify.service_id",
+        }
+    }
+}
+
+impl Into<String> for LabelKey {
+    fn into(self) -> String {
+        self.to_string()
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum ContainerState {
+    Created,
+    Running,
+    Paused,
+    Restarting,
+    Removing,
+    Exited,
+    Dead,
+}
+
+impl ContainerState {
+    pub fn parse(s: &str) -> Result<ContainerState> {
+        let state = match s {
+            "created" => ContainerState::Created,
+            "running" => ContainerState::Running,
+            "paused" => ContainerState::Paused,
+            "restarting" => ContainerState::Restarting,
+            "removing" => ContainerState::Removing,
+            "exited" => ContainerState::Exited,
+            "dead" => ContainerState::Dead,
+            _ => {
+                return Err(eyre!("Unknown container state: {}", s));
+            }
+        };
+        Ok(state)
+    }
 }

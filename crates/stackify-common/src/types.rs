@@ -209,6 +209,11 @@ pub struct ServiceFileContents {
     pub contents: Vec<u8>,
 }
 
+pub struct EnvironmentServiceFile {
+    pub header: EnvironmentServiceFileHeader,
+    pub contents: ServiceFileContents,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ServiceTypeParam {
     pub id: i32,

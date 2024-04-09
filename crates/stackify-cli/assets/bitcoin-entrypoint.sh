@@ -1,4 +1,7 @@
 #!/bin/sh
+
+while : ; do echo "sleep"; sleep 1; done
+
 mkdir -p /stacks/bitcoin
 
 bitcoind >> /stacks/logs/bitcoind.log 2>&1 &

@@ -35,7 +35,7 @@ tokio = { version = "1.36.0", features = ["full"] }
 futures-util = "0.3.30"
 tokio-util = "0.7.10"
 # Docker
-bollard = { version ="0.16.1", features = ["ssl", "time", "buildkit"] }
+#bollard = { version ="0.16.1", features = ["ssl", "time", "buildkit"] }
 # Error handling
 thiserror = { version = "1.0.58" }
 color-eyre = { version = "0.6.2" }

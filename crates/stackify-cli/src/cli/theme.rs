@@ -1,6 +1,5 @@
 use std::fmt::Display;
 
-use inquire::ui::{Attributes, RenderConfig};
 use lazy_static::lazy_static;
 use owo_colors::{style, OwoColorize, Rgb, Style, Styled};
 
@@ -188,79 +187,5 @@ impl Theme {
             table_header: style().color(palette.cyan).bold(),
             palette,
         }
-    }
-}
-
-pub struct Inquire;
-impl Inquire {
-    pub fn new_select<'a, T: Display>(message: &'a str, options: Vec<T>) -> inquire::Select<'a, T> {
-        inquire::Select::new(message, options).with_render_config(inquire_style())
-    }
-
-    pub fn new_text<'a>(message: &'a str) -> inquire::Text<'a> {
-        inquire::Text::new(message).with_render_config(inquire_style())
-    }
-
-    pub fn new_confirm<'a>(message: &'a str) -> inquire::Confirm<'a> {
-        inquire::Confirm::new(message).with_render_config(inquire_style())
-    }
-}
-
-pub fn inquire_style() -> RenderConfig<'static> {
-    RenderConfig {
-        prompt: inquire::ui::StyleSheet {
-            fg: Some(THEME.palette.magenta.to_inquire_rgb()),
-            bg: None,
-            att: Attributes::empty(),
-        },
-        answer: inquire::ui::StyleSheet {
-            fg: Some(THEME.palette.white.to_inquire_rgb()),
-            bg: None,
-            att: Attributes::BOLD,
-        },
-        error_message: inquire::ui::ErrorMessageRenderConfig {
-            message: inquire::ui::StyleSheet {
-                fg: Some(THEME.palette.red.to_inquire_rgb()),
-                bg: None,
-                att: Attributes::BOLD,
-            },
-            ..inquire::ui::ErrorMessageRenderConfig::default_colored()
-        },
-        selected_option: Some(inquire::ui::StyleSheet {
-            fg: Some(THEME.palette.white.to_inquire_rgb()),
-            bg: None,
-            att: Attributes::BOLD,
-        }),
-        placeholder: inquire::ui::StyleSheet {
-            fg: Some(THEME.palette.gray.to_inquire_rgb()),
-            bg: None,
-            att: Attributes::empty(),
-        },
-        prompt_prefix: inquire::ui::Styled::new("?")
-            .with_attr(Attributes::BOLD)
-            .with_fg(THEME.palette.cyan.to_inquire_rgb()),
-        answered_prompt_prefix: inquire::ui::Styled::new("✔️")
-            .with_fg(THEME.palette.green.to_inquire_rgb()),
-        help_message: inquire::ui::StyleSheet {
-            fg: Some(THEME.palette.blue.to_inquire_rgb()),
-            bg: None,
-            att: Attributes::empty(),
-        },
-        text_input: inquire::ui::StyleSheet {
-            fg: Some(THEME.palette.white.to_inquire_rgb()),
-            bg: None,
-            att: Attributes::empty(),
-        },
-        ..RenderConfig::default_colored()
-    }
-}
-
-pub trait ToInquireRgb {
-    fn to_inquire_rgb(&self) -> inquire::ui::Color;
-}
-
-impl ToInquireRgb for Rgb {
-    fn to_inquire_rgb(&self) -> inquire::ui::Color {
-        inquire::ui::Color::rgb(self.0, self.1, self.2)
     }
 }

@@ -34,7 +34,7 @@ tokio-util = "0.7.10"
 futures-util = { workspace = true }
 
 # Docker
-bollard = { workspace = true }
+#bollard = { workspace = true }
 
 # Logging
 log = { workspace = true }
@@ -57,7 +57,7 @@ owo-colors = "4.0.0"
 anstyle-owo-colors = "2.0.0"
 ### UI
 prettytable-rs = "^0.10"
-inquire = { version = "0.7.3", features = ["editor", "macros"] }
+#inquire = { version = "0.7.3", features = ["editor", "macros"] }
 indicatif = { version = "0.17.8", features = ["improved_unicode"] }
 #cliclack = "0.1.13"
 cliclack = { git = "https://github.com/fadeevab/cliclack.git", branch = "main" }

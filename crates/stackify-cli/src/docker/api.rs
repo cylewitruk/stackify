@@ -4,19 +4,20 @@ use std::collections::HashMap;
 
 use color_eyre::{eyre::eyre, owo_colors::OwoColorize, Result};
 use docker_api::{
-    models::{ContainerSummary, Network, NetworkingConfig},
+    models::{ContainerSummary, Network},
     opts::{
         ContainerCreateOpts, ContainerFilter, ContainerListOpts, NetworkFilter, NetworkListOpts,
     },
     Id,
 };
 
-use stackify_common::{
-    docker::LabelKey,
-    types::{EnvironmentName, EnvironmentService},
-};
+use stackify_common::types::{EnvironmentName, EnvironmentService};
 
-use crate::cli::StackifyHostDirs;
+use crate::{
+    cli::{log::clilog, StackifyHostDirs},
+    docker::LabelKey,
+    util::names::service_container_name,
+};
 
 use super::{format_network_name, ContainerUser, StackifyContainerDirs};
 
@@ -91,13 +92,19 @@ impl DockerApi {
     ) -> Result<Option<(Id, ContainerSummary)>> {
         let list_opts = ContainerListOpts::builder()
             .filter([
-                ContainerFilter::Name(container_name.to_string()),
+                ContainerFilter::Name(format!("^/{}$", container_name.to_string())),
                 ContainerFilter::LabelKey(LabelKey::Stackify.into()),
             ])
             .all(true)
             .build();
 
         let containers = self.docker.containers().list(&list_opts).await?;
+
+        clilog!(
+            "Found {} containers with the name '{}'",
+            containers.len(),
+            container_name
+        );
 
         if containers.len() == 0 {
             return Ok(None);
@@ -179,12 +186,12 @@ impl<'a> DockerOptsHelper<'a> {
             self.0
                 .host_dirs
                 .assets_dir
-                .join("build-entrypoint.sh")
+                .join("bitcoin-entrypoint.sh")
                 .to_string_lossy()
         );
 
         ContainerCreateOpts::builder()
-            .name(service.name.clone())
+            .name(service_container_name(service))
             .user(self.0.container_user.to_string())
             .volumes([bin_mount, entrypoint_mount])
             .image("stackify-runtime:latest")

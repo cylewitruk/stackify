@@ -17,6 +17,7 @@ use super::info;
 
 pub mod args;
 pub mod build;
+pub mod down;
 pub mod epoch;
 pub mod list;
 pub mod service;
@@ -31,7 +32,7 @@ pub async fn exec(ctx: &CliContext, args: EnvArgs) -> Result<()> {
         args::EnvSubCommands::Start(inner_args) => start::exec(ctx, inner_args).await,
         args::EnvSubCommands::Stop(inner_args) => stop::exec(ctx, inner_args).await,
         args::EnvSubCommands::Inspect(inner_args) => exec_inspect(ctx, inner_args).await,
-        args::EnvSubCommands::Down(inner_args) => exec_down(ctx, inner_args).await,
+        args::EnvSubCommands::Down(inner_args) => down::exec(ctx, inner_args).await,
         args::EnvSubCommands::Build(inner_args) => build::exec(ctx, inner_args).await,
         args::EnvSubCommands::Service(inner_args) => exec_service(ctx, inner_args),
         args::EnvSubCommands::Epoch(inner_args) => exec_epoch(ctx, inner_args),
@@ -60,42 +61,5 @@ async fn exec_create(ctx: &CliContext, args: args::CreateArgs) -> Result<()> {
 
 async fn exec_delete(_ctx: &CliContext, _args: args::DeleteArgs) -> Result<()> {
     println!("Delete environment");
-    Ok(())
-}
-
-async fn exec_down(ctx: &CliContext, args: args::DownArgs) -> Result<()> {
-    let env_name = EnvironmentName::new(&args.env_name)?;
-
-    let containers = ctx
-        .docker()
-        .api()
-        .containers()
-        .list(&ContainerListOpts::for_environment(&env_name, true))
-        .await?;
-
-    if containers.is_empty() {
-        info("There are no built containers for this environment.\n");
-        println!(
-            "To build the environment, use the {} command.",
-            style("stackify env build").white().bold()
-        );
-        return Ok(());
-    }
-
-    for container in containers {
-        let spinner = cliclack::spinner();
-        let container_id = container.id.ok_or(eyre!("Container ID not found."))?;
-        let container_names = container.names.ok_or(eyre!("Container name not found."))?;
-        let container_name = container_names.join(", ");
-        spinner.start(format!("Removing container: {}", container_name));
-        ctx.docker()
-            .api()
-            .containers()
-            .get(container_id)
-            .delete()
-            .await?;
-        spinner.stop(format!("Container {} removed", container_name));
-    }
-
     Ok(())
 }

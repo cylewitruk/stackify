@@ -6,7 +6,6 @@ use docker_api::opts::{
     NetworkCreateOpts, NetworkFilter, NetworkListOpts,
 };
 use stackify_common::{
-    docker::LabelKey,
     types::{EnvironmentName, EnvironmentService},
     ServiceType,
 };
@@ -16,7 +15,7 @@ use crate::{
     util::names::{environment_container_name, service_container_name},
 };
 
-use super::{ContainerUser, StackifyContainerDirs};
+use super::{ContainerUser, LabelKey, StackifyContainerDirs};
 
 pub trait CreateContainer {
     /// Create [`ContainerCreateOpts`] for the build container.
@@ -76,6 +75,7 @@ pub trait CreateContainer {
             .name(environment_container_name(environment_name))
             .image("busybox:latest")
             .labels(labels)
+            .entrypoint(["/bin/sh", "-c", "while : ; do echo 'sleep'; sleep 1; done"])
             .build()
     }
 
