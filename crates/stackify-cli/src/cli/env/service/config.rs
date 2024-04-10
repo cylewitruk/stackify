@@ -1,8 +1,12 @@
 use clap::Args;
+use cliclack::intro;
 use color_eyre::{eyre::eyre, Result};
 use stackify_common::{types::EnvironmentName, ConfigElementKind};
 
-use crate::{cli::context::CliContext, util::FindById};
+use crate::{
+    cli::{context::CliContext, theme::ThemedObject},
+    util::FindById,
+};
 
 #[derive(Debug, Args)]
 pub struct ServiceConfigArgs {
@@ -14,6 +18,7 @@ pub struct ServiceConfigArgs {
 }
 
 pub fn exec(ctx: &CliContext, args: ServiceConfigArgs) -> Result<()> {
+    intro("Configure Environment Services".bold())?;
     let env_name = EnvironmentName::new(&args.env_name)?;
     let env = ctx.db.get_environment_by_name(env_name.as_ref())?;
     let service_types = ctx.db.list_service_types()?;
@@ -50,6 +55,19 @@ pub fn exec(ctx: &CliContext, args: ServiceConfigArgs) -> Result<()> {
         .find_by_id(selected_service_version.service_type_id)
         .ok_or(eyre!("Failed to map environment service to service type."))?;
 
+    let params = ctx
+        .db
+        .list_service_type_params_for_service_type(selected_service_type.id)?;
+
+    let selected_param = cliclack::select("Select a parameter to modify:")
+        .items(
+            &params
+                .iter()
+                .map(|x| (x.clone(), x.name.clone(), x.description.clone()))
+                .collect::<Vec<_>>(),
+        )
+        .interact()?;
+
     let files = ctx.db.list_environment_service_files(selected_service.id)?;
 
     let mut select_config_element = cliclack::select("What would you like to modify?");
@@ -69,6 +87,7 @@ pub fn exec(ctx: &CliContext, args: ServiceConfigArgs) -> Result<()> {
             help_text: service_type_file.description.clone(),
         });
     }
+
     for param in ctx
         .db
         .list_service_type_params_for_service_type(selected_service_type.id)?

@@ -13,9 +13,12 @@ datadir=/opt/bitcoin
 # [network]
 # bind=0.0.0.0:18444
 discover=0
-dns=0
-dnsseed=0
+dns=1
+dnsseed=1
 listenonion=0
+{{#each peers as |peer|}}
+addnode={{peer}}:18444
+{{/each}}
 
 # [rpc]
 deprecatedrpc=serialversion

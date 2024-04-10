@@ -1,6 +1,6 @@
 use crate::{cli::log::clilog, docker::ContainerState, util::names::service_container_name};
 use cliclack::{intro, log::*, multi_progress, outro_note, MultiProgress};
-use color_eyre::Result;
+use color_eyre::{eyre::bail, Result};
 use console::style;
 use docker_api::{
     opts::{
@@ -9,9 +9,10 @@ use docker_api::{
     },
     Container,
 };
+use handlebars::Handlebars;
 use stackify_common::{
     types::{EnvironmentName, EnvironmentService},
-    ServiceType,
+    FileType, ServiceType,
 };
 
 use crate::{
@@ -77,10 +78,26 @@ pub async fn exec(ctx: &CliContext, args: StartArgs) -> Result<()> {
         environment_container_name(&env_name)
     ));
 
+    let bitcoin_service_names = env
+        .services
+        .iter()
+        .filter(|service| {
+            [ServiceType::BitcoinMiner, ServiceType::BitcoinFollower]
+                .contains(&ServiceType::from_i32(service.service_type.id).unwrap())
+        })
+        .map(|service| service.name.clone())
+        .collect::<Vec<_>>();
+
     for service in env.services {
         match ServiceType::from_i32(service.service_type.id)? {
-            ServiceType::BitcoinMiner => {
-                start_bitcoin_miner(ctx, &multi, &env_name, &service).await?;
+            ServiceType::BitcoinMiner | ServiceType::BitcoinFollower => {
+                let bitcoin_peers = bitcoin_service_names
+                    .iter()
+                    .filter(|name| *name != &service.name)
+                    .cloned()
+                    .collect::<Vec<_>>();
+
+                start_bitcoin_node(ctx, &multi, &env_name, &service, &bitcoin_peers).await?;
             }
             _ => clilog!(
                 "Service type {} is not yet supported, skipping...",
@@ -196,11 +213,12 @@ async fn assert_environment_container(
     }
 }
 
-async fn start_bitcoin_miner(
+async fn start_bitcoin_node(
     ctx: &CliContext,
     multi: &MultiProgress,
     env_name: &EnvironmentName,
     service: &EnvironmentService,
+    bitcoin_peers: &[String],
 ) -> Result<()> {
     // Format the container name
     let container_name = service_container_name(&service);
@@ -226,18 +244,32 @@ async fn start_bitcoin_miner(
             .create(
                 &ctx.docker()
                     .opts_for()
-                    .create_bitcoin_miner_container(&env_name, &service),
+                    .create_bitcoin_container(&env_name, &service)?,
             )
             .await?;
 
-        let files = ctx.db.load_files_for_environment_service(service)?;
-        for file in files {
-            container
-                .copy_file_into(
-                    &file.header.destination_dir.join(file.header.filename),
-                    &file.contents.contents,
-                )
-                .await?;
+        clilog!("Handling files for service: {}", &service.name);
+        let handlebars = Handlebars::new();
+        let mut data = serde_json::Map::new();
+
+        for file in ctx.db.load_files_for_environment_service(service)? {
+            clilog!("Handling file: {}", &file.header.filename);
+            data.insert("peers".to_string(), bitcoin_peers.into());
+            let mut content = file.contents.contents;
+
+            if file.header.file_type == FileType::HandlebarsTemplate {
+                let rendered_content =
+                    handlebars.render_template(&String::from_utf8(content)?, &data)?;
+                content = rendered_content.into_bytes();
+            }
+
+            let destination_path = &file.header.destination_dir.join(&file.header.filename);
+            clilog!(
+                "Copying file: {} -> {:?}",
+                &file.header.filename,
+                destination_path
+            );
+            container.copy_file_into(destination_path, &content).await?;
         }
 
         // Attach the container to this environment's network

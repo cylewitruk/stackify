@@ -23,7 +23,7 @@ pub fn copy_assets(ctx: &CliContext, force: bool) -> Result<()> {
     install_asset_executable(
         ctx,
         &multi,
-        "bitcoin-miner-entrypoint.sh",
+        "bitcoin-entrypoint.sh",
         force,
         BITCOIN_ENTRYPOINT,
     )?;

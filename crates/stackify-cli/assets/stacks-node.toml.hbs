@@ -15,13 +15,13 @@ miner = true
 [burnchain]
 chain = "bitcoin"
 mode = "krypton"
-peer_host = "bitcoin-node"
+peer_host = "{{burnchain_peer_host}}"
 username = "bitcoin"
 password = "bitcoin"
 rpc_port = 18443
 peer_port = 18444
 
-{{#each account as |a|}}
+{{#each accounts as |a|}}
 # "mnemonic": "{{a.mnemonic}}",
 # "privateKey": "{{a.privateKey}}",
 # "btcAddress": "{{a.btcAddress}}",
@@ -31,7 +31,7 @@ amount = {{a.amount}}
 
 {{/each}}
 
-{{#each epoch as |e|}}
+{{#each epochs as |e|}}
 [[burnchain.epochs]]
 epoch_name = "{{e.name}}"
 start_height = {{e.start_height}}

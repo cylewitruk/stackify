@@ -11,7 +11,10 @@ use docker_api::{
     Id,
 };
 
-use stackify_common::types::{EnvironmentName, EnvironmentService};
+use stackify_common::{
+    types::{EnvironmentName, EnvironmentService},
+    ServiceType,
+};
 
 use crate::{
     cli::{log::clilog, StackifyHostDirs},
@@ -172,11 +175,11 @@ impl<'a> DockerOptsHelper<'a> {
         Self(api)
     }
 
-    pub fn create_bitcoin_miner_container(
+    pub fn create_bitcoin_container(
         &self,
         env_name: &EnvironmentName,
         service: &EnvironmentService,
-    ) -> ContainerCreateOpts {
+    ) -> Result<ContainerCreateOpts> {
         let labels = default_labels(Some(env_name), Some(service));
 
         let bin_mount = format!(
@@ -189,20 +192,27 @@ impl<'a> DockerOptsHelper<'a> {
             self.0
                 .host_dirs
                 .assets_dir
-                .join("bitcoin-miner-entrypoint.sh")
+                .join("bitcoin-entrypoint.sh")
                 .to_string_lossy()
         );
 
-        ContainerCreateOpts::builder()
+        let is_miner = ServiceType::from_i32(service.service_type.id)? == ServiceType::BitcoinMiner;
+
+        let opts = ContainerCreateOpts::builder()
             .name(service_container_name(service))
+            .hostname(&service.name)
             .user(self.0.container_user.to_string())
             .volumes([bin_mount, entrypoint_mount])
             .image("stackify-runtime:latest")
             .labels(labels)
-            .env(vec![format!("BITCOIN_VERSION={}", service.version.version)])
+            .env(vec![
+                format!("BITCOIN_VERSION={}", service.version.version),
+                format!("BITCOIN_MINER={is_miner}"),
+            ])
             .entrypoint(["/bin/sh", "/entrypoint.sh"])
-            //.entrypoint(["/bin/sh", "-c", "while true; do sleep 1; done"])
-            .build()
+            .build();
+
+        Ok(opts)
     }
 }
 

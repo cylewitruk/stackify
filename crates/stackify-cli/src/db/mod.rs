@@ -4,8 +4,8 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 
 use ::diesel::connection::SimpleConnection;
-use ::diesel::prelude::*;
 use ::diesel::{delete, insert_into, update};
+use ::diesel::{prelude::*, upsert};
 use color_eyre::eyre::bail;
 use color_eyre::eyre::Report;
 use color_eyre::eyre::Result;
@@ -264,6 +264,17 @@ impl AppDb {
             .values((
                 service_type_file::service_type_id.eq(insert.service_type_id),
                 service_type_file::filename.eq(&insert.filename),
+                service_type_file::file_type_id.eq(insert.file_type_id),
+                service_type_file::destination_dir.eq(&insert.destination_dir),
+                service_type_file::description.eq(&insert.description),
+                service_type_file::default_contents.eq(&insert.default_contents),
+            ))
+            .on_conflict((
+                service_type_file::service_type_id,
+                service_type_file::filename,
+            ))
+            .do_update()
+            .set((
                 service_type_file::file_type_id.eq(insert.file_type_id),
                 service_type_file::destination_dir.eq(&insert.destination_dir),
                 service_type_file::description.eq(&insert.description),

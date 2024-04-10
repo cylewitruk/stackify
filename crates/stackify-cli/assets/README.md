@@ -11,4 +11,4 @@ This directory contains a number of assets which are compiled into the Stackify 
   - `stacks-signer.toml.hbs`: Handlebars template for a Sacks signer configuration file.
 - **Scripts**
   - `build-entrypoint.sh`: Used by the Stackify build image for building Stacks binaries.
-  - `bitcoin-miner-entrypoint.sh`: Image entrypoint for a Bitcoin miner node.
+  - `bitcoin-entrypoint.sh`: Image entrypoint for a Bitcoin node. Whether or not the node acts as a miner is controlled with the `BITCOIN_MINER` environment variable, where a value of `true` will start a simulated miner.

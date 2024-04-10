@@ -1,7 +1,7 @@
-stacks_private_key = "{{SIGNER_PRIVATE_KEY}}"
-node_host = "{{STACKS_NODE_ENDPOINT}}" # eg "127.0.0.1:20443"
+stacks_private_key = "{{signer_private_key}}"
+node_host = "{{stacks_node_endpoint}}" # eg "127.0.0.1:20443"
 # must be added as event_observer in node config:
-endpoint = "{{0.0.0.0:30000}}" # e.g 127.0.0.1:30000
+endpoint = "{{endpoint}}" # e.g 127.0.0.1:30000
 network = "testnet"
 auth_password = "stacks"
 db_path = "/opt/stackify/signer"

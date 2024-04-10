@@ -3,6 +3,7 @@ use std::{path::PathBuf, time::Duration};
 use color_eyre::Result;
 use diesel::{Connection, SqliteConnection};
 use futures_util::Future;
+use signal_hook::flag::register_conditional_shutdown;
 use tokio_util::sync::CancellationToken;
 
 use crate::{

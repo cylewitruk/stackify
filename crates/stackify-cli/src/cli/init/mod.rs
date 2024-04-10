@@ -161,7 +161,7 @@ runtime binaries, initialize the database and copy assets to the appropriate dir
         multi.stop();
     }
 
-    load_default_configuration_files(ctx)?;
+    load_default_configuration_files(ctx, args.force)?;
 
     outro("Finished!".bold().green())?;
 

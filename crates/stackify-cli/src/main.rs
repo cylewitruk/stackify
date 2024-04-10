@@ -8,7 +8,7 @@ use docker::api::DockerApi;
 use tokio::sync::broadcast;
 
 use crate::{
-    cli::{Cli, Commands},
+    cli::{log::get_log, Cli, Commands},
     errors::ReportResultExt,
 };
 
@@ -23,36 +23,36 @@ mod util;
 async fn main() -> Result<()> {
     let context = initialize().await?;
 
-    match Cli::try_parse() {
-        Ok(cli) => match cli.command {
-            Commands::Initialize(args) => {
-                cli::init::exec(&context, args).await?;
-            }
-            Commands::Environment(args) => {
-                cli::env::exec(&context, args).await.handle()?;
-            }
-            Commands::Info(args) => {
-                cli::info::exec(&context, args).await?;
-            }
-            Commands::Clean(args) => {
-                cli::clean::exec(&context, args).await?;
-            }
-            Commands::Config(args) => {
-                cli::config::exec(&context, args)?;
-            }
-            Commands::Completions { shell } => {
-                shell.generate(&mut Cli::command(), &mut std::io::stdout());
-            }
-            Commands::MarkdownHelp => {
-                clap_markdown::print_help_markdown::<Cli>();
-            }
-        },
-        Err(e) => {
-            e.print()?;
+    let cli = Cli::parse();
+
+    match cli.command {
+        Commands::Initialize(args) => {
+            cli::init::exec(&context, args).await?;
+        }
+        Commands::Environment(args) => {
+            cli::env::exec(&context, args).await.handle()?;
+        }
+        Commands::Info(args) => {
+            cli::info::exec(&context, args).await?;
+        }
+        Commands::Clean(args) => {
+            cli::clean::exec(&context, args).await?;
+        }
+        Commands::Config(args) => {
+            cli::config::exec(&context, args)?;
+        }
+        Commands::Completions { shell } => {
+            shell.generate(&mut Cli::command(), &mut std::io::stdout());
+        }
+        Commands::MarkdownHelp => {
+            clap_markdown::print_help_markdown::<Cli>();
         }
     }
 
     println!("");
+    if cli.dump_logs {
+        println!("{}", get_log().join("\n"));
+    }
     Ok(())
 }
 

@@ -88,6 +88,14 @@ pub struct Cli {
 
     #[command(flatten)]
     pub color: clap_color_flag::Color,
+
+    #[arg(
+        long = "dump-logs",
+        default_value = "false",
+        hide = true,
+        global = true
+    )]
+    pub dump_logs: bool,
 }
 
 impl Cli {
