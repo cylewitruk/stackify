@@ -183,6 +183,26 @@ table! {
     }
 }
 
+table! {
+    stacks_account (id) {
+        id -> Integer,
+        address -> Text,
+        amount -> BigInt,
+        mnemonic -> Text,
+        private_key -> Text,
+        btc_address -> Text,
+    }
+}
+
+table! {
+    environment_stacks_account (id) {
+        id -> Integer,
+        environment_id -> Integer,
+        stacks_account_id -> Integer,
+        remark -> Nullable<Text>
+    }
+}
+
 allow_tables_to_appear_in_same_query!(
     epoch,
     environment_status,
@@ -194,4 +214,6 @@ allow_tables_to_appear_in_same_query!(
     service_action_type,
     service_action_type_constraint,
     environment_service_action,
+    stacks_account,
+    environment_stacks_account
 );

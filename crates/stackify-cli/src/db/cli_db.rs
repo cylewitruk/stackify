@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use color_eyre::{eyre::eyre, Result};
 
 use ::diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
-use diesel::SelectableHelper;
+use diesel::{JoinOnDsl, SelectableHelper};
 use stackify_common::{
     types::{self, EnvironmentName, EnvironmentService},
     FileType, ServiceType,
@@ -270,10 +270,32 @@ impl CliDatabase for AppDb {
             })
             .collect::<Result<Vec<_>>>()?;
 
+        let stacks_accounts = environment_stacks_account::table
+            .inner_join(
+                stacks_account::table
+                    .on(environment_stacks_account::stacks_account_id.eq(stacks_account::id)),
+            )
+            .filter(environment_stacks_account::environment_id.eq(env.id))
+            .load::<(model::EnvironmentStacksAccount, model::StacksAccount)>(
+                &mut *self.conn.borrow_mut(),
+            )?
+            .iter()
+            .map(|(esa, sa)| types::EnvironmentStacksAccount {
+                id: esa.id,
+                mnemonic: sa.mnemonic.clone(),
+                address: sa.address.clone(),
+                amount: sa.amount as u64,
+                btc_address: sa.btc_address.clone(),
+                private_key: sa.private_key.clone(),
+                remark: esa.remark.clone(),
+            })
+            .collect::<Vec<_>>();
+
         let ret = types::Environment {
             name: env_name,
             services,
             epochs,
+            stacks_accounts,
         };
 
         Ok(ret)

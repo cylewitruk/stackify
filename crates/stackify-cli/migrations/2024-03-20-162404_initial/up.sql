@@ -328,3 +328,59 @@ CREATE TABLE environment_container_action_log (
     FOREIGN KEY (environment_container_id) REFERENCES environment_container (id),
     FOREIGN KEY (service_action_type_id) REFERENCES service_action_type (id)
 );
+
+CREATE TABLE stacks_account (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    address TEXT NOT NULL,
+    amount INTEGER NOT NULL,
+    mnemonic TEXT NOT NULL,
+    private_key TEXT NOT NULL,
+    btc_address TEXT NOT NULL,
+
+    UNIQUE (address),
+    UNIQUE (btc_address),
+    UNIQUE (private_key),
+    UNIQUE (mnemonic)
+);
+
+INSERT INTO stacks_account (address, amount, mnemonic, private_key, btc_address) 
+    VALUES 
+        (
+            'ST3EQ88S02BXXD0T5ZVT3KW947CRMQ1C6DMQY8H19', 
+            100000000000000, 
+            'point approve language letter cargo rough similar wrap focus edge polar task olympic tobacco cinnamon drop lawn boring sort trade senior screen tiger climb',
+            '539e35c740079b79f931036651ad01f76d8fe1496dbd840ba9e62c7e7b355db001',
+            'n1htkoYKuLXzPbkn9avC2DJxt7X85qVNCK'
+        ),
+        (
+            'ST3KCNDSWZSFZCC6BE4VA9AXWXC9KEB16FBTRK36T',
+            100000000000000,
+            'laugh capital express view pull vehicle cluster embark service clerk roast glance lumber glove purity project layer lyrics limb junior reduce apple method pear',
+            '075754fb099a55e351fe87c68a73951836343865cd52c78ae4c0f6f48e234f3601',
+            'n2ZGZ7Zau2Ca8CLHGh11YRnLw93b4ufsDR'
+        ),
+        (
+            'STB2BWB0K5XZGS3FXVTG3TKS46CQVV66NAK3YVN8',
+            100000000000000,
+            'level garlic bean design maximum inhale daring alert case worry gift frequent floor utility crowd twenty burger place time fashion slow produce column prepare',
+            '374b6734eaff979818c5f1367331c685459b03b1a2053310906d1408dc928a0001',
+            'mhY4cbHAFoXNYvXdt82yobvVuvR6PHeghf'
+        ),
+        (
+            'STSTW15D618BSZQB85R058DS46THH86YQQY6XCB7',
+            100000000000000,
+            'drop guess similar uphold alarm remove fossil riot leaf badge lobster ability mesh parent lawn today student olympic model assault syrup end scorpion lab',
+            '26f235698d02803955b7418842affbee600fc308936a7ca48bf5778d1ceef9df01',
+            'mkEDDqbELrKYGUmUbTAyQnmBAEz4V1MAro'
+        );
+
+CREATE TABLE environment_stacks_account (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    environment_id INTEGER NOT NULL,
+    stacks_account_id INTEGER NOT NULL,
+    remark TEXT NULL,
+
+    UNIQUE (environment_id, stacks_account_id),
+    FOREIGN KEY (environment_id) REFERENCES environment (id),
+    FOREIGN KEY (stacks_account_id) REFERENCES stacks_account (id)
+);

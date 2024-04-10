@@ -197,3 +197,26 @@ pub struct EnvironmentContainerActionLog {
     pub created_at: PrimitiveDateTime,
     pub data: Option<String>,
 }
+
+#[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, QueryableByName)]
+#[diesel(table_name = stacks_account)]
+pub struct StacksAccount {
+    pub id: i32,
+    pub address: String,
+    pub amount: i64,
+    pub mnemonic: String,
+    pub private_key: String,
+    pub btc_address: String,
+}
+
+#[derive(
+    Queryable, Associations, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, QueryableByName,
+)]
+#[diesel(table_name = environment_stacks_account)]
+#[belongs_to(StacksAccount)]
+pub struct EnvironmentStacksAccount {
+    pub id: i32,
+    pub environment_id: i32,
+    pub stacks_account_id: i32,
+    pub remark: Option<String>,
+}

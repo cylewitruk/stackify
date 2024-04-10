@@ -141,6 +141,7 @@ pub struct Environment {
     pub name: EnvironmentName,
     pub services: Vec<EnvironmentService>,
     pub epochs: Vec<EnvironmentEpoch>,
+    pub stacks_accounts: Vec<EnvironmentStacksAccount>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -232,4 +233,15 @@ pub struct EnvironmentServiceParam {
     pub id: i32,
     pub param: ServiceTypeParam,
     pub value: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EnvironmentStacksAccount {
+    pub id: i32,
+    pub address: String,
+    pub amount: u64,
+    pub mnemonic: String,
+    pub private_key: String,
+    pub btc_address: String,
+    pub remark: Option<String>,
 }
