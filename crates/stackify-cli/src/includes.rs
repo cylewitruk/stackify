@@ -7,6 +7,7 @@ pub const STACKIFY_BUILD_SETUP: &[u8] = include_bytes!("../assets/build-setup.sh
 pub const STACKIFY_CARGO_CONFIG: &[u8] = include_bytes!("../assets/cargo-config.toml");
 pub const STACKIFY_BUILD_ENTRYPOINT: &[u8] = include_bytes!("../assets/build-entrypoint.sh");
 pub const BITCOIN_ENTRYPOINT: &[u8] = include_bytes!("../assets/bitcoin-entrypoint.sh");
+pub const STACKS_NODE_ENTRYPOINT: &[u8] = include_bytes!("../assets/stacks-node-entrypoint.sh");
 
 // These are loaded into the database
 pub const BITCOIN_CONF: &[u8] = include_bytes!("../assets/bitcoin.conf.hbs");

@@ -214,6 +214,46 @@ impl<'a> DockerOptsHelper<'a> {
 
         Ok(opts)
     }
+
+    pub fn create_stacks_node_container(
+        &self,
+        env_name: &EnvironmentName,
+        service: &EnvironmentService,
+    ) -> Result<ContainerCreateOpts> {
+        let labels = default_labels(Some(env_name), Some(service));
+
+        let bin_mount = format!(
+            "{}:/opt/stackify/bin:rw",
+            self.0.host_dirs.bin_dir.to_string_lossy()
+        );
+
+        let entrypoint_mount = format!(
+            "{}:/entrypoint.sh:ro",
+            self.0
+                .host_dirs
+                .assets_dir
+                .join("stacks-node-entrypoint.sh")
+                .to_string_lossy()
+        );
+
+        let is_miner = ServiceType::from_i32(service.service_type.id)? == ServiceType::StacksMiner;
+
+        let opts = ContainerCreateOpts::builder()
+            .name(service_container_name(service))
+            .hostname(&service.name)
+            .user(self.0.container_user.to_string())
+            .volumes([bin_mount, entrypoint_mount])
+            .image("stackify-runtime:latest")
+            .labels(labels)
+            .env(vec![
+                format!("STACKS_NODE_VERSION={}", service.version.version),
+                format!("STACKS_NODE_MINER={is_miner}"),
+            ])
+            .entrypoint(["/bin/sh", "/entrypoint.sh"])
+            .build();
+
+        Ok(opts)
+    }
 }
 
 fn default_labels(

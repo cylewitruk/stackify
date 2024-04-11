@@ -134,22 +134,9 @@ CREATE TABLE service_type_param (
     value_type_id INTEGER NOT NULL,
     allowed_values TEXT NULL,
 
-    UNIQUE (service_type_id, name),
+    UNIQUE (service_type_id, key),
     FOREIGN KEY (service_type_id) REFERENCES service_type (id)
 );
-
-INSERT INTO service_type_param (service_type_id, value_type_id, name, key, description, default_value, is_required, allowed_values) 
-    VALUES
-        (
-            0,  -- service_type_id (Bitcoin Miner)
-            1,  -- value_type_id (Integer)
-            'Bitcoin Block Frequency', -- name
-            'BITCOIN_BLOCK_FREQUENCY', -- key
-            'The frequency at which the Bitcoin Miner will mine a new block (in seconds).', -- description
-            '30', -- default value 
-            1, -- is_required
-            NULL
-        );
 
 CREATE TABLE service_version (
     id INTEGER PRIMARY KEY,

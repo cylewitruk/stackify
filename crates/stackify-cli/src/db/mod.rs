@@ -4,8 +4,8 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 
 use ::diesel::connection::SimpleConnection;
+use ::diesel::prelude::*;
 use ::diesel::{delete, insert_into, update};
-use ::diesel::{prelude::*, upsert};
 use color_eyre::eyre::bail;
 use color_eyre::eyre::Report;
 use color_eyre::eyre::Result;
@@ -13,6 +13,7 @@ use diesel_migrations::embed_migrations;
 use diesel_migrations::EmbeddedMigrations;
 use diesel_migrations::MigrationHarness;
 use log::info;
+use stackify_common::ValueType;
 
 pub mod cli_db;
 pub mod diesel;
@@ -226,6 +227,17 @@ pub struct InsertServiceFile {
     pub default_contents: Vec<u8>,
 }
 
+pub struct InsertServiceParam<'a> {
+    pub service_type: &'a stackify_common::ServiceType,
+    pub name: &'a str,
+    pub key: &'a str,
+    pub description: &'a str,
+    pub default_value: Option<&'a str>,
+    pub is_required: bool,
+    pub value_type: &'a ValueType,
+    pub allowed_values: Option<&'a str>,
+}
+
 /// Configuration
 impl AppDb {
     pub fn list_service_type_params_for_service_type(
@@ -250,6 +262,20 @@ impl AppDb {
         Ok(count > 0)
     }
 
+    pub fn check_if_service_type_param_exists(
+        &self,
+        service_type_id: i32,
+        key: &str,
+    ) -> Result<bool> {
+        let count: i64 = service_type_param::table
+            .filter(service_type_param::service_type_id.eq(service_type_id))
+            .filter(service_type_param::key.eq(key))
+            .count()
+            .get_result(&mut *self.conn.borrow_mut())?;
+
+        Ok(count > 0)
+    }
+
     pub fn list_service_files_for_service_type(
         &self,
         service_type_id: i32,
@@ -260,7 +286,7 @@ impl AppDb {
     }
 
     pub fn insert_service_file(&self, insert: InsertServiceFile) -> Result<()> {
-        let _ = insert_into(service_type_file::table)
+        insert_into(service_type_file::table)
             .values((
                 service_type_file::service_type_id.eq(insert.service_type_id),
                 service_type_file::filename.eq(&insert.filename),
@@ -279,6 +305,34 @@ impl AppDb {
                 service_type_file::destination_dir.eq(&insert.destination_dir),
                 service_type_file::description.eq(&insert.description),
                 service_type_file::default_contents.eq(&insert.default_contents),
+            ))
+            .execute(&mut *self.conn.borrow_mut())?;
+
+        Ok(())
+    }
+
+    pub fn insert_service_param(&self, insert: &InsertServiceParam) -> Result<()> {
+        let value_type_id = insert.value_type.clone() as i32;
+        insert_into(service_type_param::table)
+            .values((
+                service_type_param::service_type_id.eq(insert.service_type.clone() as i32),
+                service_type_param::name.eq(insert.name),
+                service_type_param::key.eq(insert.key),
+                service_type_param::description.eq(insert.description),
+                service_type_param::default_value.eq(insert.default_value),
+                service_type_param::is_required.eq(insert.is_required),
+                service_type_param::value_type_id.eq(value_type_id),
+                service_type_param::allowed_values.eq(insert.allowed_values),
+            ))
+            .on_conflict((service_type_param::service_type_id, service_type_param::key))
+            .do_update()
+            .set((
+                service_type_param::name.eq(insert.name),
+                service_type_param::description.eq(insert.description),
+                service_type_param::default_value.eq(insert.default_value),
+                service_type_param::is_required.eq(insert.is_required),
+                service_type_param::value_type_id.eq(value_type_id),
+                service_type_param::allowed_values.eq(insert.allowed_values),
             ))
             .execute(&mut *self.conn.borrow_mut())?;
 

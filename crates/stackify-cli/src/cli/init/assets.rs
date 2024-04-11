@@ -13,7 +13,7 @@ use crate::{
     includes::{
         BITCOIN_ENTRYPOINT, STACKIFY_BUILD_DOCKERFILE, STACKIFY_BUILD_ENTRYPOINT,
         STACKIFY_BUILD_SETUP, STACKIFY_CARGO_CONFIG, STACKIFY_RUN_DOCKERFILE, STACKS_NODE_CONF,
-        STACKS_SIGNER_CONF,
+        STACKS_NODE_ENTRYPOINT, STACKS_SIGNER_CONF,
     },
 };
 
@@ -35,6 +35,13 @@ pub fn copy_assets(ctx: &CliContext, force: bool) -> Result<()> {
         STACKIFY_BUILD_ENTRYPOINT,
     )?;
     install_asset_executable(ctx, &multi, "build-setup.sh", force, STACKIFY_BUILD_SETUP)?;
+    install_asset_executable(
+        ctx,
+        &multi,
+        "stacks-node-entrypoint.sh",
+        force,
+        STACKS_NODE_ENTRYPOINT,
+    )?;
     install_asset(
         ctx,
         &multi,

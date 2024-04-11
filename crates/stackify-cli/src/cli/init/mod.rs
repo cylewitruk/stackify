@@ -4,7 +4,11 @@ use color_eyre::{eyre::bail, Result};
 use docker_api::opts::ImageBuildOpts;
 
 use crate::{
-    cli::{context::CliContext, init::docker::clean_images, ABOUT},
+    cli::{
+        context::CliContext,
+        init::{db::load_default_configuration_params, docker::clean_images},
+        ABOUT,
+    },
     docker::{opts::BuildImage, BuildResult},
 };
 
@@ -93,7 +97,7 @@ runtime binaries, initialize the database and copy assets to the appropriate dir
         download_and_extract_bitcoin_core(ctx, &args.bitcoin_version).await?;
 
         // Download Dasel (a jq-like tool for working with json,yaml,toml,xml,etc.).
-        download_dasel(ctx, &args.dasel_version).await?;
+        //download_dasel(ctx, &args.dasel_version).await?;
     }
 
     if !args.no_build {
@@ -162,6 +166,8 @@ runtime binaries, initialize the database and copy assets to the appropriate dir
     }
 
     load_default_configuration_files(ctx, args.force)?;
+
+    load_default_configuration_params(ctx, args.force)?;
 
     outro("Finished!".bold().green())?;
 

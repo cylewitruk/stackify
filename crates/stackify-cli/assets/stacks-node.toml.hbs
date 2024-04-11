@@ -1,8 +1,6 @@
 [node]
 rpc_bind = "0.0.0.0:20443"
 p2p_bind = "0.0.0.0:20444"
-local_peer_seed = "{{local_peer_seed}}"
-prometheus_bind = "prometheus:4000"
 pox_sync_sample_secs = {{pox_sync_sample_secs}}
 wait_time_for_microblocks = {{wait_time_for_microblocks}}
 working_dir = "/stacks/data"
@@ -10,6 +8,7 @@ working_dir = "/stacks/data"
 {{#if miner}}
 seed = "{{seed}}"
 miner = true
+mine_microblocks = {{mine_microblocks}}
 {{/if}}
 
 [burnchain]
