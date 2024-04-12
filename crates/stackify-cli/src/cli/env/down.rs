@@ -55,7 +55,9 @@ async fn remove_containers(ctx: &CliContext, env_name: &EnvironmentName) -> Resu
         if let Some(state) = summary.state.as_deref() {
             spinner.set_message(format!("Stopping container: {}", container_name));
             if ContainerState::parse(state)? == ContainerState::Running {
-                container.stop(&ContainerStopOpts::default()).await?;
+                container
+                    .stop(&ContainerStopOpts::builder().signal("SIGKILL").build())
+                    .await?;
             }
         }
 

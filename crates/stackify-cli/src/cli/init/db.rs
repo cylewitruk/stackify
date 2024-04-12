@@ -143,7 +143,7 @@ pub fn load_default_configuration_params(ctx: &CliContext, force: bool) -> Resul
         ctx,
         AssertParam {
             name: "PoX Sync Sample Seconds",
-            service_types: vec![ServiceType::StacksMiner],
+            service_types: vec![ServiceType::StacksMiner, ServiceType::StacksFollower],
             key: "pox_sync_sample_secs",
             description: "The number of seconds to wait between PoX syncs",
             default_value: Some("5"),

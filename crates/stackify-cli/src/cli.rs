@@ -15,7 +15,7 @@ use self::config::args::ConfigArgs;
 use self::env::args::EnvArgs;
 use self::info::InfoArgs;
 use self::init::InitArgs;
-use self::theme::theme;
+use self::theme::THEME;
 
 // Top-level command handlers
 pub mod clean;
@@ -140,13 +140,21 @@ fn styles() -> Styles {
     // Cyan: 71, 158, 194
     // Gray: 152, 152, 157
     Styles::styled()
-        .header(owo_to_anstyle_color(theme().palette().green).on_default() | Effects::BOLD)
-        .usage(owo_to_anstyle_color(theme().palette().green).on_default() | Effects::BOLD)
-        .literal(owo_to_anstyle_color(theme().palette().cyan).on_default())
-        .invalid(owo_to_anstyle_color(theme().palette().red).on_default())
-        .valid(owo_to_anstyle_color(theme().palette().green).on_default())
-        .error(owo_to_anstyle_color(theme().palette().red).on_default() | Effects::BOLD)
-        .placeholder(owo_to_anstyle_color(theme().palette().cyan).on_default())
+        .header(
+            owo_to_anstyle_color(THEME.read().unwrap().palette().green).on_default()
+                | Effects::BOLD,
+        )
+        .usage(
+            owo_to_anstyle_color(THEME.read().unwrap().palette().green).on_default()
+                | Effects::BOLD,
+        )
+        .literal(owo_to_anstyle_color(THEME.read().unwrap().palette().cyan).on_default())
+        .invalid(owo_to_anstyle_color(THEME.read().unwrap().palette().red).on_default())
+        .valid(owo_to_anstyle_color(THEME.read().unwrap().palette().green).on_default())
+        .error(
+            owo_to_anstyle_color(THEME.read().unwrap().palette().red).on_default() | Effects::BOLD,
+        )
+        .placeholder(owo_to_anstyle_color(THEME.read().unwrap().palette().cyan).on_default())
 }
 
 fn owo_to_anstyle_color(color: owo_colors::Rgb) -> anstyle::RgbColor {

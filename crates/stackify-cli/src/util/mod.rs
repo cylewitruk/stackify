@@ -4,6 +4,7 @@ pub mod git;
 pub mod names;
 pub mod print;
 pub mod progressbar;
+pub mod stacks_cli;
 
 pub use progressbar::new_progressbar;
 

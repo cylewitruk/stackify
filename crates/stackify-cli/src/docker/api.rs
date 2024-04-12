@@ -175,6 +175,19 @@ impl<'a> DockerOptsHelper<'a> {
         Self(api)
     }
 
+    pub fn generate_stacks_keychain(&self) -> ContainerCreateOpts {
+        let labels = default_labels(None, None);
+
+        ContainerCreateOpts::builder()
+            .name("stx-stacks-cli")
+            .command(["npx", "@stacks/cli", "make_keychain"])
+            .attach_stdout(true)
+            .auto_remove(true)
+            .image("stacks-cli:latest")
+            .labels(labels)
+            .build()
+    }
+
     pub fn create_bitcoin_container(
         &self,
         env_name: &EnvironmentName,
@@ -237,6 +250,12 @@ impl<'a> DockerOptsHelper<'a> {
         );
 
         let is_miner = ServiceType::from_i32(service.service_type.id)? == ServiceType::StacksMiner;
+        let version = service
+            .version
+            .clone()
+            .git_target
+            .ok_or(eyre!("No git target found for service '{}'", service.name))?
+            .target;
 
         let opts = ContainerCreateOpts::builder()
             .name(service_container_name(service))
@@ -246,10 +265,15 @@ impl<'a> DockerOptsHelper<'a> {
             .image("stackify-runtime:latest")
             .labels(labels)
             .env(vec![
-                format!("STACKS_NODE_VERSION={}", service.version.version),
-                format!("STACKS_NODE_MINER={is_miner}"),
+                format!("VERSION={version}"),
+                format!("MINER={is_miner}"),
             ])
-            .entrypoint(["/bin/sh", "/entrypoint.sh"])
+            //.entrypoint(["/bin/sh", "/entrypoint.sh"])
+            .entrypoint([
+                "/bin/sh",
+                "-c",
+                "/entrypoint.sh 2>&1 | tee /var/log/stackify/stacks-node.log",
+            ])
             .build();
 
         Ok(opts)

@@ -237,6 +237,15 @@ pub trait BuildImage {
             .build_args(build_args)
             .build()
     }
+
+    fn for_stacks_cli_image(host_dirs: &StackifyHostDirs, force: bool) -> ImageBuildOpts {
+        ImageBuildOpts::builder(&host_dirs.assets_dir)
+            .tag("stackify-stacks-cli:latest")
+            .labels(default_labels())
+            .dockerfile("Dockerfile.stacks-cli")
+            .nocahe(force)
+            .build()
+    }
 }
 
 impl BuildImage for ImageBuildOpts {}

@@ -10,10 +10,10 @@ pub mod config;
 pub mod list;
 pub mod remove;
 
-pub fn exec_service(ctx: &CliContext, args: ServiceArgs) -> Result<()> {
+pub async fn exec_service(ctx: &CliContext, args: ServiceArgs) -> Result<()> {
     match args.commands {
         ServiceSubCommands::Add(inner_args) => {
-            add::exec(ctx, inner_args)?;
+            add::exec(ctx, inner_args).await?;
         }
         ServiceSubCommands::Remove(inner_args) => {
             remove::exec(ctx, inner_args)?;

@@ -12,8 +12,8 @@ use crate::{
     cli::{context::CliContext, theme::ThemedObject},
     includes::{
         BITCOIN_ENTRYPOINT, STACKIFY_BUILD_DOCKERFILE, STACKIFY_BUILD_ENTRYPOINT,
-        STACKIFY_BUILD_SETUP, STACKIFY_CARGO_CONFIG, STACKIFY_RUN_DOCKERFILE, STACKS_NODE_CONF,
-        STACKS_NODE_ENTRYPOINT, STACKS_SIGNER_CONF,
+        STACKIFY_BUILD_SETUP, STACKIFY_CARGO_CONFIG, STACKIFY_RUN_DOCKERFILE,
+        STACKS_CLI_DOCKERFILE, STACKS_NODE_CONF, STACKS_NODE_ENTRYPOINT, STACKS_SIGNER_CONF,
     },
 };
 
@@ -55,6 +55,13 @@ pub fn copy_assets(ctx: &CliContext, force: bool) -> Result<()> {
         "Dockerfile.runtime",
         force,
         STACKIFY_RUN_DOCKERFILE,
+    )?;
+    install_asset(
+        ctx,
+        &multi,
+        "Dockerfile.stacks-cli",
+        force,
+        STACKS_CLI_DOCKERFILE,
     )?;
     install_asset(
         ctx,

@@ -27,7 +27,7 @@ async fn main() -> Result<()> {
 
     match cli.command {
         Commands::Initialize(args) => {
-            cli::init::exec(&context, args).await?;
+            cli::init::exec(&context, args).await.handle()?;
         }
         Commands::Environment(args) => {
             cli::env::exec(&context, args).await.handle()?;
@@ -39,7 +39,7 @@ async fn main() -> Result<()> {
             cli::clean::exec(&context, args).await?;
         }
         Commands::Config(args) => {
-            cli::config::exec(&context, args)?;
+            cli::config::exec(&context, args).handle()?;
         }
         Commands::Completions { shell } => {
             shell.generate(&mut Cli::command(), &mut std::io::stdout());

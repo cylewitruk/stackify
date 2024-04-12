@@ -1,15 +1,12 @@
-use std::fmt::Display;
+use std::{
+    fmt::Display,
+    sync::{Mutex, RwLock},
+};
 
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use owo_colors::{style, OwoColorize, Rgb, Style, Styled};
 
-lazy_static! {
-    static ref THEME: Theme = Theme::default();
-}
-
-pub fn theme() -> &'static Theme {
-    &*THEME
-}
+pub static THEME: Lazy<RwLock<Box<dyn Theme>>> = Lazy::new(|| RwLock::new(Box::new(DefaultTheme)));
 
 pub trait ThemedObject {
     fn red(&self) -> Styled<&Self>;
@@ -58,59 +55,59 @@ pub trait ThemedObject {
 
 impl<T: OwoColorize + Display> ThemedObject for T {
     fn red(&self) -> Styled<&Self> {
-        self.style(THEME.red)
+        self.style(Theme::red(&**THEME.read().unwrap()))
     }
 
     fn green(&self) -> Styled<&Self> {
-        self.style(THEME.green)
+        self.style(Theme::green(&**THEME.read().unwrap()))
     }
 
     fn yellow(&self) -> Styled<&Self> {
-        self.style(THEME.yellow)
+        self.style(Theme::yellow(&**THEME.read().unwrap()))
     }
 
     fn blue(&self) -> Styled<&Self> {
-        self.style(THEME.blue)
+        self.style(Theme::blue(&**THEME.read().unwrap()))
     }
 
     fn magenta(&self) -> Styled<&Self> {
-        self.style(THEME.magenta)
+        self.style(Theme::magenta(&**THEME.read().unwrap()))
     }
 
     fn cyan(&self) -> Styled<&Self> {
-        self.style(THEME.cyan)
+        self.style(Theme::cyan(&**THEME.read().unwrap()))
     }
 
     fn gray(&self) -> Styled<&Self> {
-        self.style(THEME.gray)
+        self.style(Theme::gray(&**THEME.read().unwrap()))
     }
 
     fn white(&self) -> Styled<&Self> {
-        self.style(THEME.white)
+        self.style(Theme::white(&**THEME.read().unwrap()))
     }
 
     fn text(&self) -> Styled<&Self> {
-        self.style(THEME.text)
+        self.style(Theme::text(&**THEME.read().unwrap()))
     }
 
     fn info(&self) -> Styled<&Self> {
-        self.style(THEME.info)
+        self.style(Theme::info(&**THEME.read().unwrap()))
     }
 
     fn warning(&self) -> Styled<&Self> {
-        self.style(THEME.warning)
+        self.style(Theme::warning(&**THEME.read().unwrap()))
     }
 
     fn error(&self) -> Styled<&Self> {
-        self.style(THEME.error)
+        self.style(Theme::error(&**THEME.read().unwrap()))
     }
 
     fn success(&self) -> Styled<&Self> {
-        self.style(THEME.success)
+        self.style(Theme::success(&**THEME.read().unwrap()))
     }
 
     fn table_header(&self) -> Styled<&Self> {
-        self.style(THEME.table_header)
+        self.style(Theme::table_header(&**THEME.read().unwrap()))
     }
 }
 
@@ -140,52 +137,96 @@ impl Default for ColorPalette {
     }
 }
 
-pub struct Theme {
-    pub palette: ColorPalette,
-    pub red: Style,
-    pub green: Style,
-    pub yellow: Style,
-    pub blue: Style,
-    pub magenta: Style,
-    pub cyan: Style,
-    pub gray: Style,
-    pub white: Style,
-    pub text: Style,
-    pub info: Style,
-    pub warning: Style,
-    pub error: Style,
-    pub success: Style,
-    pub table_header: Style,
+pub trait Theme: Sync + Send {
+    // Symbols
+    fn success_symbol(&self) -> String {
+        "✔"
+            .to_owned()
+            .style(THEME.read().unwrap().success().bold())
+            .to_string()
+    }
+
+    fn error_symbol(&self) -> String {
+        "✕"
+            .to_owned()
+            .style(THEME.read().unwrap().error().bold())
+            .to_string()
+    }
+
+    fn warning_symbol(&self) -> String {
+        "⚠"
+            .to_owned()
+            .style(THEME.read().unwrap().warning().bold())
+            .to_string()
+    }
+
+    fn info_symbol(&self) -> String {
+        "ℹ"
+            .to_owned()
+            .style(THEME.read().unwrap().info().bold())
+            .to_string()
+    }
+
+    fn skipped_symbol(&self) -> String {
+        "⊖"
+            .to_owned()
+            .style(THEME.read().unwrap().gray().bold())
+            .to_string()
+    }
+
+    // Styling
+    fn palette(&self) -> ColorPalette {
+        ColorPalette::default()
+    }
+    fn red(&self) -> Style {
+        style().color(self.palette().red)
+    }
+    fn green(&self) -> Style {
+        style().color(self.palette().green)
+    }
+
+    fn yellow(&self) -> Style {
+        style().color(self.palette().yellow)
+    }
+    fn blue(&self) -> Style {
+        style().color(self.palette().blue)
+    }
+    fn magenta(&self) -> Style {
+        style().color(self.palette().magenta)
+    }
+    fn cyan(&self) -> Style {
+        style().color(self.palette().cyan)
+    }
+    fn gray(&self) -> Style {
+        style().color(self.palette().gray)
+    }
+    fn white(&self) -> Style {
+        style().color(self.palette().white)
+    }
+    fn text(&self) -> Style {
+        style().remove_all_effects()
+    }
+
+    // Log-level styles
+    fn info(&self) -> Style {
+        style().fg_rgb::<8, 105, 203>()
+    }
+    fn warning(&self) -> Style {
+        style().fg_rgb::<205, 172, 8>()
+    }
+    fn error(&self) -> Style {
+        style().fg_rgb::<204, 55, 46>()
+    }
+    fn success(&self) -> Style {
+        style().fg_rgb::<38, 164, 57>()
+    }
+
+    // Table styles
+    fn table_header(&self) -> Style {
+        style().color(self.palette().cyan).bold()
+    }
 }
 
-impl Default for Theme {
-    fn default() -> Self {
-        Self::apple()
-    }
-}
+pub struct DefaultTheme;
 
-impl Theme {
-    pub fn palette(&self) -> &ColorPalette {
-        &self.palette
-    }
-    pub fn apple() -> Self {
-        let palette = ColorPalette::default();
-        Self {
-            red: style().color(palette.red),
-            green: style().color(palette.green),
-            yellow: style().color(palette.yellow),
-            blue: style().color(palette.blue),
-            magenta: style().color(palette.magenta),
-            cyan: style().color(palette.cyan),
-            gray: style().color(palette.gray),
-            white: style().color(palette.white),
-            text: style().remove_all_effects(),
-            info: style().fg_rgb::<8, 105, 203>(),
-            warning: style().fg_rgb::<205, 172, 8>(),
-            error: style().fg_rgb::<204, 55, 46>(),
-            success: style().fg_rgb::<38, 164, 57>(),
-            table_header: style().color(palette.cyan).bold(),
-            palette,
-        }
-    }
-}
+impl Theme for DefaultTheme {}

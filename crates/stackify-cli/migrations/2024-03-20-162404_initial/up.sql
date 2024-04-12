@@ -104,7 +104,8 @@ INSERT INTO value_type (id, name)
         (0, 'String'),
         (1, 'Integer'),
         (2, 'Boolean'),
-        (3, 'Enum')
+        (3, 'Enum'),
+        (4, 'Keychain')
     ;
 
 -- Default service configuration file templates.
@@ -205,7 +206,7 @@ CREATE TABLE environment_service (
     name TEXT NOT NULL,
     comment TEXT NULL,
 
-    UNIQUE (environment_id, service_version_id),
+    UNIQUE (name),
     FOREIGN KEY (environment_id) REFERENCES environment (id),
     FOREIGN KEY (service_version_id) REFERENCES service_version (id)
 );

@@ -4,7 +4,7 @@ use futures_util::StreamExt;
 use regex::Regex;
 
 use crate::{
-    cli::{context::CliContext, theme::ThemedObject},
+    cli::{context::CliContext, log::clilog, theme::ThemedObject},
     docker::BuildResult,
 };
 
@@ -27,6 +27,14 @@ pub async fn clean_images(ctx: &CliContext) -> Result<()> {
         .delete()
         .await;
 
+    let _ = ctx
+        .docker()
+        .api()
+        .images()
+        .get("stacks-cli:latest")
+        .delete()
+        .await;
+
     Ok(())
 }
 
@@ -42,14 +50,15 @@ pub async fn build_image(ctx: &CliContext, opts: &ImageBuildOpts) -> Result<Buil
                 match info {
                     ImageBuildChunk::Digest { aux } => {
                         //spinner.start(format!("Digest: {}", aux.id));
+                        clilog!("Digest: {}", aux.id);
                         return Ok(BuildResult::Success(aux.id));
                     }
                     ImageBuildChunk::Error {
                         error,
                         error_detail,
                     } => {
-                        eprintln!("Error: {}", error);
-                        eprintln!("Error Detail: {:?}", error_detail);
+                        clilog!("Error: {}", error);
+                        clilog!("Error Detail: {:?}", error_detail);
                         return Ok(BuildResult::Failed(error, error_detail.message));
                     }
                     ImageBuildChunk::PullStatus {
@@ -61,6 +70,7 @@ pub async fn build_image(ctx: &CliContext, opts: &ImageBuildOpts) -> Result<Buil
                         //spinner.start(format!("Pulling: {}", status));
                     }
                     ImageBuildChunk::Update { stream } => {
+                        clilog!("{}", stream);
                         regex.captures(&stream).map(|captures| {
                             let _step = captures.get(1).unwrap().as_str();
                             let _total = captures.get(2).unwrap().as_str();
@@ -70,11 +80,9 @@ pub async fn build_image(ctx: &CliContext, opts: &ImageBuildOpts) -> Result<Buil
                     }
                 }
             }
-            Err(e) => eprintln!("Error: {}", e),
+            Err(e) => clilog!("Error: {}", e),
         }
     }
-
-    //spinner.stop("Build image complete");
 
     bail!("Error building image, ended up in an unknown state.");
 }

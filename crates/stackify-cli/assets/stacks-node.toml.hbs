@@ -1,15 +1,30 @@
 [node]
 rpc_bind = "0.0.0.0:20443"
 p2p_bind = "0.0.0.0:20444"
+working_dir = "/opt/stackify/data"
+{{#if miner}}
 pox_sync_sample_secs = {{pox_sync_sample_secs}}
 wait_time_for_microblocks = {{wait_time_for_microblocks}}
-working_dir = "/stacks/data"
-
-{{#if miner}}
 seed = "{{seed}}"
 miner = true
 mine_microblocks = {{mine_microblocks}}
+
+[miner]
+min_tx_fee = 1
+first_attempt_time_ms = 10_000
+second_attempt_time_ms = 20_000
+wait_for_block_download = false
+microblock_attempt_time_ms = 10
+self_signing_seed = 1
+{{else}}
+bootstrap_node = "{{bootstrap_node}}"
 {{/if}}
+
+[connection_options]
+disable_block_download = true
+disable_inbound_handshakes = true
+disable_inbound_walks = true
+walk_interval = 0
 
 [burnchain]
 chain = "bitcoin"

@@ -1,11 +1,20 @@
+use std::borrow::Cow;
+
 use clap::Args;
 use color_eyre::Result;
+use docker_api::{conn::TtyChunk, opts::ContainerCreateOpts};
+use futures_util::StreamExt;
 use stackify_common::{types::EnvironmentName, util::random_hex, ServiceAction};
+use textwrap::Options;
 
 use crate::{
-    cli::{context::CliContext, theme::ThemedObject},
+    cli::{
+        context::CliContext,
+        log::clilog,
+        theme::{self, ThemedObject, THEME},
+    },
     db::diesel::model::Epoch,
-    util::FilterByServiceType,
+    util::{stacks_cli::MakeKeychainResult, FilterByServiceType},
 };
 
 #[derive(Debug, Args)]
@@ -21,7 +30,7 @@ pub struct ServiceAddArgs {
     pub env_name: String,
 }
 
-pub fn exec(ctx: &CliContext, args: ServiceAddArgs) -> Result<()> {
+pub async fn exec(ctx: &CliContext, args: ServiceAddArgs) -> Result<()> {
     let env_name = EnvironmentName::new(&args.env_name)?;
     let env = ctx.db.get_environment_by_name(env_name.as_ref())?;
     let service_types = ctx.db.list_service_types()?;
@@ -157,6 +166,62 @@ pub fn exec(ctx: &CliContext, args: ServiceAddArgs) -> Result<()> {
     if !add {
         cliclack::outro_cancel("Aborted by user".red().bold())?;
         return Ok(());
+    }
+
+    let generate_keychain_spinner = cliclack::spinner();
+    generate_keychain_spinner.start("Generating new keychain...");
+    let cli = ctx
+        .docker()
+        .api()
+        .containers()
+        .create(&ctx.docker().opts_for().generate_stacks_keychain())
+        .await?;
+    let mut cli_attach = cli.attach().await?;
+    let mut cli_stdout = vec![];
+    let mut cli_stderr = vec![];
+    cli.start().await?;
+    while let Some(result) = cli_attach.next().await {
+        match result {
+            Ok(chunk) => match chunk {
+                TtyChunk::StdOut(data) => {
+                    let str = String::from_utf8(data)?;
+                    cli_stdout.push(str);
+                }
+                TtyChunk::StdErr(data) => {
+                    let str = String::from_utf8(data)?;
+                    cli_stderr.push(str);
+                }
+                TtyChunk::StdIn(_) => {
+                    clilog!("received stdin tty chunk while executing stacks cli, this shouldn't happen");
+                }
+            },
+            Err(e) => {
+                cliclack::log::error(format!("Error: {}", e))?;
+            }
+        }
+    }
+
+    let cli_result = cli.wait().await?;
+
+    if cli_result.status_code == 0 {
+        let keychain = MakeKeychainResult::from_json(&cli_stdout.join(""))?;
+        generate_keychain_spinner.stop(format!(
+            "{} Generate new keychain",
+            THEME.read().unwrap().success_symbol()
+        ));
+        let mut msg_lines = vec![];
+        let wrapped_mnemonic = textwrap::wrap(
+            &keychain.mnemonic,
+            Options::new(80).subsequent_indent("                "),
+        );
+        msg_lines.push(format!("‣ Mnemonic:     {}", wrapped_mnemonic.join("\n")));
+        msg_lines.push(format!("‣ Private Key:  {}", keychain.key_info.private_key));
+        msg_lines.push(format!("‣ Public Key:   {}", keychain.key_info.public_key));
+        msg_lines.push(format!("‣ STX Address:  {}", keychain.key_info.address));
+        msg_lines.push(format!("‣ BTC Address:  {}", keychain.key_info.btc_address));
+        msg_lines.push(format!("‣ WIF:          {}", keychain.key_info.wif));
+        msg_lines.push(format!("‣ Index:        {}", keychain.key_info.index));
+        cliclack::note("Keychain", msg_lines.join("\n"))?;
     }
 
     // Add the service

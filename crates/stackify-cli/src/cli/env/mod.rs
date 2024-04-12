@@ -34,7 +34,7 @@ pub async fn exec(ctx: &CliContext, args: EnvArgs) -> Result<()> {
         args::EnvSubCommands::Inspect(inner_args) => exec_inspect(ctx, inner_args).await,
         args::EnvSubCommands::Down(inner_args) => down::exec(ctx, inner_args).await,
         args::EnvSubCommands::Build(inner_args) => build::exec(ctx, inner_args).await,
-        args::EnvSubCommands::Service(inner_args) => exec_service(ctx, inner_args),
+        args::EnvSubCommands::Service(inner_args) => exec_service(ctx, inner_args).await,
         args::EnvSubCommands::Epoch(inner_args) => exec_epoch(ctx, inner_args),
         args::EnvSubCommands::Set(inner_args) => exec_set(ctx, inner_args).await,
     }

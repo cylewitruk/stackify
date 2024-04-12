@@ -7,6 +7,8 @@ use crate::{
     cli::{
         context::CliContext,
         init::{db::load_default_configuration_params, docker::clean_images},
+        log::clilog,
+        theme::THEME,
         ABOUT,
     },
     docker::{opts::BuildImage, BuildResult},
@@ -59,7 +61,7 @@ pub struct InitArgs {
 pub async fn exec(ctx: &CliContext, args: InitArgs) -> Result<()> {
     let disk_space_usage = match args.pre_compile {
         true => "~9GB",
-        false => "~2.3GB",
+        false => "~2.5GB",
     };
 
     println!("{}\n", ABOUT);
@@ -103,15 +105,17 @@ runtime binaries, initialize the database and copy assets to the appropriate dir
     if !args.no_build {
         let multi = multi_progress("Build Docker images");
 
+        // Clean up
         let clean_spinner = multi.add(spinner());
         clean_spinner.start("Cleaning up existing images...");
         clean_images(ctx).await?;
         clean_spinner.stop(format!("{} {}", "✔".green(), "Clean up existing images"));
 
         // Build the build image.
+        clilog!("Building stackify build image");
         let build_spinner = multi.add(spinner());
 
-        build_spinner.start("Preparing build image...");
+        build_spinner.start("Preparing Stackify build image...");
         match build_image(
             ctx,
             &ImageBuildOpts::for_build_image(&ctx.host_dirs, args.pre_compile, args.force),
@@ -119,21 +123,35 @@ runtime binaries, initialize the database and copy assets to the appropriate dir
         .await?
         {
             BuildResult::Success(id) => {
-                build_spinner.stop(format!("{} {} {}", "✔".green(), "Build image", id.dimmed()));
+                build_spinner.stop(format!(
+                    "{} {} {}",
+                    THEME.read().unwrap().success_symbol(),
+                    "Stackify build image",
+                    id.dimmed()
+                ));
             }
             BuildResult::Failed(error, message) => {
-                build_spinner.stop(format!("{} {}", "✖".red(), "Build image failed"));
+                build_spinner.stop(format!(
+                    "{} {}",
+                    THEME.read().unwrap().error_symbol(),
+                    "Stackify build image"
+                ));
                 bail!("Build image failed: {} - {}", error, message);
             }
             BuildResult::Cancelled => {
-                build_spinner.stop(format!("{} {}", "✖".red(), "Build image cancelled"));
+                build_spinner.stop(format!(
+                    "{} {}",
+                    THEME.read().unwrap().skipped_symbol(),
+                    "Stackify build image"
+                ));
                 bail!("Build image cancelled");
             }
         }
 
         // Build the runtime image.
+        clilog!("Building stackify runtime image");
         let runtime_spinner = multi.add(spinner());
-        runtime_spinner.start("Preparing runtime image...");
+        runtime_spinner.start("Preparing Stackify runtime image...");
         match build_image(
             ctx,
             &ImageBuildOpts::for_runtime_image(&ctx.host_dirs, args.force),
@@ -144,7 +162,7 @@ runtime binaries, initialize the database and copy assets to the appropriate dir
                 runtime_spinner.stop(format!(
                     "{} {} {}",
                     "✔".green(),
-                    "Runtime image",
+                    "Stackify runtime image",
                     id.dimmed()
                 ));
             }
@@ -154,6 +172,41 @@ runtime binaries, initialize the database and copy assets to the appropriate dir
             }
             BuildResult::Cancelled => {
                 runtime_spinner.stop(format!(
+                    "{} {}",
+                    "✖".red(),
+                    "Operation was cancelled by the user"
+                ));
+                bail!("Build image cancelled");
+            }
+        }
+
+        clilog!("Building stacks cli image");
+        let stacks_cli_spinner = multi.add(spinner());
+        stacks_cli_spinner.start("Preparing Stacks CLI image...");
+        match build_image(
+            ctx,
+            &ImageBuildOpts::for_stacks_cli_image(&ctx.host_dirs, args.force),
+        )
+        .await?
+        {
+            BuildResult::Success(id) => {
+                stacks_cli_spinner.stop(format!(
+                    "{} {} {}",
+                    "✔".green(),
+                    "Stacks CLI image",
+                    id.dimmed()
+                ));
+            }
+            BuildResult::Failed(error, message) => {
+                stacks_cli_spinner.stop(format!(
+                    "{} {}",
+                    "✖".red(),
+                    "Failed to build stacks-cli image"
+                ));
+                bail!("Build image failed: {} - {}", error, message);
+            }
+            BuildResult::Cancelled => {
+                stacks_cli_spinner.stop(format!(
                     "{} {}",
                     "✖".red(),
                     "Operation was cancelled by the user"

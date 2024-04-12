@@ -1,0 +1,7 @@
+FROM node:21-bookworm-slim
+
+RUN apt update \
+    && apt upgrade -y \
+    && apt install jq -y
+
+RUN npm install --global @stacks/cli --yes

@@ -4,7 +4,10 @@ use crate::{
     util::names::service_container_name,
 };
 use cliclack::{intro, log::*, multi_progress, outro_note, MultiProgress};
-use color_eyre::{eyre::bail, Result};
+use color_eyre::{
+    eyre::{bail, eyre},
+    Result,
+};
 use console::style;
 use docker_api::{
     opts::{
@@ -16,7 +19,7 @@ use docker_api::{
 use handlebars::{to_json, Handlebars};
 use stackify_common::{
     types::{Environment, EnvironmentName, EnvironmentService},
-    FileType, ServiceType,
+    FileType, ServiceType, ValueType,
 };
 
 use crate::{
@@ -366,20 +369,78 @@ async fn create_stacks_node_container(
     let handlebars = Handlebars::new();
     let mut data = serde_json::Map::new();
 
-    let stacks_peers = env
+    let stacks_bootstrap_nodes = env
         .services
         .iter()
         .filter(|service| {
-            [ServiceType::StacksMiner, ServiceType::StacksFollower]
+            [ServiceType::StacksMiner]
+                .contains(&ServiceType::from_i32(service.service_type.id).unwrap())
+        })
+        .filter(|svc| &svc.name != &service.name)
+        .map(|service| {
+            let seed = service
+                .params
+                .iter()
+                .find(|param| param.param.key == "public_key")
+                .expect("Seed param not found for Stacks miner")
+                .value
+                .clone();
+            format!("{seed}@{}:20444", service.name.clone())
+        })
+        .collect::<Vec<_>>();
+
+    data.insert(
+        "bootstrap_node".to_string(),
+        to_json(stacks_bootstrap_nodes.first()),
+    );
+
+    let bitcoin_node = env
+        .services
+        .iter()
+        .filter(|service| {
+            [ServiceType::BitcoinMiner, ServiceType::BitcoinFollower]
                 .contains(&ServiceType::from_i32(service.service_type.id).unwrap())
         })
         .filter(|svc| &svc.name != &service.name)
         .map(|service| service.name.clone())
         .collect::<Vec<_>>();
 
+    data.insert(
+        "burnchain_peer_host".to_string(),
+        to_json(bitcoin_node.first()),
+    );
+
+    if ServiceType::from_i32(service.service_type.id)? == ServiceType::StacksMiner {
+        // TODO: When adding a stacks miner, generate a new keychain and set the service's params
+        data.insert("miner".to_string(), to_json(true));
+    } else {
+        data.insert("miner".to_string(), to_json(false));
+    }
+
+    for param in &service.params {
+        clilog!("Inserting param: {:?}", param);
+        match param.param.value_type {
+            ValueType::String => {
+                data.insert(param.param.key.clone(), to_json(&param.value));
+            }
+            ValueType::Integer => {
+                data.insert(
+                    param.param.key.clone(),
+                    to_json(param.value.parse::<i64>()?),
+                );
+            }
+            ValueType::Boolean => {
+                data.insert(
+                    param.param.key.clone(),
+                    to_json(param.value.parse::<bool>()?),
+                );
+            }
+            _ => bail!("Unsupported value type: {:?}", param.param.value_type),
+        }
+    }
+
     for file in ctx.db.load_files_for_environment_service(service)? {
         clilog!("Handling file: {}", &file.header.filename);
-        data.insert("peers".to_string(), to_json(&stacks_peers));
         let mut content = file.contents.contents;
 
         if file.header.file_type == FileType::HandlebarsTemplate {

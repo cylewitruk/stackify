@@ -1,6 +1,7 @@
 // These are provided directly to the docker daemon for image building
 pub const STACKIFY_BUILD_DOCKERFILE: &[u8] = include_bytes!("../assets/Dockerfile.build");
 pub const STACKIFY_RUN_DOCKERFILE: &[u8] = include_bytes!("../assets/Dockerfile.runtime");
+pub const STACKS_CLI_DOCKERFILE: &[u8] = include_bytes!("../assets/Dockerfile.stacks-cli");
 pub const STACKIFY_BUILD_SETUP: &[u8] = include_bytes!("../assets/build-setup.sh");
 
 // These are mounted to the container at creation time.
