@@ -1,6 +1,6 @@
 use color_eyre::Result;
 
-use cliclack::outro_note;
+use cliclack::{intro, outro_note};
 use console::style;
 use prettytable::{format::Alignment, row, Cell, Row, Table};
 
@@ -12,6 +12,8 @@ use crate::{
 use super::args::ListArgs;
 
 pub async fn exec(ctx: &CliContext, _args: ListArgs) -> Result<()> {
+    intro("List Environments".bold())?;
+
     let environments = ctx.db.load_all_environments()?;
 
     if environments.is_empty() {

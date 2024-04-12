@@ -107,6 +107,7 @@ pub enum ValueType {
     Integer = 1,
     Boolean = 2,
     Enum = 3,
+    StacksKeychain = 4,
 }
 
 impl ValueType {

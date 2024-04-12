@@ -98,6 +98,35 @@ impl AppDb {
         Ok(())
     }
 
+    pub fn add_environment_service_param(
+        &self,
+        environment_service_id: i32,
+        service_type_param_id: i32,
+        value: &str,
+    ) -> Result<()> {
+        insert_into(environment_service_param::table)
+            .values((
+                environment_service_param::environment_service_id.eq(environment_service_id),
+                environment_service_param::service_type_param_id.eq(service_type_param_id),
+                environment_service_param::value.eq(value),
+            ))
+            .execute(&mut *self.conn.borrow_mut())?;
+
+        Ok(())
+    }
+
+    pub fn find_service_type_param_id_by_key(
+        &self,
+        service_type_id: i32,
+        key: &str,
+    ) -> Result<i32> {
+        Ok(service_type_param::table
+            .select(service_type_param::id)
+            .filter(service_type_param::service_type_id.eq(service_type_id))
+            .filter(service_type_param::key.eq(key))
+            .first(&mut *self.conn.borrow_mut())?)
+    }
+
     pub fn get_environment_by_name(&self, name: &str) -> Result<Environment> {
         environment::table
             .filter(environment::name.eq(name))

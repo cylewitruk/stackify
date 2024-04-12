@@ -172,36 +172,6 @@ pub fn load_default_configuration_params(ctx: &CliContext, force: bool) -> Resul
     assert_param(
         ctx,
         AssertParam {
-            name: "Local Peer Seed",
-            service_types: vec![ServiceType::StacksMiner, ServiceType::StacksFollower],
-            key: "local_peer_seed",
-            description: "The private key to use for signing P2P messages in the networking stack",
-            default_value: Some("0000000000000000000000000000000000000000000000000000000000000000"),
-            allowed_values: None,
-            is_required: false,
-            value_type: ValueType::String,
-        },
-        force,
-    )?;
-
-    assert_param(
-        ctx,
-        AssertParam {
-            name: "Seed",
-            service_types: vec![ServiceType::StacksMiner],
-            key: "seed",
-            description: "The private key to use for mining",
-            default_value: Some("0000000000000000000000000000000000000000000000000000000000000000"),
-            allowed_values: None,
-            is_required: false,
-            value_type: ValueType::String,
-        },
-        force,
-    )?;
-
-    assert_param(
-        ctx,
-        AssertParam {
             name: "Mine Microblocks",
             service_types: vec![ServiceType::StacksMiner],
             key: "mine_microblocks",
@@ -210,6 +180,26 @@ pub fn load_default_configuration_params(ctx: &CliContext, force: bool) -> Resul
             allowed_values: None,
             is_required: false,
             value_type: ValueType::Boolean,
+        },
+        force,
+    )?;
+
+    assert_param(
+        ctx,
+        AssertParam {
+            name: "Stacks Keychain",
+            service_types: vec![
+                ServiceType::StacksMiner,
+                ServiceType::StacksFollower,
+                ServiceType::StacksSigner,
+            ],
+            key: "stacks_keychain",
+            description:
+                "The keychain to use for signing P2P messages, mining, or signing transactions",
+            default_value: None,
+            allowed_values: None,
+            is_required: true,
+            value_type: ValueType::StacksKeychain,
         },
         force,
     )?;

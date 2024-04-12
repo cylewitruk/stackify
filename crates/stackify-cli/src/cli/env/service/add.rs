@@ -1,17 +1,15 @@
-use std::borrow::Cow;
-
 use clap::Args;
-use color_eyre::Result;
-use docker_api::{conn::TtyChunk, opts::ContainerCreateOpts};
+use color_eyre::{eyre::bail, Result};
+use docker_api::conn::TtyChunk;
 use futures_util::StreamExt;
-use stackify_common::{types::EnvironmentName, util::random_hex, ServiceAction};
+use stackify_common::{types::EnvironmentName, util::random_hex, ServiceAction, ServiceType};
 use textwrap::Options;
 
 use crate::{
     cli::{
         context::CliContext,
         log::clilog,
-        theme::{self, ThemedObject, THEME},
+        theme::{ThemedObject, THEME},
     },
     db::diesel::model::Epoch,
     util::{stacks_cli::MakeKeychainResult, FilterByServiceType},
@@ -87,7 +85,7 @@ pub async fn exec(ctx: &CliContext, args: ServiceAddArgs) -> Result<()> {
         StartAtKind::BlockHeight => {
             let block_height = cliclack::input("What block height should the service start at?")
                 .validate(|input: &String| match input.parse::<u32>() {
-                    Ok(i) => Ok(()),
+                    Ok(_) => Ok(()),
                     Err(_) => {
                         Err("Invalid block height. Please enter a valid positive number (>= 0).")
                     }
@@ -112,7 +110,7 @@ pub async fn exec(ctx: &CliContext, args: ServiceAddArgs) -> Result<()> {
             StopAtKind::BlockHeight => {
                 let block_height = cliclack::input("What block height should the service stop at?")
                     .validate(|input: &String| match input.parse::<u32>() {
-                        Ok(i) => Ok(()),
+                        Ok(_) => Ok(()),
                         Err(_) => Err(
                             "Invalid block height. Please enter a valid positive number (>= 0).",
                         ),
@@ -157,8 +155,7 @@ pub async fn exec(ctx: &CliContext, args: ServiceAddArgs) -> Result<()> {
     cliclack::log::success(format!(
         "{}\n{}",
         "Configuration complete!".green().bold(),
-        "Please review the above and confirm the addition of the service to the environment.
-    "
+        "Please review the above and confirm the addition of the service to the environment."
     ))?;
 
     let add = cliclack::confirm("Add the above service to the environment?").interact()?;
@@ -168,66 +165,93 @@ pub async fn exec(ctx: &CliContext, args: ServiceAddArgs) -> Result<()> {
         return Ok(());
     }
 
-    let generate_keychain_spinner = cliclack::spinner();
-    generate_keychain_spinner.start("Generating new keychain...");
-    let cli = ctx
-        .docker()
-        .api()
-        .containers()
-        .create(&ctx.docker().opts_for().generate_stacks_keychain())
-        .await?;
-    let mut cli_attach = cli.attach().await?;
-    let mut cli_stdout = vec![];
-    let mut cli_stderr = vec![];
-    cli.start().await?;
-    while let Some(result) = cli_attach.next().await {
-        match result {
-            Ok(chunk) => match chunk {
-                TtyChunk::StdOut(data) => {
-                    let str = String::from_utf8(data)?;
-                    cli_stdout.push(str);
+    let stacks_keychain = if [
+        ServiceType::StacksMiner,
+        ServiceType::StacksFollower,
+        ServiceType::StacksSigner,
+    ]
+    .contains(&ServiceType::from_i32(service_type.id)?)
+    {
+        let generate_keychain_spinner = cliclack::spinner();
+        generate_keychain_spinner.start("Generating new keychain...");
+        let cli = ctx
+            .docker()
+            .api()
+            .containers()
+            .create(&ctx.docker().opts_for().generate_stacks_keychain())
+            .await?;
+        let mut cli_attach = cli.attach().await?;
+        let mut cli_stdout = vec![];
+        let mut cli_stderr = vec![];
+        cli.start().await?;
+        while let Some(result) = cli_attach.next().await {
+            match result {
+                Ok(chunk) => match chunk {
+                    TtyChunk::StdOut(data) => {
+                        let str = String::from_utf8(data)?;
+                        cli_stdout.push(str);
+                    }
+                    TtyChunk::StdErr(data) => {
+                        let str = String::from_utf8(data)?;
+                        cli_stderr.push(str);
+                    }
+                    TtyChunk::StdIn(_) => {
+                        clilog!("received stdin tty chunk while executing stacks cli, this shouldn't happen");
+                    }
+                },
+                Err(e) => {
+                    cliclack::log::error(format!("Error: {}", e))?;
                 }
-                TtyChunk::StdErr(data) => {
-                    let str = String::from_utf8(data)?;
-                    cli_stderr.push(str);
-                }
-                TtyChunk::StdIn(_) => {
-                    clilog!("received stdin tty chunk while executing stacks cli, this shouldn't happen");
-                }
-            },
-            Err(e) => {
-                cliclack::log::error(format!("Error: {}", e))?;
             }
         }
-    }
 
-    let cli_result = cli.wait().await?;
+        let cli_result = cli.wait().await?;
 
-    if cli_result.status_code == 0 {
-        let keychain = MakeKeychainResult::from_json(&cli_stdout.join(""))?;
-        generate_keychain_spinner.stop(format!(
-            "{} Generate new keychain",
-            THEME.read().unwrap().success_symbol()
-        ));
-        let mut msg_lines = vec![];
-        let wrapped_mnemonic = textwrap::wrap(
-            &keychain.mnemonic,
-            Options::new(80).subsequent_indent("                "),
-        );
-        msg_lines.push(format!("‣ Mnemonic:     {}", wrapped_mnemonic.join("\n")));
-        msg_lines.push(format!("‣ Private Key:  {}", keychain.key_info.private_key));
-        msg_lines.push(format!("‣ Public Key:   {}", keychain.key_info.public_key));
-        msg_lines.push(format!("‣ STX Address:  {}", keychain.key_info.address));
-        msg_lines.push(format!("‣ BTC Address:  {}", keychain.key_info.btc_address));
-        msg_lines.push(format!("‣ WIF:          {}", keychain.key_info.wif));
-        msg_lines.push(format!("‣ Index:        {}", keychain.key_info.index));
-        cliclack::note("Keychain", msg_lines.join("\n"))?;
-    }
+        if cli_result.status_code == 0 {
+            let keychain = MakeKeychainResult::from_json(&cli_stdout.join(""))?;
+            generate_keychain_spinner.stop(format!(
+                "{} Generate new keychain",
+                THEME.read().unwrap().success_symbol()
+            ));
+            let mut msg_lines = vec![];
+            let wrapped_mnemonic = textwrap::wrap(
+                &keychain.mnemonic,
+                Options::new(80).subsequent_indent("                "),
+            );
+            msg_lines.push(
+                "A new keychain has been generated for this service. Here are the details:\n"
+                    .cyan()
+                    .to_string(),
+            );
+            msg_lines.push(format!("‣ Mnemonic:     {}", wrapped_mnemonic.join("\n")));
+            msg_lines.push(format!("‣ Private Key:  {}", keychain.key_info.private_key));
+            msg_lines.push(format!("‣ Public Key:   {}", keychain.key_info.public_key));
+            msg_lines.push(format!("‣ STX Address:  {}", keychain.key_info.address));
+            msg_lines.push(format!("‣ BTC Address:  {}", keychain.key_info.btc_address));
+            msg_lines.push(format!("‣ WIF:          {}", keychain.key_info.wif));
+            msg_lines.push(format!("‣ Index:        {}", keychain.key_info.index));
+            cliclack::note("Keychain", msg_lines.join("\n"))?;
+
+            Some(keychain)
+        } else {
+            bail!("Failed to generate keychain: {:?}", cli_stderr);
+        }
+    } else {
+        None
+    };
 
     // Add the service
     let env_service =
         ctx.db
             .add_environment_service(env.id, service_version.id, &name, comment.as_deref())?;
+
+    if let Some(keychain) = stacks_keychain {
+        let param_id = ctx
+            .db
+            .find_service_type_param_id_by_key(service_type.id, "stacks_keychain")?;
+        ctx.db
+            .add_environment_service_param(env_service.id, param_id, &keychain.to_json()?)?;
+    }
 
     if let StartAt::BlockHeight(block_height) = start_at {
         ctx.db.add_environment_service_action(

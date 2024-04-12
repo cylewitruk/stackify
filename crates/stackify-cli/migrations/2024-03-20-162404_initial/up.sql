@@ -105,7 +105,7 @@ INSERT INTO value_type (id, name)
         (1, 'Integer'),
         (2, 'Boolean'),
         (3, 'Enum'),
-        (4, 'Keychain')
+        (4, 'Stacks Keychain')
     ;
 
 -- Default service configuration file templates.

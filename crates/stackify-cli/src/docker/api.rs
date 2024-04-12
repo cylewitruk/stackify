@@ -183,7 +183,7 @@ impl<'a> DockerOptsHelper<'a> {
             .command(["npx", "@stacks/cli", "make_keychain"])
             .attach_stdout(true)
             .auto_remove(true)
-            .image("stacks-cli:latest")
+            .image("stackify-stacks-cli:latest")
             .labels(labels)
             .build()
     }
