@@ -89,7 +89,9 @@ table! {
         maximum_epoch_id -> Nullable<Integer>,
         git_target -> Nullable<Text>,
         cli_name -> Text,
-        // rebuild_required -> Bool
+        rebuild_required -> Bool,
+        last_built_at -> Nullable<Timestamp>,
+        last_build_commit_hash -> Nullable<Text>,
     }
 }
 

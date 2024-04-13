@@ -9,7 +9,10 @@ use stackify_common::{
     FileType, ServiceType,
 };
 
-use crate::{cli::env, db::errors::LoadEnvironmentError};
+use crate::{
+    cli::{env, log::clilog},
+    db::errors::LoadEnvironmentError,
+};
 
 use super::{
     diesel::{model, schema::*, InnerDb},
@@ -192,20 +195,31 @@ impl CliDatabase for AppDb {
                 )?;
 
                 for st_param in service_type_params {
+                    clilog!(
+                        "Loading param for env {}: {}={}",
+                        es.id,
+                        st_param.id,
+                        st_param.name
+                    );
                     let allowed_values = st_param
                         .allowed_values
                         .clone()
                         .map(|av| av.split(',').map(str::to_owned).collect::<Vec<_>>());
+                    clilog!("> Allowed values: {:?}", allowed_values);
 
+                    clilog!("Finding param value: {}/{}", es.id, st_param.id);
                     let env_value = if let Some(param) = Self::find_environment_service_param(
                         &mut *self.conn.borrow_mut(),
                         es.id,
                         st_param.id,
                     )? {
+                        clilog!("> Found param value: {}", param.value);
                         param.value
                     } else if let Some(default_value) = st_param.default_value.clone() {
+                        clilog!("> Using default value: {}", default_value);
                         default_value
                     } else {
+                        clilog!("> Missing param value");
                         return Err(LoadEnvironmentError::MissingParam {
                             service_name: es.name.clone(),
                             param_name: st_param.name.clone(),

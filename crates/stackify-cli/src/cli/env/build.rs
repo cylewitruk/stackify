@@ -12,6 +12,7 @@ use stackify_common::ServiceType;
 use std::collections::HashMap;
 
 use crate::cli::context::CliContext;
+use crate::cli::log::clilog;
 use crate::cli::theme::ThemedObject;
 use crate::db::cli_db::CliDatabase as _;
 use crate::docker::opts::CreateContainer;
@@ -103,8 +104,15 @@ pub async fn exec(ctx: &CliContext, args: BuildArgs) -> Result<()> {
         // Stop & remove the build container, ignoring errors
         if !ctx.cancellation_token.is_cancelled() {
             let _ = container.stop(&ContainerStopOpts::default()).await;
-            let _ = container.delete().await;
-        }
+        } else {
+            let _ = container
+                .stop(&ContainerStopOpts::builder().signal("SIGKILL").build())
+                .await;
+        };
+
+        clilog!("waiting for build container to stop...");
+        let _ = container.wait().await;
+        let _ = container.delete().await;
 
         multi.stop();
     }
@@ -166,14 +174,29 @@ async fn register_shutdown(ctx: &CliContext) {
 
 /// Kills the existing build container if it exists.
 async fn kill_existing_build_container(ctx: &CliContext) -> Result<()> {
+    clilog!("checking for existing build container...");
     if let Some((container_id, _)) = ctx
         .docker()
         .find_container_by_name(&EnvironmentName::new("stackify-build")?)
         .await?
     {
-        let container = ctx.docker().api().containers().get(container_id);
+        clilog!("found existing build container, stopping and removing...");
+        let container = ctx.docker().api().containers().get(container_id.clone());
         let _ = container.stop(&ContainerStopOpts::default()).await;
+        let _ = container.wait().await;
         let _ = container.delete().await;
+        while ctx
+            .docker()
+            .api()
+            .containers()
+            .get(container_id.clone())
+            .inspect()
+            .await
+            .is_ok()
+        {
+            clilog!("waiting for build container to stop...");
+            tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+        }
     }
 
     Ok(())
@@ -184,6 +207,8 @@ async fn create_build_container(
     ctx: &CliContext,
     service: &EnvironmentService,
 ) -> Result<Container> {
+    kill_existing_build_container(ctx).await?;
+
     let mut env_vars = HashMap::<String, String>::new();
     if ServiceType::StacksMiner.is(service.service_type.id) {
         let target = service

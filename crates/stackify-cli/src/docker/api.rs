@@ -83,6 +83,16 @@ impl DockerApi {
         DockerOptsHelper::new(self)
     }
 
+    pub async fn container_exists(&self, container_name: &str) -> Result<bool> {
+        let container = self
+            .docker
+            .containers()
+            .get(container_name)
+            .inspect()
+            .await?;
+        Ok(container.id.is_some())
+    }
+
     /// Helper function to find a container and its id from name, so that the
     /// rest of the application can refer to containers by name.
     ///
@@ -268,12 +278,12 @@ impl<'a> DockerOptsHelper<'a> {
                 format!("VERSION={version}"),
                 format!("MINER={is_miner}"),
             ])
-            //.entrypoint(["/bin/sh", "/entrypoint.sh"])
-            .entrypoint([
-                "/bin/sh",
-                "-c",
-                "/entrypoint.sh 2>&1 | tee /var/log/stackify/stacks-node.log",
-            ])
+            .entrypoint(["/bin/sh", "-c", "while true; do sleep 1; done"])
+            // .entrypoint([
+            //     "/bin/sh",
+            //     "-c",
+            //     "/entrypoint.sh 2>&1 | tee /var/log/stackify/stacks-node.log",
+            // ])
             .build();
 
         Ok(opts)

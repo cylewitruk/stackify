@@ -1,7 +1,7 @@
 use crate::{
     cli::log::clilog,
     docker::{api::DockerApi, ContainerState},
-    util::names::service_container_name,
+    util::{names::service_container_name, stacks_cli::MakeKeychainResult},
 };
 use cliclack::{intro, log::*, multi_progress, outro_note, MultiProgress};
 use color_eyre::{
@@ -381,11 +381,12 @@ async fn create_stacks_node_container(
             let seed = service
                 .params
                 .iter()
-                .find(|param| param.param.key == "public_key")
-                .expect("Seed param not found for Stacks miner")
-                .value
-                .clone();
-            format!("{seed}@{}:20444", service.name.clone())
+                .find(|param| param.param.key == "stacks_keychain")
+                .expect("Seed param not found for Stacks miner");
+            let keychain = MakeKeychainResult::from_json(&seed.value)
+                .expect("Keychain not found for Stacks miner");
+            let miner_pubkey = keychain.key_info.public_key;
+            format!("{miner_pubkey}@{}:20444", service.name.clone())
         })
         .collect::<Vec<_>>();
 
@@ -411,7 +412,6 @@ async fn create_stacks_node_container(
     );
 
     if ServiceType::from_i32(service.service_type.id)? == ServiceType::StacksMiner {
-        // TODO: When adding a stacks miner, generate a new keychain and set the service's params
         data.insert("miner".to_string(), to_json(true));
     } else {
         data.insert("miner".to_string(), to_json(false));
@@ -433,6 +433,17 @@ async fn create_stacks_node_container(
                 data.insert(
                     param.param.key.clone(),
                     to_json(param.value.parse::<bool>()?),
+                );
+            }
+            ValueType::StacksKeychain => {
+                clilog!(
+                    "Inserting keychain param: {}: {}",
+                    &param.param.key,
+                    &param.value
+                );
+                data.insert(
+                    param.param.key.clone(),
+                    to_json(MakeKeychainResult::from_json(&param.value)?),
                 );
             }
             _ => bail!("Unsupported value type: {:?}", param.param.value_type),
@@ -457,6 +468,8 @@ async fn create_stacks_node_container(
         );
         container.copy_file_into(destination_path, &content).await?;
     }
+
+    clilog!("Container data: {:?}", data);
 
     Ok(container)
 }

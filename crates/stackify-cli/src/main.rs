@@ -29,6 +29,9 @@ async fn main() -> Result<()> {
         Commands::Initialize(args) => {
             cli::init::exec(&context, args).await.handle()?;
         }
+        Commands::Uninstall => {
+            cli::uninstall::exec(&context).await.handle()?;
+        }
         Commands::Environment(args) => {
             cli::env::exec(&context, args).await.handle()?;
         }

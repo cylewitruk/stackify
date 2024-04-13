@@ -2,8 +2,6 @@ use clap::{Args, Subcommand};
 
 #[derive(Debug, Subcommand)]
 pub enum ConfigSubCommands {
-    /// This will completely remove all Stackify resources from the system.
-    Reset,
     /// Import a Stackify export file.
     Import(ImportArgs),
     /// Export Stackify configuration, which can be imported later. This is

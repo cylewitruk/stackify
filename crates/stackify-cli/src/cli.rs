@@ -28,6 +28,7 @@ pub mod log;
 pub mod network;
 pub mod show;
 pub mod theme;
+pub mod uninstall;
 
 pub mod clap_color_flag;
 pub mod clap_verbosity_flag;
@@ -122,6 +123,7 @@ pub enum Commands {
     Clean(CleanArgs),
     /// Commands for interacting with the stackify global configuration.
     Config(ConfigArgs),
+    Uninstall,
     Completions {
         /// The shell to generate the completions for
         #[arg(value_enum)]

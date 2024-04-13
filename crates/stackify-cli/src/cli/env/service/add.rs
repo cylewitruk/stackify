@@ -246,6 +246,7 @@ pub async fn exec(ctx: &CliContext, args: ServiceAddArgs) -> Result<()> {
             .add_environment_service(env.id, service_version.id, &name, comment.as_deref())?;
 
     if let Some(keychain) = stacks_keychain {
+        clilog!("Adding keychain to service: {:?}", keychain);
         let param_id = ctx
             .db
             .find_service_type_param_id_by_key(service_type.id, "stacks_keychain")?;

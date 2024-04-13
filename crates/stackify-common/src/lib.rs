@@ -117,6 +117,7 @@ impl ValueType {
             1 => Ok(Self::Integer),
             2 => Ok(Self::Boolean),
             3 => Ok(Self::Enum),
+            4 => Ok(Self::StacksKeychain),
             _ => bail!("Invalid value type value: {}", value),
         }
     }

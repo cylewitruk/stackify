@@ -3,10 +3,7 @@ use crate::db::diesel::model::{Epoch, ServiceType, ServiceUpgradePath, ServiceVe
 pub mod git;
 pub mod names;
 pub mod print;
-pub mod progressbar;
 pub mod stacks_cli;
-
-pub use progressbar::new_progressbar;
 
 pub trait FindById<T> {
     fn find_by_id(&self, id: i32) -> Option<&T>;

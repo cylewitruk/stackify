@@ -148,6 +148,8 @@ CREATE TABLE service_version (
     git_target TEXT NULL,
     cli_name TEXT NOT NULL,
     rebuild_required BOOLEAN NOT NULL DEFAULT 0,
+    last_built_at TIMESTAMP NULL,
+    last_build_commit_hash TEXT NULL,
 
     UNIQUE (service_type_id, version),
     UNIQUE (cli_name),

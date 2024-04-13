@@ -5,7 +5,7 @@ working_dir = "/opt/stackify/data"
 {{#if miner}}
 pox_sync_sample_secs = {{pox_sync_sample_secs}}
 wait_time_for_microblocks = {{wait_time_for_microblocks}}
-seed = "{{seed}}"
+seed = "{{stacks_keychain.keyInfo.privateKey}}"
 miner = true
 mine_microblocks = {{mine_microblocks}}
 
