@@ -121,6 +121,10 @@ pub struct ServiceVersion {
     pub min_epoch: Option<Epoch>,
     pub max_epoch: Option<Epoch>,
     pub git_target: Option<GitTarget>,
+    pub cli_name: String,
+    pub rebuild_required: bool,
+    pub last_built_at: Option<time::PrimitiveDateTime>,
+    pub last_build_commit_hash: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

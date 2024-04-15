@@ -243,6 +243,7 @@ async fn start_stacks_node(
     }
 
     container.start().await?;
+    spinner.stop(format!("{} {}", "✔".green(), &container_name));
 
     Ok(())
 }

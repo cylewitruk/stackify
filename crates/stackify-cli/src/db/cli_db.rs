@@ -256,6 +256,10 @@ impl CliDatabase for AppDb {
                         min_epoch,
                         max_epoch,
                         git_target,
+                        cli_name: db_service_type.cli_name.clone(),
+                        rebuild_required: db_service_version.rebuild_required,
+                        last_built_at: db_service_version.last_built_at,
+                        last_build_commit_hash: db_service_version.last_build_commit_hash.clone(),
                     },
                     name: es.name.clone(),
                     remark: es.comment.clone(),
@@ -356,6 +360,10 @@ impl CliDatabase for AppDb {
                             min_epoch,
                             max_epoch,
                             git_target: types::GitTarget::parse_opt(sv.git_target.as_ref()),
+                            cli_name: service_type.cli_name.clone(),
+                            rebuild_required: sv.rebuild_required,
+                            last_built_at: sv.last_built_at,
+                            last_build_commit_hash: sv.last_build_commit_hash.clone(),
                         }
                     });
 

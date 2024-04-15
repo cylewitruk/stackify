@@ -43,6 +43,23 @@ impl AppDb {
 
 /// Environments
 impl AppDb {
+    pub fn update_service_version_build_details(
+        &self,
+        service_version_id: i32,
+        commit_hash: Option<&str>,
+    ) -> Result<()> {
+        ::diesel::update(service_version::table)
+            .filter(service_version::id.eq(service_version_id))
+            .set((
+                service_version::last_built_at.eq(::diesel::dsl::now),
+                service_version::last_build_commit_hash.eq(commit_hash),
+            ))
+            .execute(&mut *self.conn.borrow_mut())
+            .map(|_| ())?;
+
+        Ok(())
+    }
+
     pub fn add_environment_service(
         &self,
         environment_id: i32,

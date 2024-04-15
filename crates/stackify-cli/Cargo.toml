@@ -1,6 +1,6 @@
 [package]
 name = "stackify-cli"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
 
 [[bin]]
@@ -63,7 +63,7 @@ anstyle-owo-colors = "2.0.0"
 ### UI
 prettytable-rs = "^0.10"
 indicatif = { version = "0.17.8", features = ["improved_unicode"] }
-cliclack = { git = "https://github.com/fadeevab/cliclack.git", branch = "main" }
+cliclack = "0.2.5"
 
 # Database
 diesel = { workspace = true }

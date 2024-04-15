@@ -5,7 +5,7 @@ use stackify_common::types::EnvironmentName;
 
 use crate::{
     cli::{context::CliContext, theme::ThemedObject},
-    docker::{format_network_name, opts::ListContainers, ContainerState},
+    docker::{network_name, opts::ListContainers, ContainerState},
 };
 
 use super::args::DownArgs;
@@ -78,7 +78,7 @@ async fn remove_containers(ctx: &CliContext, env_name: &EnvironmentName) -> Resu
 async fn remove_network(ctx: &CliContext, env_name: &EnvironmentName) -> Result<()> {
     let multi = multi_progress("Removing network");
 
-    let network_name = format_network_name(env_name);
+    let network_name = network_name(env_name);
     let spinner = multi.add(cliclack::spinner());
     spinner.start(format!("Removing network: {}", &network_name));
 

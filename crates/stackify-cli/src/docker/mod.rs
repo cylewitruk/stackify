@@ -5,7 +5,7 @@ use std::{
 };
 
 use color_eyre::{eyre::eyre, Result};
-use stackify_common::types::EnvironmentName;
+use stackify_common::types::{EnvironmentName, EnvironmentService};
 
 pub mod api;
 pub mod opts;
@@ -65,20 +65,20 @@ impl Display for ContainerUser {
     }
 }
 
-pub fn format_environment_container_name(env_name: &EnvironmentName) -> String {
+pub fn network_name(env_name: &EnvironmentName) -> String {
     format!("{}{}", STACKIFY_PREFIX, env_name)
 }
 
-pub fn format_service_container_name(service_name: &str) -> String {
-    format!("{}{}", STACKIFY_PREFIX, service_name)
+pub fn environment_container_name(env_name: &EnvironmentName) -> String {
+    format!("stx-{}", env_name)
 }
 
-pub fn format_network_name(env_name: &EnvironmentName) -> String {
-    format!("{}{}", STACKIFY_PREFIX, env_name)
+pub fn service_container_name(env_service: &EnvironmentService) -> String {
+    format!("stx-{}", env_service.name)
 }
 
 pub enum ActionResult {
-    Success,
+    Success(String),
     Failed(i64, Vec<String>),
     Cancelled,
 }

@@ -5,9 +5,7 @@ start_stacks_node() {
 }
 
 if [ "$MINER" == "false" ]; then
-  while : ; do
-    sleep 1
-  done
+  start_stacks_node
 elif [ "$MINER" == "true" ]; then
   start_stacks_node
 fi

@@ -1,5 +1,4 @@
 use cliclack::{intro, multi_progress, outro_cancel, outro_note, ProgressBar};
-use color_eyre::eyre::eyre;
 use color_eyre::Result;
 use console::style;
 use docker_api::conn::TtyChunk;
@@ -7,6 +6,7 @@ use docker_api::models::ContainerState;
 use docker_api::opts::{ContainerCreateOpts, ContainerStopOpts, LogsOpts};
 use docker_api::Container;
 use futures_util::StreamExt;
+use regex::Regex;
 use stackify_common::types::{EnvironmentName, EnvironmentService};
 use stackify_common::ServiceType;
 use std::collections::HashMap;
@@ -54,10 +54,15 @@ pub async fn exec(ctx: &CliContext, args: BuildArgs) -> Result<()> {
     // the user cancels the build.
     register_shutdown(ctx).await;
 
-    let mut last_result = ActionResult::Success;
+    let mut last_result = ActionResult::Success("".to_string());
 
     // Iterate through each service in the environment and build them.
     for service in env.services.iter() {
+        clilog!(
+            "Building service: {} ({})",
+            service.name,
+            service.version.version
+        );
         if ![
             ServiceType::StacksMiner,
             ServiceType::StacksFollower,
@@ -65,6 +70,11 @@ pub async fn exec(ctx: &CliContext, args: BuildArgs) -> Result<()> {
         ]
         .contains(&ServiceType::from_i32(service.service_type.id)?)
         {
+            clilog!(
+                "Skipping service: {} ({})",
+                service.name,
+                service.service_type.name
+            );
             cliclack::log::step(format!(
                 "Skipping {service_name} {service_type} {reason}",
                 service_name = service.name.cyan(),
@@ -75,8 +85,9 @@ pub async fn exec(ctx: &CliContext, args: BuildArgs) -> Result<()> {
         }
 
         let multi = multi_progress(format!(
-            "Building {} {}",
+            "Building {} version {} {}",
             service.name.cyan(),
+            service.version.version.magenta(),
             format!("[{}]", service.service_type.name).dimmed()
         ));
 
@@ -97,7 +108,7 @@ pub async fn exec(ctx: &CliContext, args: BuildArgs) -> Result<()> {
 
         // Follow logs and show progress
         last_result = follow_build_logs(ctx, &container, &spinner).await?;
-        if !matches!(last_result, ActionResult::Success) {
+        if !matches!(last_result, ActionResult::Success(_)) {
             break;
         }
 
@@ -113,6 +124,11 @@ pub async fn exec(ctx: &CliContext, args: BuildArgs) -> Result<()> {
         clilog!("waiting for build container to stop...");
         let _ = container.wait().await;
         let _ = container.delete().await;
+
+        if let ActionResult::Success(commit_hash) = &last_result {
+            ctx.db
+                .update_service_version_build_details(service.version.id, Some(&commit_hash))?;
+        }
 
         multi.stop();
     }
@@ -210,13 +226,20 @@ async fn create_build_container(
     kill_existing_build_container(ctx).await?;
 
     let mut env_vars = HashMap::<String, String>::new();
-    if ServiceType::StacksMiner.is(service.service_type.id) {
+    if [
+        ServiceType::StacksMiner,
+        ServiceType::StacksFollower,
+        ServiceType::StacksSigner,
+    ]
+    .contains(&ServiceType::from_i32(service.service_type.id)?)
+    {
         let target = service
             .version
             .git_target
             .as_ref()
             .map(|x| x.target.clone())
             .unwrap_or_default();
+
         env_vars.insert("BUILD_STACKS".into(), target);
     }
 
@@ -248,6 +271,8 @@ async fn follow_build_logs(
     let mut accumulated_log = vec![];
 
     let building_text = style("Building...");
+    let commit_hash_regex = Regex::new("^COMMIT_HASH=([a-z0-9]+)$")?;
+    let mut commit_hash = None;
 
     while let Some(log) = log_stream.next().await {
         if ctx.cancellation_token.is_cancelled() {
@@ -259,14 +284,23 @@ async fn follow_build_logs(
             Ok(TtyChunk::StdOut(chunk)) => {
                 let msg = String::from_utf8_lossy(&chunk);
                 let msg = msg.strip_suffix("\n").unwrap_or(&msg).trim();
+                clilog!("STDOUT: {}", msg);
+
                 if msg.is_empty() {
                     continue;
                 }
                 spinner.set_message(format!("{building_text} {msg}", msg = msg.dimmed()));
+
+                commit_hash_regex.captures(&msg).map(|captures| {
+                    clilog!("Commit hash: {}", captures.get(1).unwrap().as_str());
+                    commit_hash = Some(captures.get(1).unwrap().as_str().to_string());
+                });
             }
             Ok(TtyChunk::StdErr(chunk)) => {
                 let msg = String::from_utf8_lossy(&chunk);
                 let msg = msg.strip_suffix("\n").unwrap_or(&msg).trim();
+                //clilog!("STDERR: {}", msg);
+
                 if msg.is_empty() {
                     continue;
                 }
@@ -275,6 +309,7 @@ async fn follow_build_logs(
             }
             Ok(TtyChunk::StdIn(_)) => unreachable!(),
             Err(e) => {
+                clilog!("ERR: {}", e.to_string());
                 spinner.set_message(format!(
                     "\u{8}{building_text} {msg}",
                     msg = e.to_string().dimmed()
@@ -295,8 +330,19 @@ async fn follow_build_logs(
             accumulated_log,
         ));
     } else {
-        spinner.stop(format!("{} {}", "✔".green(), "Build complete"));
+        spinner.stop(format!(
+            "{} {} {}",
+            "✔".green(),
+            "Build complete",
+            format!(
+                "({})",
+                commit_hash.as_ref().map(|x| x.as_str()).unwrap_or_default()
+            )
+            .dimmed()
+        ));
     }
 
-    Ok(ActionResult::Success)
+    Ok(ActionResult::Success(
+        commit_hash.unwrap_or_default().to_string(),
+    ))
 }

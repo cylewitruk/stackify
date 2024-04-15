@@ -22,7 +22,7 @@ use crate::{
     util::names::service_container_name,
 };
 
-use super::{format_network_name, ContainerUser, StackifyContainerDirs};
+use super::{network_name, ContainerUser, StackifyContainerDirs};
 
 #[derive(Clone)]
 pub struct DockerApi {
@@ -146,7 +146,7 @@ impl DockerApi {
         &self,
         env_name: &EnvironmentName,
     ) -> Result<Option<(Id, Network)>> {
-        let network_name = format_network_name(env_name);
+        let network_name = network_name(env_name);
 
         let list_opts = NetworkListOpts::builder()
             .filter([
@@ -278,12 +278,12 @@ impl<'a> DockerOptsHelper<'a> {
                 format!("VERSION={version}"),
                 format!("MINER={is_miner}"),
             ])
-            .entrypoint(["/bin/sh", "-c", "while true; do sleep 1; done"])
-            // .entrypoint([
-            //     "/bin/sh",
-            //     "-c",
-            //     "/entrypoint.sh 2>&1 | tee /var/log/stackify/stacks-node.log",
-            // ])
+            //.entrypoint(["/bin/sh", "-c", "while true; do sleep 1; done"])
+            .entrypoint([
+                "/bin/sh",
+                "-c",
+                "/entrypoint.sh 2>&1 | tee /var/log/stackify/stacks-node.log",
+            ])
             .build();
 
         Ok(opts)

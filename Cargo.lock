@@ -474,8 +474,9 @@ checksum = "98cc8fbded0c607b7ba9dd60cd98df59af97e84d24e49c8557331cfc26d301ce"
 
 [[package]]
 name = "cliclack"
-version = "0.2.4"
-source = "git+https://github.com/fadeevab/cliclack.git?branch=main#b2cc2337799bac48dcc1bbc4e5dc99753a8c3e23"
+version = "0.2.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4febf49beeedc40528e4956995631f1bbdb4d8804ef940b44351f393a996c739"
 dependencies = [
  "console",
  "indicatif",
@@ -3012,7 +3013,7 @@ version = "0.1.0"
 
 [[package]]
 name = "stackify-cli"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "anstyle",
  "anstyle-owo-colors",

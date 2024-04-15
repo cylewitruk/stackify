@@ -3,13 +3,16 @@
 
 cd /src || exit 1
 
+git config --global --add safe.directory '*'
+
 if [ "${BUILD_SBTC}" = "true" ]; then
   echo "Building SBTC" \
     && find ./ ! -name '.' -delete \
     && cp -rT /repos/sbtc /src \
     && git pull \
     && cargo --config /cargo-config.toml install --path sbtc-cli --root ./ \
-    && mv -f ./bin/sbtc /out/sbtc
+    && mv -f ./bin/sbtc /out/sbtc \
+    && echo "COMMIT_HASH=$(git rev-parse --short HEAD)"
 fi
 
 if [ "${BUILD_CLARINET}" = "true" ]; then
@@ -20,7 +23,8 @@ if [ "${BUILD_CLARINET}" = "true" ]; then
     && git pull \
     && git submodule update --recursive \
     && cargo --config /cargo-config.toml build --profile docker --bin clarinet \
-    && mv -f /target/x86_64-unknown-linux-gnu/docker/clarinet /out/clarinet
+    && mv -f /target/x86_64-unknown-linux-gnu/docker/clarinet /out/clarinet \
+    && echo "COMMIT_HASH=$(git rev-parse --short HEAD)"
 fi
 
 if [ -n "${BUILD_STACKS}" ]; then
@@ -29,8 +33,11 @@ if [ -n "${BUILD_STACKS}" ]; then
   find ./ ! -name '.' -delete 
   echo "Copying stacks-core source files"
   cp -rT /repos/stacks-core /src
+  echo "Fetching the latest changes"
+  git fetch --all
   echo "Checking out the specified tag/branch/commit (${BUILD_STACKS})"
-  git checkout "${BUILD_STACKS}" 
+  git checkout "${BUILD_STACKS}"
+  echo "COMMIT_HASH=$(git log -n 1 --pretty=format:"%H" "${BUILD_STACKS}")"
   echo "Pulling the latest changes"
   git pull
   echo "Building stacks-node"
