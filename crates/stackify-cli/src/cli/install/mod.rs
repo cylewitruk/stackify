@@ -6,7 +6,7 @@ use docker_api::opts::ImageBuildOpts;
 use crate::{
     cli::{
         context::CliContext,
-        init::{db::load_default_configuration_params, docker::clean_images},
+        install::{db::load_default_configuration_params, docker::clean_images},
         log::clilog,
         theme::THEME,
         ABOUT,
@@ -18,7 +18,7 @@ use self::{
     assets::copy_assets,
     db::load_default_configuration_files,
     docker::build_image,
-    downloads::{download_and_extract_bitcoin_core, download_dasel},
+    downloads::download_and_extract_bitcoin_core,
 };
 
 use super::theme::ThemedObject;

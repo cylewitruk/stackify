@@ -27,7 +27,7 @@ async fn main() -> Result<()> {
 
     match cli.command {
         Commands::Initialize(args) => {
-            cli::init::exec(&context, args).await.handle()?;
+            cli::install::exec(&context, args).await.handle()?;
         }
         Commands::Uninstall => {
             cli::uninstall::exec(&context).await.handle()?;

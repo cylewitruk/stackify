@@ -14,7 +14,7 @@ use self::clean::CleanArgs;
 use self::config::args::ConfigArgs;
 use self::env::args::EnvArgs;
 use self::info::InfoArgs;
-use self::init::InitArgs;
+use self::install::InitArgs;
 use self::theme::THEME;
 
 // Top-level command handlers
@@ -23,7 +23,7 @@ pub mod config;
 pub mod context;
 pub mod env;
 pub mod info;
-pub mod init;
+pub mod install;
 pub mod log;
 pub mod network;
 pub mod show;
