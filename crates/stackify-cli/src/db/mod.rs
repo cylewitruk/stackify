@@ -5,6 +5,7 @@ use std::collections::HashMap;
 
 use ::diesel::connection::SimpleConnection;
 use ::diesel::prelude::*;
+use ::diesel::upsert::excluded;
 use ::diesel::{delete, insert_into, update};
 use color_eyre::eyre::bail;
 use color_eyre::eyre::Report;
@@ -43,6 +44,31 @@ impl AppDb {
 
 /// Environments
 impl AppDb {
+    pub fn set_service_param_value(
+        &self,
+        env_svc_id: i32,
+        param_id: i32,
+        value: String,
+    ) -> Result<()> {
+        insert_into(environment_service_param::table)
+            .values((
+                environment_service_param::environment_service_id.eq(env_svc_id),
+                environment_service_param::service_type_param_id.eq(param_id),
+                environment_service_param::value.eq(&value),
+            ))
+            .on_conflict((
+                environment_service_param::environment_service_id,
+                environment_service_param::service_type_param_id,
+            ))
+            .do_update()
+            .set(environment_service_param::value.eq(&value))
+            .execute(&mut *self.conn.borrow_mut())
+            .map(|_| ())
+            .map_err(Report::from)?;
+
+        Ok(())
+    }
+
     pub fn update_service_version_build_details(
         &self,
         service_version_id: i32,

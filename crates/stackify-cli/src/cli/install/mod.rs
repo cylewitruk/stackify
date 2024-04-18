@@ -15,9 +15,7 @@ use crate::{
 };
 
 use self::{
-    assets::copy_assets,
-    db::load_default_configuration_files,
-    docker::build_image,
+    assets::copy_assets, db::load_default_configuration_files, docker::build_image,
     downloads::download_and_extract_bitcoin_core,
 };
 

@@ -111,8 +111,7 @@ pub enum Commands {
     /// Initializes the local environment in preparation for building & running
     /// Stacks environments. This will download several binaries and build several
     /// Docker images and will take some time.
-    #[clap(visible_alias = "init")]
-    Initialize(InitArgs),
+    Install(InitArgs),
     /// Commands for configuring, manipulating and interacting with environments.
     #[clap(visible_alias = "env")]
     Environment(EnvArgs),

@@ -5,9 +5,7 @@ use stackify_common::{FileType, ServiceType, ValueType};
 
 use crate::{
     cli::{context::CliContext, log::clilog, theme::ThemedObject},
-    db::{
-        diesel::schema::service_type_param::allowed_values, InsertServiceFile, InsertServiceParam,
-    },
+    db::{InsertServiceFile, InsertServiceParam},
     includes::{BITCOIN_CONF, STACKS_NODE_CONF, STACKS_SIGNER_CONF},
 };
 
@@ -200,6 +198,21 @@ pub fn load_default_configuration_params(ctx: &CliContext, force: bool) -> Resul
             allowed_values: None,
             is_required: true,
             value_type: ValueType::StacksKeychain,
+        },
+        force,
+    )?;
+
+    assert_param(
+        ctx,
+        AssertParam {
+            name: "Stacks Node",
+            service_types: vec![ServiceType::StacksSigner],
+            key: "stacks_node",
+            description: "The Stacks node that this signer should receive events from",
+            default_value: None,
+            allowed_values: None,
+            is_required: true,
+            value_type: ValueType::Service,
         },
         force,
     )?;

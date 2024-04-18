@@ -108,6 +108,7 @@ pub enum ValueType {
     Boolean = 2,
     Enum = 3,
     StacksKeychain = 4,
+    Service,
 }
 
 impl ValueType {
@@ -118,6 +119,7 @@ impl ValueType {
             2 => Ok(Self::Boolean),
             3 => Ok(Self::Enum),
             4 => Ok(Self::StacksKeychain),
+            5 => Ok(Self::Service),
             _ => bail!("Invalid value type value: {}", value),
         }
     }

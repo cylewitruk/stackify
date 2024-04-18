@@ -1,10 +1,14 @@
 use clap::Args;
 use cliclack::intro;
-use color_eyre::{eyre::eyre, Result};
-use stackify_common::{types::EnvironmentName, ConfigElementKind};
+use color_eyre::{
+    eyre::{bail, eyre},
+    Result,
+};
+use stackify_common::{types::EnvironmentName, ConfigElementKind, ServiceType, ValueType};
 
 use crate::{
     cli::{context::CliContext, theme::ThemedObject},
+    db::cli_db::CliDatabase,
     util::FindById,
 };
 
@@ -20,10 +24,10 @@ pub struct ServiceConfigArgs {
 pub fn exec(ctx: &CliContext, args: ServiceConfigArgs) -> Result<()> {
     intro("Configure Environment Services".bold())?;
     let env_name = EnvironmentName::new(&args.env_name)?;
-    let env = ctx.db.get_environment_by_name(env_name.as_ref())?;
+    let env = ctx.db.load_environment(env_name.as_ref())?;
     let service_types = ctx.db.list_service_types()?;
     let service_versions = ctx.db.list_service_versions()?;
-    let service_type_files = ctx.db.list_service_type_files()?;
+    // let service_type_files = ctx.db.list_service_type_files()?;
     let services = ctx
         .db
         .list_environment_services_for_environment_id(env.id)?;
@@ -68,53 +72,93 @@ pub fn exec(ctx: &CliContext, args: ServiceConfigArgs) -> Result<()> {
         )
         .interact()?;
 
-    let files = ctx.db.list_environment_service_files(selected_service.id)?;
+    match ValueType::from_i32(selected_param.value_type_id)? {
+        ValueType::Boolean => {
+            let value = cliclack::select("Select a value:")
+                .items(&[(true, "true", ""), (false, "false", "")])
+                .interact()?;
+            ctx.db.set_service_param_value(
+                selected_service.id,
+                selected_param.id,
+                value.to_string(),
+            )?;
+        }
+        ValueType::Integer => {
+            let value: String = cliclack::input("Enter a value:").interact()?;
+            let value = value.parse::<i32>()?;
+            ctx.db.set_service_param_value(
+                selected_service.id,
+                selected_param.id,
+                value.to_string(),
+            )?;
+        }
+        ValueType::String => {
+            let value = cliclack::input("Enter a value:").interact()?;
+            ctx.db
+                .set_service_param_value(selected_service.id, selected_param.id, value)?;
+        }
+        // ValueType::Enum => {
+        //     let allowed_values = ctx
+        //         .db
+        //         .list_service_type_param_allowed_values(selected_param.id)?;
+        //     let value = cliclack::select("Select a value:")
+        //         .items(
+        //             &allowed_values
+        //                 .iter()
+        //                 .map(|x| (x.clone(), x.value.clone(), x.description.clone()))
+        //                 .collect::<Vec<_>>(),
+        //         )
+        //         .interact()?;
+        //     ctx.db.set_service_param_value(selected_param.id, value.value)?;
+        // },
+        ValueType::StacksKeychain => {
+            let value = cliclack::input("Enter a value:").interact()?;
+            ctx.db
+                .set_service_param_value(selected_service.id, selected_param.id, value)?;
+        }
+        ValueType::Service => match ServiceType::from_i32(selected_service_type.id)? {
+            ServiceType::StacksSigner => {
+                let stacks_peers = env
+                    .services
+                    .iter()
+                    .filter(|service| {
+                        [ServiceType::StacksMiner, ServiceType::StacksFollower]
+                            .contains(&ServiceType::from_i32(service.service_type.id).unwrap())
+                    })
+                    .filter(|svc| &svc.name != &selected_service.name)
+                    .map(|service| service.name.clone())
+                    .collect::<Vec<_>>();
 
-    let mut select_config_element = cliclack::select("What would you like to modify?");
-    let mut config_elements = Vec::new();
-    for file in files.iter() {
-        let service_type_file = service_type_files
-            .iter()
-            .find(|x| x.id == file.service_type_file_id)
-            .ok_or(eyre!(
-                "Failed to map environment service file to service type file."
-            ))?;
+                let stacks_node =
+                    cliclack::select("Which Stacks node should this signer receive events from?")
+                        .items(
+                            &stacks_peers
+                                .iter()
+                                .map(|sn| (sn.clone(), sn, ""))
+                                .collect::<Vec<_>>(),
+                        )
+                        .interact()?;
 
-        config_elements.push(ConfigElement {
-            kind: ConfigElementKind::File,
-            id: file.id,
-            name: service_type_file.filename.clone(),
-            help_text: service_type_file.description.clone(),
-        });
+                ctx.db.set_service_param_value(
+                    selected_service.id,
+                    selected_param.id,
+                    stacks_node,
+                )?;
+            }
+            _ => bail!("Unsupported service type for ValueType::Service"),
+        },
+        _ => bail!("Unsupported value type"),
     }
 
-    for param in ctx
-        .db
-        .list_service_type_params_for_service_type(selected_service_type.id)?
-    {
-        config_elements.push(ConfigElement {
-            kind: ConfigElementKind::Param,
-            id: param.id,
-            name: param.name.clone(),
-            help_text: param.description.clone(),
-        });
-    }
+    cliclack::outro_note(
+        "Configuration Updated".green().bold(),
+        format!(
+            "The configuration parameter {} has been updated for {}.",
+            selected_param.name.cyan(),
+            env_name.magenta()
+        ),
+    )?;
 
-    select_config_element = select_config_element.items(
-        &config_elements
-            .into_iter()
-            .map(|x| (x.clone(), x.name, x.help_text))
-            .collect::<Vec<_>>(),
-    );
-
-    let selected_element = select_config_element.interact()?;
-
-    // let editor = scrawl::with(&"Hello, world!");
-    // let output = editor
-    //     .expect("failed to open default editor");
-    // let text = output.to_string()
-    //     .expect("failed to convert output to string");
-    // cliclack::log::remark(text)?;
     Ok(())
 }
 

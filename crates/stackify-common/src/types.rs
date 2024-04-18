@@ -142,6 +142,7 @@ impl Display for Epoch {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Environment {
+    pub id: i32,
     pub name: EnvironmentName,
     pub services: Vec<EnvironmentService>,
     pub epochs: Vec<EnvironmentEpoch>,

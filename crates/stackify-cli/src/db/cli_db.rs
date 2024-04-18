@@ -310,6 +310,7 @@ impl CliDatabase for AppDb {
             .collect::<Vec<_>>();
 
         let ret = types::Environment {
+            id: env.id,
             name: env_name,
             services,
             epochs,

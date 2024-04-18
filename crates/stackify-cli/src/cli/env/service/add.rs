@@ -11,7 +11,7 @@ use crate::{
         log::clilog,
         theme::{ThemedObject, THEME},
     },
-    db::diesel::model::Epoch,
+    db::{cli_db::CliDatabase, diesel::model::Epoch},
     util::{stacks_cli::MakeKeychainResult, FilterByServiceType},
 };
 
@@ -30,7 +30,7 @@ pub struct ServiceAddArgs {
 
 pub async fn exec(ctx: &CliContext, args: ServiceAddArgs) -> Result<()> {
     let env_name = EnvironmentName::new(&args.env_name)?;
-    let env = ctx.db.get_environment_by_name(env_name.as_ref())?;
+    let env = ctx.db.load_environment(env_name.as_ref())?;
     let service_types = ctx.db.list_service_types()?;
     let epochs = ctx.db.list_epochs()?;
 
@@ -152,11 +152,50 @@ pub async fn exec(ctx: &CliContext, args: ServiceAddArgs) -> Result<()> {
         random_hex(4)
     );
 
+    let stacks_keychain = if [
+        ServiceType::StacksMiner,
+        ServiceType::StacksFollower,
+        ServiceType::StacksSigner,
+    ]
+    .contains(&ServiceType::from_i32(service_type.id)?)
+    {
+        Some(generate_stacks_keychain(ctx).await?)
+    } else {
+        None
+    };
+
     cliclack::log::success(format!(
         "{}\n{}",
         "Configuration complete!".green().bold(),
         "Please review the above and confirm the addition of the service to the environment."
     ))?;
+
+    let stacks_node = if ServiceType::StacksSigner.is(service_type.id) {
+        let stacks_peers = env
+            .services
+            .iter()
+            .filter(|service| {
+                [ServiceType::StacksMiner, ServiceType::StacksFollower]
+                    .contains(&ServiceType::from_i32(service.service_type.id).unwrap())
+            })
+            .filter(|svc| &svc.name != &name)
+            .map(|service| service.name.clone())
+            .collect::<Vec<_>>();
+
+        let stacks_node =
+            cliclack::select("Which Stacks node should this signer receive events from?")
+                .items(
+                    &stacks_peers
+                        .iter()
+                        .map(|sn| (sn.clone(), sn, ""))
+                        .collect::<Vec<_>>(),
+                )
+                .interact()?;
+
+        Some(stacks_node)
+    } else {
+        None
+    };
 
     let add = cliclack::confirm("Add the above service to the environment?").interact()?;
 
@@ -165,86 +204,12 @@ pub async fn exec(ctx: &CliContext, args: ServiceAddArgs) -> Result<()> {
         return Ok(());
     }
 
-    let stacks_keychain = if [
-        ServiceType::StacksMiner,
-        ServiceType::StacksFollower,
-        ServiceType::StacksSigner,
-    ]
-    .contains(&ServiceType::from_i32(service_type.id)?)
-    {
-        let generate_keychain_spinner = cliclack::spinner();
-        generate_keychain_spinner.start("Generating new keychain...");
-        let cli = ctx
-            .docker()
-            .api()
-            .containers()
-            .create(&ctx.docker().opts_for().generate_stacks_keychain())
-            .await?;
-        let mut cli_attach = cli.attach().await?;
-        let mut cli_stdout = vec![];
-        let mut cli_stderr = vec![];
-        cli.start().await?;
-        while let Some(result) = cli_attach.next().await {
-            match result {
-                Ok(chunk) => match chunk {
-                    TtyChunk::StdOut(data) => {
-                        let str = String::from_utf8(data)?;
-                        cli_stdout.push(str);
-                    }
-                    TtyChunk::StdErr(data) => {
-                        let str = String::from_utf8(data)?;
-                        cli_stderr.push(str);
-                    }
-                    TtyChunk::StdIn(_) => {
-                        clilog!("received stdin tty chunk while executing stacks cli, this shouldn't happen");
-                    }
-                },
-                Err(e) => {
-                    cliclack::log::error(format!("Error: {}", e))?;
-                }
-            }
-        }
-
-        let cli_result = cli.wait().await?;
-
-        if cli_result.status_code == 0 {
-            let keychain = MakeKeychainResult::from_json(&cli_stdout.join(""))?;
-            generate_keychain_spinner.stop(format!(
-                "{} Generate new keychain",
-                THEME.read().unwrap().success_symbol()
-            ));
-            let mut msg_lines = vec![];
-            let wrapped_mnemonic = textwrap::wrap(
-                &keychain.mnemonic,
-                Options::new(80).subsequent_indent("                "),
-            );
-            msg_lines.push(
-                "A new keychain has been generated for this service. Here are the details:\n"
-                    .cyan()
-                    .to_string(),
-            );
-            msg_lines.push(format!("‣ Mnemonic:     {}", wrapped_mnemonic.join("\n")));
-            msg_lines.push(format!("‣ Private Key:  {}", keychain.key_info.private_key));
-            msg_lines.push(format!("‣ Public Key:   {}", keychain.key_info.public_key));
-            msg_lines.push(format!("‣ STX Address:  {}", keychain.key_info.address));
-            msg_lines.push(format!("‣ BTC Address:  {}", keychain.key_info.btc_address));
-            msg_lines.push(format!("‣ WIF:          {}", keychain.key_info.wif));
-            msg_lines.push(format!("‣ Index:        {}", keychain.key_info.index));
-            cliclack::note("Keychain", msg_lines.join("\n"))?;
-
-            Some(keychain)
-        } else {
-            bail!("Failed to generate keychain: {:?}", cli_stderr);
-        }
-    } else {
-        None
-    };
-
     // Add the service
     let env_service =
         ctx.db
             .add_environment_service(env.id, service_version.id, &name, comment.as_deref())?;
 
+    // If this is a Stacks service then generate a new Stacks keychain
     if let Some(keychain) = stacks_keychain {
         clilog!("Adding keychain to service: {:?}", keychain);
         let param_id = ctx
@@ -254,6 +219,16 @@ pub async fn exec(ctx: &CliContext, args: ServiceAddArgs) -> Result<()> {
             .add_environment_service_param(env_service.id, param_id, &keychain.to_json()?)?;
     }
 
+    if let Some(stacks_node) = stacks_node {
+        let param_id = ctx
+            .db
+            .find_service_type_param_id_by_key(service_type.id, "stacks_node")?;
+
+        ctx.db
+            .add_environment_service_param(env_service.id, param_id, &stacks_node)?;
+    }
+
+    // Add start actions to the service depending on what the user selected
     if let StartAt::BlockHeight(block_height) = start_at {
         ctx.db.add_environment_service_action(
             env_service.id,
@@ -270,17 +245,17 @@ pub async fn exec(ctx: &CliContext, args: ServiceAddArgs) -> Result<()> {
         )?;
     }
 
-    for cfg_file in ctx
-        .db
-        .list_service_files_for_service_type(service_type.id)?
-    {
-        ctx.db.add_environment_service_file(
-            env.id,
-            env_service.id,
-            cfg_file.id,
-            &cfg_file.default_contents,
-        )?;
-    }
+    // for cfg_file in ctx
+    //     .db
+    //     .list_service_files_for_service_type(service_type.id)?
+    // {
+    //     ctx.db.add_environment_service_file(
+    //         env.id,
+    //         env_service.id,
+    //         cfg_file.id,
+    //         &cfg_file.default_contents,
+    //     )?;
+    // }
 
     //cliclack::log::success("Service added successfully!")?;
     cliclack::outro(format!(
@@ -290,6 +265,73 @@ pub async fn exec(ctx: &CliContext, args: ServiceAddArgs) -> Result<()> {
     ))?;
 
     Ok(())
+}
+
+async fn generate_stacks_keychain(ctx: &CliContext) -> Result<MakeKeychainResult> {
+    let generate_keychain_spinner = cliclack::spinner();
+    generate_keychain_spinner.start("Generating new keychain...");
+    let cli = ctx
+        .docker()
+        .api()
+        .containers()
+        .create(&ctx.docker().opts_for().generate_stacks_keychain())
+        .await?;
+    let mut cli_attach = cli.attach().await?;
+    let mut cli_stdout = vec![];
+    let mut cli_stderr = vec![];
+    cli.start().await?;
+    while let Some(result) = cli_attach.next().await {
+        match result {
+            Ok(chunk) => match chunk {
+                TtyChunk::StdOut(data) => {
+                    let str = String::from_utf8(data)?;
+                    cli_stdout.push(str);
+                }
+                TtyChunk::StdErr(data) => {
+                    let str = String::from_utf8(data)?;
+                    cli_stderr.push(str);
+                }
+                TtyChunk::StdIn(_) => {
+                    clilog!("received stdin tty chunk while executing stacks cli, this shouldn't happen");
+                }
+            },
+            Err(e) => {
+                cliclack::log::error(format!("Error: {}", e))?;
+            }
+        }
+    }
+
+    let cli_result = cli.wait().await?;
+
+    if cli_result.status_code == 0 {
+        let keychain = MakeKeychainResult::from_json(&cli_stdout.join(""))?;
+        generate_keychain_spinner.stop(format!(
+            "{} Generate new keychain",
+            THEME.read().unwrap().success_symbol()
+        ));
+        let mut msg_lines = vec![];
+        let wrapped_mnemonic = textwrap::wrap(
+            &keychain.mnemonic,
+            Options::new(80).subsequent_indent("                "),
+        );
+        msg_lines.push(
+            "A new keychain has been generated for this service. Here are the details:\n"
+                .cyan()
+                .to_string(),
+        );
+        msg_lines.push(format!("‣ Mnemonic:     {}", wrapped_mnemonic.join("\n")));
+        msg_lines.push(format!("‣ Private Key:  {}", keychain.key_info.private_key));
+        msg_lines.push(format!("‣ Public Key:   {}", keychain.key_info.public_key));
+        msg_lines.push(format!("‣ STX Address:  {}", keychain.key_info.address));
+        msg_lines.push(format!("‣ BTC Address:  {}", keychain.key_info.btc_address));
+        msg_lines.push(format!("‣ WIF:          {}", keychain.key_info.wif));
+        msg_lines.push(format!("‣ Index:        {}", keychain.key_info.index));
+        cliclack::note("Keychain", msg_lines.join("\n"))?;
+
+        Ok(keychain)
+    } else {
+        bail!("Failed to generate keychain: {:?}", cli_stderr);
+    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
