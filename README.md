@@ -88,3 +88,10 @@ fc66e442d606   stackify-runtime:latest   "/bin/sh -c '/entryp…"   7 minutes ag
 2d0ee8245cb8   stackify-runtime:latest   "/bin/sh /entrypoint…"   7 minutes ago   Up 7 minutes             stx-foo-bitcoin-miner-9e20268c
 a71f95f0add9   busybox:latest            "/bin/sh -c 'while :…"   7 minutes ago   Up 7 minutes             stx-foo
 ```
+
+#### Viewing Environments
+
+You can view environments and their general configuration using the `stackify env ls` command:
+
+![List Environments](docs/assets/list_env.png)
+
