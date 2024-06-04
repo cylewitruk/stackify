@@ -76,3 +76,15 @@ stackify env start FOO
 ```
 
 ![Start Environment](docs/assets/start_env.gif)
+
+Once the environment has started, you should be able to see your environment running via `docker ps`, for example:
+
+```
+➜ docker ps
+CONTAINER ID   IMAGE                     COMMAND                  CREATED         STATUS         PORTS     NAMES
+2257523b79b1   stackify-runtime:latest   "/bin/sh -c '/entryp…"   7 minutes ago   Up 7 minutes             stx-foo-stacks-signer-9fcfcbba
+fc66e442d606   stackify-runtime:latest   "/bin/sh -c '/entryp…"   7 minutes ago   Up 7 minutes             stx-foo-stacks-signer-5c27527f
+9233eaaa355d   stackify-runtime:latest   "/bin/sh -c '/entryp…"   7 minutes ago   Up 7 minutes             stx-foo-stacks-miner-acde5630
+2d0ee8245cb8   stackify-runtime:latest   "/bin/sh /entrypoint…"   7 minutes ago   Up 7 minutes             stx-foo-bitcoin-miner-9e20268c
+a71f95f0add9   busybox:latest            "/bin/sh -c 'while :…"   7 minutes ago   Up 7 minutes             stx-foo
+```
