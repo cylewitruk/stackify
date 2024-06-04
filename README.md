@@ -47,7 +47,9 @@ Once your environment is created, you will need to add services to it for it to 
 
 #### Add Services
 
-Each environment can have one or many services. Stackify services represent a specific version and configuration of Stacks network components. Stackify provides an interactive prompt for configuring new services in environments. 
+Each environment can have one or many services. Stackify services represent a specific version and configuration of Stacks network components. Stackify provides an interactive prompt for configuring new services in environments.
+
+**Note:** It is completely valid and _part of the use case_ to mix and match different versions of services and configurations, such as start/stop block heights/epochs, etc.!
 
 To add a new service, run the following command (replacing `FOO` with the name of your environment):
 
