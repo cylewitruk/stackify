@@ -229,7 +229,6 @@ async fn create_build_container(
     if [
         ServiceType::StacksMiner,
         ServiceType::StacksFollower,
-        ServiceType::StacksSigner,
     ]
     .contains(&ServiceType::from_i32(service.service_type.id)?)
     {
@@ -241,6 +240,19 @@ async fn create_build_container(
             .unwrap_or_default();
 
         env_vars.insert("BUILD_STACKS".into(), target);
+    } else if [
+        ServiceType::StacksSigner,
+    ]
+    .contains(&ServiceType::from_i32(service.service_type.id)?)
+    {
+        let target = service
+            .version
+            .git_target
+            .as_ref()
+            .map(|x| x.target.clone())
+            .unwrap_or_default();
+
+        env_vars.insert("BUILD_SIGNER".into(), target);
     }
 
     let create_opts = ContainerCreateOpts::for_stackify_build_container(
@@ -289,6 +301,7 @@ async fn follow_build_logs(
                 if msg.is_empty() {
                     continue;
                 }
+                
                 spinner.set_message(format!("{building_text} {msg}", msg = msg.dimmed()));
 
                 commit_hash_regex.captures(&msg).map(|captures| {

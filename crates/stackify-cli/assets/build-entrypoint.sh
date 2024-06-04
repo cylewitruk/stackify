@@ -45,3 +45,22 @@ if [ -n "${BUILD_STACKS}" ]; then
   echo "Moving the built binary to the output directory"
   mv -f /target/x86_64-unknown-linux-gnu/docker/stacks-node /out/stacks-node-"${BUILD_STACKS}"
 fi
+
+if [ -n "${BUILD_SIGNER}" ]; then
+  echo "Building Stacks signer"
+  echo "Removing existing source files (if any)"
+  find ./ ! -name '.' -delete 
+  echo "Copying stacks-core source files"
+  cp -rT /repos/stacks-core /src
+  echo "Fetching the latest changes"
+  git fetch --all
+  echo "Checking out the specified tag/branch/commit (${BUILD_SIGNER})"
+  git checkout "${BUILD_SIGNER}"
+  echo "COMMIT_HASH=$(git log -n 1 --pretty=format:"%H" "${BUILD_SIGNER}")"
+  echo "Pulling the latest changes"
+  git pull
+  echo "Building stacks-signer"
+  cargo --config /cargo-config.toml build --profile docker --package stacks-signer --bin stacks-signer
+  echo "Moving the built binary to the output directory"
+  mv -f /target/x86_64-unknown-linux-gnu/docker/stacks-signer /out/stacks-signer-"${BUILD_SIGNER}"
+fi

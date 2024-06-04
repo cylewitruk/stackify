@@ -141,7 +141,7 @@ CREATE TABLE service_type_param (
 );
 
 CREATE TABLE service_version (
-    id INTEGER PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     service_type_id INTEGER NOT NULL,
     version TEXT NOT NULL,
     minimum_epoch_id INTEGER NULL,
@@ -155,30 +155,42 @@ CREATE TABLE service_version (
     UNIQUE (service_type_id, version),
     UNIQUE (cli_name),
     FOREIGN KEY (service_type_id) REFERENCES service_type (id)
-) WITHOUT ROWID;
+);
 
-INSERT INTO service_version (id, service_type_id, version, cli_name) 
-    VALUES (0, 0, '26.0', 'bitcoin-miner-26-0');      -- Bitcoin Miner
-INSERT INTO service_version (id, service_type_id, version, cli_name) 
-    VALUES (1, 1, '26.0', 'bitcoin-follower-26-0');      -- Bitcoin Follower
-INSERT INTO service_version (id, service_type_id, version, maximum_epoch_id, git_target, cli_name) 
-    VALUES (2, 2, '2.4', 6, 'tag:2.4.0.0.4', 'stacks-miner-2-4');       -- Stacks Miner
-INSERT INTO service_version (id, service_type_id, version, git_target, cli_name) 
-    VALUES (3, 2, 'nakamoto', 'branch:next', 'stacks-miner-nakamoto');  -- Stacks Miner
-INSERT INTO service_version (id, service_type_id, version, maximum_epoch_id, git_target, cli_name) 
-    VALUES (4, 3, '2.4', 6, 'tag:2.4.0.0.4', 'stacks-follower-2-4');       -- Stacks Follower
-INSERT INTO service_version (id, service_type_id, version, git_target, cli_name) 
-    VALUES (5, 3, 'nakamoto', 'branch:next', 'stacks-follower-nakamoto');  -- Stacks Follower
-INSERT INTO service_version (id, service_type_id, version, git_target, cli_name) 
-    VALUES (6, 4, 'nakamoto', 'branch:next', 'stacks-signer-nakamoto');  -- Stacks Signer
-INSERT INTO service_version (id, service_type_id, version, maximum_epoch_id, git_target, cli_name) 
-    VALUES (7, 5, 'PoX-3', 6, 'tag:2.4.0.0.4', 'stacks-stacker-self-pox-3');     -- Stacks Stacker (Self)
-INSERT INTO service_version (id, service_type_id, version, minimum_epoch_id, git_target, cli_name) 
-    VALUES (8, 5, 'PoX-4', 7, 'branch:next', 'stacks-stacker-self-pox-4');     -- Stacks Stacker (Self)
-INSERT INTO service_version (id, service_type_id, version, maximum_epoch_id, git_target, cli_name) 
-    VALUES (9, 6, 'PoX-3', 6, 'tag:2.4.0.0.4', 'stacks-stacker-pool-pox-3');     -- Stacks Stacker (Pool)
-INSERT INTO service_version (id, service_type_id, version, minimum_epoch_id, git_target, cli_name) 
-    VALUES (10, 6, 'PoX-4', 7, 'branch:next', 'stacks-stacker-pool-pox-4');     -- Stacks Stacker (Pool)
+INSERT INTO service_version (service_type_id, version, cli_name) 
+    VALUES (0, '26.0', 'bitcoin-miner-26-0');      -- Bitcoin Miner
+INSERT INTO service_version (service_type_id, version, cli_name) 
+    VALUES (1, '26.0', 'bitcoin-follower-26-0');      -- Bitcoin Follower
+INSERT INTO service_version (service_type_id, version, maximum_epoch_id, git_target, cli_name) 
+    VALUES (2, '2.4.0.0.4', 6, 'tag:2.4.0.0.4', 'stacks-miner-2.4.0.0.4');       -- Stacks Miner
+INSERT INTO service_version (service_type_id, version, git_target, cli_name) 
+    VALUES (2, 'next', 'branch:next', 'stacks-miner-next');  -- Stacks Miner
+INSERT INTO service_version (service_type_id, version, git_target, cli_name) 
+    VALUES (2, 'develop', 'branch:develop', 'stacks-miner-develop');  -- Stacks Miner
+INSERT INTO service_version (service_type_id, version, git_target, cli_name) 
+    VALUES (2, '2.5.0.0.3', 'tag:2.5.0.0.3', 'stacks-miner-2.5.0.0.3');  -- Stacks Miner
+INSERT INTO service_version (service_type_id, version, maximum_epoch_id, git_target, cli_name) 
+    VALUES (3, '2.4.0.0.4', 6, 'tag:2.4.0.0.4', 'stacks-follower-2.4.0.0.4');       -- Stacks Follower
+INSERT INTO service_version (service_type_id, version, git_target, cli_name) 
+    VALUES (3, 'next', 'branch:next', 'stacks-follower-next');  -- Stacks Follower
+INSERT INTO service_version (service_type_id, version, git_target, cli_name) 
+    VALUES (3, 'develop', 'branch:develop', 'stacks-follower-develop');  -- Stacks Follower
+INSERT INTO service_version (service_type_id, version, git_target, cli_name) 
+    VALUES (3, '2.5.0.0.3', 'tag:2.5.0.0.3', 'stacks-follower-2.5.0.0.3');  -- Stacks Follower
+INSERT INTO service_version (service_type_id, version, git_target, cli_name) 
+    VALUES (4, 'next', 'branch:next', 'stacks-signer-next');  -- Stacks Signer
+INSERT INTO service_version (service_type_id, version, git_target, cli_name) 
+    VALUES (4, 'develop', 'branch:develop', 'stacks-signer-develop');  -- Stacks Signer
+INSERT INTO service_version (service_type_id, version, git_target, cli_name) 
+    VALUES (4, '2.5.0.0.3', 'tag:2.5.0.0.3', 'stacks-signer-2.5.0.0.3');  -- Stacks Signer
+INSERT INTO service_version (service_type_id, version, maximum_epoch_id, git_target, cli_name) 
+    VALUES (5, 'PoX-3', 6, 'tag:2.4.0.0.4', 'stacks-stacker-self-pox-3');     -- Stacks Stacker (Self)
+INSERT INTO service_version (service_type_id, version, minimum_epoch_id, git_target, cli_name) 
+    VALUES (5, 'PoX-4', 7, 'branch:next', 'stacks-stacker-self-pox-4');     -- Stacks Stacker (Self)
+INSERT INTO service_version (service_type_id, version, maximum_epoch_id, git_target, cli_name) 
+    VALUES (6, 'PoX-3', 6, 'tag:2.4.0.0.4', 'stacks-stacker-pool-pox-3');     -- Stacks Stacker (Pool)
+INSERT INTO service_version (service_type_id, version, minimum_epoch_id, git_target, cli_name) 
+    VALUES (6, 'PoX-4', 7, 'branch:next', 'stacks-stacker-pool-pox-4');     -- Stacks Stacker (Pool)
 
 CREATE TABLE service_upgrade_path (
     id INTEGER PRIMARY KEY,

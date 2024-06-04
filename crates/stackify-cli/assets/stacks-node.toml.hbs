@@ -25,6 +25,17 @@ disable_block_download = true
 disable_inbound_handshakes = true
 disable_inbound_walks = true
 walk_interval = 0
+# Set your auth token, which the signer uses
+# This should match the auth_password field of your signer config
+block_proposal_token = "stacks"
+
+{{#each event_observers as |e|}}
+[[events_observer]]
+endpoint = "{{e.endpoint}}"
+retry_count = {{e.retry_count}}
+include_data_events = {{e.include_data_events}}
+events_keys = [{{#each e.event_keys as |k|}}"{{k}}"{{#unless @last}}, {{/unless}}{{/each}}]
+{{/each}}
 
 [burnchain]
 chain = "bitcoin"

@@ -1,6 +1,6 @@
 use std::{fmt::Display, ops::Deref, path::PathBuf};
 
-use color_eyre::{eyre::bail, Result};
+use color_eyre::{eyre::{bail, eyre}, Result};
 use regex::Regex;
 
 use crate::{FileType, ServiceType, ValueType};
@@ -88,6 +88,9 @@ pub struct EnvironmentService {
     pub params: Vec<EnvironmentServiceParam>,
 }
 
+impl EnvironmentService {
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EnvironmentEpoch {
     pub id: i32,
@@ -147,6 +150,19 @@ pub struct Environment {
     pub services: Vec<EnvironmentService>,
     pub epochs: Vec<EnvironmentEpoch>,
     pub stacks_accounts: Vec<EnvironmentStacksAccount>,
+}
+
+impl Environment {
+    pub fn find_service_instances(&self, service_type: ServiceType, name: &str) -> Vec<&EnvironmentService> {
+        let service_type_id = service_type as i32;
+
+        self
+            .services
+            .iter()
+            .filter(|service| service.service_type.id == service_type_id)
+            .filter(|svc| &svc.name != name)
+            .collect::<Vec<_>>()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

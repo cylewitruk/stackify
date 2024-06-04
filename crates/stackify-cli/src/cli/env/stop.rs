@@ -54,5 +54,7 @@ pub async fn exec(ctx: &CliContext, args: StopArgs) -> Result<()> {
         ));
     }
 
+    outro("Environment Stopped".bold().green())?;
+
     Ok(())
 }

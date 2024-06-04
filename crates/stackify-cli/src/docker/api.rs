@@ -288,6 +288,55 @@ impl<'a> DockerOptsHelper<'a> {
 
         Ok(opts)
     }
+
+    pub fn create_stacks_signer_container(
+        &self,
+        env_name: &EnvironmentName,
+        service: &EnvironmentService,
+    ) -> Result<ContainerCreateOpts> {
+        let labels = default_labels(Some(env_name), Some(service));
+
+        let bin_mount = format!(
+            "{}:/opt/stackify/bin:rw",
+            self.0.host_dirs.bin_dir.to_string_lossy()
+        );
+
+        let entrypoint_mount = format!(
+            "{}:/entrypoint.sh:ro",
+            self.0
+                .host_dirs
+                .assets_dir
+                .join("stacks-signer-entrypoint.sh")
+                .to_string_lossy()
+        );
+
+        let version = service
+            .version
+            .clone()
+            .git_target
+            .ok_or(eyre!("No git target found for service '{}'", service.name))?
+            .target;
+
+        let opts = ContainerCreateOpts::builder()
+            .name(service_container_name(service))
+            .hostname(&service.name)
+            .user(self.0.container_user.to_string())
+            .volumes([bin_mount, entrypoint_mount])
+            .image("stackify-runtime:latest")
+            .labels(labels)
+            .env(vec![
+                format!("VERSION={version}"),
+            ])
+            //.entrypoint(["/bin/sh", "-c", "while true; do sleep 1; done"])
+            .entrypoint([
+                "/bin/sh",
+                "-c",
+                "/entrypoint.sh 2>&1 | tee /var/log/stackify/stacks-signer.log",
+            ])
+            .build();
+
+        Ok(opts)
+    }
 }
 
 fn default_labels(

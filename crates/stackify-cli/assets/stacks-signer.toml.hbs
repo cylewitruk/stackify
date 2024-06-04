@@ -1,7 +1,18 @@
 stacks_private_key = "{{signer_private_key}}"
+
+# The IP address and port where your Stacks node can be accessed. 
+# The port 20443 is the default RPC endpoint for Stacks nodes. 
+# Note that you must use an IP address - DNS hosts are not supported at this time.
+# This should be the IP address accessible via Docker, usually via a network.
 node_host = "{{stacks_node_endpoint}}" # eg "127.0.0.1:20443"
-# must be added as event_observer in node config:
-endpoint = "{{endpoint}}" # e.g 127.0.0.1:30000
+
+# This is the location where the signer will expose an RPC endpoint for 
+# receiving events from your Stacks node. Must be added as an 'event_observer'
+# in your Stacks node configuration.
+endpoint = "0.0.0.0:30000" # e.g 127.0.0.1:30000
+
 network = "testnet"
+
 auth_password = "stacks"
-db_path = "/opt/stackify/signer"
+
+db_path = "/opt/stackify/signer.sqlite"
