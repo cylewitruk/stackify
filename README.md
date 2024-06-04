@@ -54,3 +54,9 @@ To add a new service, run the following command (replacing `FOO` with the name o
 Which will present you with an interactive prompt of available services. Depending on the service you select, different configuration options will be available to you. For example, when configuring a [Stacks Signer](https://docs.stacks.co/nakamoto-upgrade/signing-and-stacking/running-a-signer), you will be prompted to specify which Stacks Node to receive events from:
 
 ![Add Service](docs/assets/add_service.gif)
+
+#### Build the Environment
+
+Before an environment can be launched, it must first be built. This will use Stackify's own Docker build containers to produce the required binaries of the correct targets and versions to be run within the Stackify runtime containers. _Note that since the runtime containers are the targets, the built binaries may not necessarily be runnable directly by you on your system._
+
+![Build Environment](docs/assets/build_env.gif)
