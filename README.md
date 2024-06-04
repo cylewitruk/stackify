@@ -32,6 +32,8 @@ To install Stackify, run `stackify install` and follow the prompts.
 
 This will create an application directory at `~/.stackify`, copy built-in assets such as configuration files, templates, Dockerfiles, scripts, etc., download [Bitcoin Core](https://bitcoincore.org/), build required Docker images and setup/configure the Stackify application database.
 
+**Note** that Stackify does require ~3GB of space.
+
 ### Create your first environment
 
 Stackify is built around the concept of **environments**, which allow you to create completely isolated environment configurations with different ccompositions of services, versions and configurations.
@@ -60,3 +62,7 @@ Which will present you with an interactive prompt of available services. Dependi
 Before an environment can be launched, it must first be built. This will use Stackify's own Docker build containers to produce the required binaries of the correct targets and versions to be run within the Stackify runtime containers. _Note that since the runtime containers are the targets, the built binaries may not necessarily be runnable directly by you on your system._
 
 ![Build Environment](docs/assets/build_env.gif)
+
+Once the build has completed, you will find the built binaries in `~/.stackify/bin/` and it should look something like the following (depending on the services configured):
+
+![Post-Build](docs/assets/after_env_build.png)
