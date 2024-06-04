@@ -66,3 +66,13 @@ Before an environment can be launched, it must first be built. This will use Sta
 Once the build has completed, you will find the built binaries in `~/.stackify/bin/` and it should look something like the following (depending on the services configured):
 
 ![Post-Build](docs/assets/after_env_build.png)
+
+#### Start the Environment
+
+To start the environment, which will create the necessary Docker resources and containers, generate and install related configuration files, and start the containers. Start the environment using the `environment start` command (replacing `FOO` with the name of your environment):
+
+```
+stackify env start FOO
+```
+
+![Start Environment](docs/assets/start_env.gif)
