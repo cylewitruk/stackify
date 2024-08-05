@@ -1,6 +1,6 @@
 use std::{fmt::Display, ops::Deref, path::PathBuf};
 
-use color_eyre::{eyre::{bail, eyre}, Result};
+use color_eyre::{eyre::bail, Result};
 use regex::Regex;
 
 use crate::{FileType, ServiceType, ValueType};
@@ -149,7 +149,7 @@ pub struct Environment {
     pub name: EnvironmentName,
     pub services: Vec<EnvironmentService>,
     pub epochs: Vec<EnvironmentEpoch>,
-    pub stacks_accounts: Vec<EnvironmentStacksAccount>,
+    pub keychains: Vec<EnvironmentKeychain>,
 }
 
 impl Environment {
@@ -172,6 +172,16 @@ pub enum GitTargetKind {
     Commit,
 }
 
+impl Display for GitTargetKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            GitTargetKind::Tag => write!(f, "tag"),
+            GitTargetKind::Branch => write!(f, "branch"),
+            GitTargetKind::Commit => write!(f, "commit"),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GitTarget {
     pub target_type: GitTargetKind,
@@ -179,6 +189,13 @@ pub struct GitTarget {
 }
 
 impl GitTarget {
+    pub fn new(target_type: GitTargetKind, target: &str) -> Self {
+        Self {
+            target_type,
+            target: target.to_string(),
+        }
+    }
+
     pub fn parse<T: AsRef<str>>(s: T) -> Option<GitTarget> {
         let s = s.as_ref();
         let split = s.split(":").collect::<Vec<_>>();
@@ -257,12 +274,14 @@ pub struct EnvironmentServiceParam {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct EnvironmentStacksAccount {
+pub struct EnvironmentKeychain {
     pub id: i32,
-    pub address: String,
+    pub environment_id: i32,
+    pub stx_address: String,
     pub amount: u64,
     pub mnemonic: String,
     pub private_key: String,
+    pub public_key: String,
     pub btc_address: String,
     pub remark: Option<String>,
 }

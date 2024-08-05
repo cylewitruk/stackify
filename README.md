@@ -9,7 +9,7 @@
                                 |___/ 
 ```
 
-Welcome to Stackify! A tool which aims to enable _consistent_ and _reproducable_ Stacks
+Welcome to Stackify! A tool which aims to enable _consistent_ and _reproducible_ Stacks
 environments, including all dependencies, in **regtest** (_and possibly additional environments later on_). No more fiddling with Docker compose and configuration files - easily compose
 environments with an interactive interface, and import/export environments for exact
 reproduction on other machines.
@@ -49,7 +49,13 @@ Once your environment is created, you will need to add services to it for it to 
 
 Each environment can have one or many services. Stackify services represent a specific version and configuration of Stacks network components. Stackify provides an interactive prompt for configuring new services in environments.
 
-**Note:** It is completely valid and _part of the use case_ to mix and match different versions of services and configurations, such as start/stop block heights/epochs, etc.!
+When adding a service, there are a number of configuration options you can use to fine-tune the service's behavior, such as:
+
+- The version of the service. Service versions are part of the Stackify configuration and must be managed separately. See [Configure Service Versions].
+- Start block height OR epoch, immediately or never (start manually)
+- Stop block height OR epoch, or never (stop manually)
+
+**Note:** It is completely valid and _**part of the use case**_ to mix and match different versions of services and configurations, such as start/stop block heights/epochs, etc.!
 
 To add a new service, run the following command (replacing `FOO` with the name of your environment):
 
@@ -97,3 +103,4 @@ You can view environments and their general configuration using the `stackify en
 
 ![List Environments](docs/assets/list_env.png)
 
+To view detailed information for specific services within an environment, use the `stackify env svc inspect` command.

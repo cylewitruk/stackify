@@ -288,24 +288,20 @@ impl CliDatabase for AppDb {
             })
             .collect::<Result<Vec<_>>>()?;
 
-        let stacks_accounts = environment_stacks_account::table
-            .inner_join(
-                stacks_account::table
-                    .on(environment_stacks_account::stacks_account_id.eq(stacks_account::id)),
-            )
-            .filter(environment_stacks_account::environment_id.eq(env.id))
-            .load::<(model::EnvironmentStacksAccount, model::StacksAccount)>(
-                &mut *self.conn.borrow_mut(),
-            )?
-            .iter()
-            .map(|(esa, sa)| types::EnvironmentStacksAccount {
+        let keychains = environment_keychain::table
+            .filter(environment_keychain::environment_id.eq(env.id))
+            .load::<model::EnvironmentKeychain>(&mut *self.conn.borrow_mut())?
+            .into_iter()
+            .map(|esa| types::EnvironmentKeychain {
                 id: esa.id,
-                mnemonic: sa.mnemonic.clone(),
-                address: sa.address.clone(),
-                amount: sa.amount as u64,
-                btc_address: sa.btc_address.clone(),
-                private_key: sa.private_key.clone(),
+                environment_id: esa.environment_id,
+                amount: esa.amount as u64,
+                btc_address: esa.btc_address.clone(),
+                mnemonic: esa.mnemonic.clone(),
+                private_key: esa.private_key.clone(),
+                public_key: esa.public_key.clone(),
                 remark: esa.remark.clone(),
+                stx_address: esa.stx_address.clone(),
             })
             .collect::<Vec<_>>();
 
@@ -314,7 +310,7 @@ impl CliDatabase for AppDb {
             name: env_name,
             services,
             epochs,
-            stacks_accounts,
+            keychains,
         };
 
         Ok(ret)

@@ -189,8 +189,9 @@ pub struct EnvironmentContainer {
     pub created_at: PrimitiveDateTime,
 }
 
-#[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, QueryableByName)]
+#[derive(Queryable, Associations, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, QueryableByName)]
 #[diesel(table_name = environment_container_action_log)]
+#[belongs_to(EnvironmentContainer)]
 pub struct EnvironmentContainerActionLog {
     pub id: i32,
     pub environment_container_id: i32,
@@ -200,25 +201,19 @@ pub struct EnvironmentContainerActionLog {
     pub data: Option<String>,
 }
 
-#[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, QueryableByName)]
-#[diesel(table_name = stacks_account)]
-pub struct StacksAccount {
-    pub id: i32,
-    pub address: String,
-    pub amount: i64,
-    pub mnemonic: String,
-    pub private_key: String,
-    pub btc_address: String,
-}
-
 #[derive(
     Queryable, Associations, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, QueryableByName,
 )]
-#[diesel(table_name = environment_stacks_account)]
-#[belongs_to(StacksAccount)]
-pub struct EnvironmentStacksAccount {
+#[diesel(table_name = environment_keychain)]
+#[belongs_to(Environment)]
+pub struct EnvironmentKeychain {
     pub id: i32,
     pub environment_id: i32,
-    pub stacks_account_id: i32,
+    pub stx_address: String,
+    pub amount: i64,
+    pub mnemonic: String,
+    pub private_key: String,
+    pub public_key: String,
+    pub btc_address: String,
     pub remark: Option<String>,
 }

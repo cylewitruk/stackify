@@ -42,7 +42,7 @@ async fn main() -> Result<()> {
             cli::clean::exec(&context, args).await?;
         }
         Commands::Config(args) => {
-            cli::config::exec(&context, args).handle()?;
+            cli::config::exec(&context, args).await.handle()?;
         }
         Commands::Completions { shell } => {
             shell.generate(&mut Cli::command(), &mut std::io::stdout());

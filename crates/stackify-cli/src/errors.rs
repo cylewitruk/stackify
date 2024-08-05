@@ -1,7 +1,8 @@
 use std::fmt::Debug;
 
 use cliclack::{log::warning, outro_note};
-use color_eyre::Result;
+use color_eyre::{Result, Report};
+use thiserror::Error;
 
 use crate::{cli::theme::ThemedObject, db::errors::LoadEnvironmentError};
 
@@ -54,6 +55,14 @@ impl<T: Debug> ReportResultExt for Result<T> {
                         }
                         _ => Err(self.unwrap_err()),
                     }
+                } else if let Some(err) = e.downcast_ref::<CliError>() {
+                    match err {
+                        CliError::Graceful { title, message } => {
+                            warning(format!("{}", title.yellow()))?;
+                            cliclack::outro(format!("{} {}", "Failed".red().bold(), message))?;
+                            Ok(())
+                        }
+                    }
                 } else {
                     println!("{}", crate::cli::log::get_log().join("\n"));
                     Err(self.unwrap_err())
@@ -61,4 +70,10 @@ impl<T: Debug> ReportResultExt for Result<T> {
             }
         }
     }
+}
+
+#[derive(Debug, Error)]
+pub enum CliError {
+    #[error("Error: {title}\n{message}")]
+    Graceful { title: String, message: String }
 }

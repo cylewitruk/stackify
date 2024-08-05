@@ -37,14 +37,75 @@ pub enum EnvSubCommands {
     /// Stops the specified environment if it is running and removes all
     /// associated resources, without actually deleting the environment.
     Down(DownArgs),
-    /// Commands for managing environments' services.
+    /// Manage services for the specified environment.
     #[clap(visible_aliases = ["svc"])]
     Service(ServiceArgs),
-    /// Commands for managing environments' epoch configurations.
+    /// Manage the epoch-map for the specified environment.
     Epoch(EpochArgs),
     /// Update the environment's configuration. Note that changes made here will
     /// not affect the environment until it is restarted.
     Set(SetArgs),
+    /// Manage keychains (Stacks accounts) for the environment.
+    Keychain(KeychainArgs),
+}
+
+#[derive(Debug, Args)]
+pub struct KeychainArgs {
+    #[command(subcommand)]
+    pub commands: KeychainSubCommands,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum KeychainSubCommands {
+    /// Add a new key to the keychain.
+    New(KeychainNewArgs),
+    /// Remove a key from the keychain.
+    Remove(KeychainRemoveArgs),
+    /// List all keys in the keychain.
+    List(KeychainListArgs),
+}
+
+#[derive(Debug, Args)]
+pub struct KeychainNewArgs {
+    /// The name of the environment.
+    #[arg(
+        required = false,
+        value_name = "NAME",
+        short = 'e',
+        long = "environment",
+        visible_alias = "env"
+    )]
+    pub env_name: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct KeychainRemoveArgs {
+    /// The name of the environment.
+    #[arg(
+        required = false,
+        value_name = "NAME",
+        short = 'e',
+        long = "environment",
+        visible_alias = "env"
+    )]
+    pub env_name: String,
+
+    /// The name of the key to remove.
+    #[arg(required = true, value_name = "NAME")]
+    pub key_name: String,
+}
+
+#[derive(Debug, Args)]
+pub struct KeychainListArgs {
+    /// The name of the environment.
+    #[arg(
+        required = false,
+        value_name = "NAME",
+        short = 'e',
+        long = "environment",
+        visible_alias = "env"
+    )]
+    pub env_name: String,
 }
 
 #[derive(Debug, Args)]

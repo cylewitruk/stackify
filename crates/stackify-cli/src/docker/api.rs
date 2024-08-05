@@ -190,7 +190,7 @@ impl<'a> DockerOptsHelper<'a> {
 
         ContainerCreateOpts::builder()
             .name("stx-stacks-cli")
-            .command(["npx", "@stacks/cli", "make_keychain"])
+            .command(["npx", "@stacks/cli", "make_keychain", "-t"])
             .attach_stdout(true)
             .auto_remove(true)
             .image("stackify-stacks-cli:latest")

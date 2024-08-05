@@ -85,6 +85,7 @@ pub enum ServiceData {
     },
     StacksStackerSelf,
     StacksStackerPool,
+    StacksTransactionGenerator,
 }
 
 /// Enum representing the actions that the monitor can take via its mpsc channel.
@@ -228,6 +229,7 @@ impl Monitor {
                     ServiceType::StacksStackerSelf | ServiceType::StacksStackerPool => {
                         self.local_stacks_stacker(&service, &mut data)?;
                     }
+                    ServiceType::StacksTransactionGenerator => {}
                     ServiceType::StackifyDaemon | ServiceType::StackifyEnvironment => {}
                 }
             }

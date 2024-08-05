@@ -73,8 +73,8 @@ pub struct ServicesArgs {
 #[derive(Debug, Subcommand)]
 pub enum ServiceSubCommands {
     /// Add a new version to one of the available service types.
-    #[clap(visible_aliases = ["add", "new"])]
-    AddVersion(AddServiceVersionArgs),
+    #[clap(visible_aliases = ["new"])]
+    Add,
     /// Remove a service version from the available service versions. This
     /// command will fail if the calculated service + version name is already
     /// in use.

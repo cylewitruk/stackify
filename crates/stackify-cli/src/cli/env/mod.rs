@@ -1,4 +1,4 @@
-use color_eyre::eyre::{eyre, Result};
+use color_eyre::eyre::{bail, eyre, Result};
 use console::style;
 use docker_api::opts::{
     ContainerCreateOpts, ContainerListOpts, ContainerStopOpts, NetworkCreateOpts,
@@ -6,8 +6,10 @@ use docker_api::opts::{
 use stackify_common::types::EnvironmentName;
 
 use crate::cli::context::CliContext;
+use crate::cli::theme::ThemedObject;
 use crate::cli::warn;
 use crate::docker::opts::{CreateContainer, CreateNetwork, ListContainers};
+use crate::errors::CliError;
 
 use self::args::EnvArgs;
 use self::epoch::exec_epoch;
@@ -23,6 +25,7 @@ pub mod list;
 pub mod service;
 pub mod start;
 pub mod stop;
+pub mod keychain;
 
 pub async fn exec(ctx: &CliContext, args: EnvArgs) -> Result<()> {
     match args.commands {
@@ -37,6 +40,7 @@ pub async fn exec(ctx: &CliContext, args: EnvArgs) -> Result<()> {
         args::EnvSubCommands::Service(inner_args) => exec_service(ctx, inner_args).await,
         args::EnvSubCommands::Epoch(inner_args) => exec_epoch(ctx, inner_args),
         args::EnvSubCommands::Set(inner_args) => exec_set(ctx, inner_args).await,
+        args::EnvSubCommands::Keychain(inner_args) => keychain::exec(ctx, inner_args).await,
     }
 }
 
@@ -62,4 +66,32 @@ async fn exec_create(ctx: &CliContext, args: args::CreateArgs) -> Result<()> {
 async fn exec_delete(_ctx: &CliContext, _args: args::DeleteArgs) -> Result<()> {
     println!("Delete environment");
     Ok(())
+}
+
+/// Prompts the user to select an environment from the list of available environments.
+/// This function is used when the user does not provide an environment name as an argument
+/// and is required to select an environment interactively.
+pub fn prompt_environment_name(ctx: &CliContext) -> Result<EnvironmentName> {
+    let environments = ctx.db.list_environments()?;
+
+    if environments.is_empty() {
+        bail!(CliError::Graceful { 
+            title: "No environments are configured".to_string(), 
+            message: format!(
+                "Please create a new environment using the `{}` command first.", 
+                "stackify env new".bold()
+            )
+        });
+    }
+
+    let env_items = environments
+        .iter()
+        .map(|env| (env.name.as_str(), env.name.as_str(), ""))
+        .collect::<Vec<_>>();
+
+    let env_name = cliclack::select("Select an environment")
+        .items(&env_items)
+        .interact()?;
+
+    Ok(EnvironmentName::new(env_name)?)
 }

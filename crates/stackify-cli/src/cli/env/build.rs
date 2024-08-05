@@ -63,10 +63,15 @@ pub async fn exec(ctx: &CliContext, args: BuildArgs) -> Result<()> {
             service.name,
             service.version.version
         );
+
+        // Skip services that don't need to be built (i.e. Bitcoin Core, etc.).
         if ![
             ServiceType::StacksMiner,
             ServiceType::StacksFollower,
             ServiceType::StacksSigner,
+            ServiceType::StacksStackerSelf,
+            ServiceType::StacksStackerPool,
+            ServiceType::StacksTransactionGenerator,
         ]
         .contains(&ServiceType::from_i32(service.service_type.id)?)
         {
@@ -84,6 +89,7 @@ pub async fn exec(ctx: &CliContext, args: BuildArgs) -> Result<()> {
             continue;
         }
 
+        // Setup progressbar/spinner
         let multi = multi_progress(format!(
             "Building {} version {} {}",
             service.name.cyan(),
@@ -239,7 +245,7 @@ async fn create_build_container(
             .map(|x| x.target.clone())
             .unwrap_or_default();
 
-        env_vars.insert("BUILD_STACKS".into(), target);
+        env_vars.insert("BUILD_NODE".into(), target);
     } else if [
         ServiceType::StacksSigner,
     ]
@@ -253,6 +259,20 @@ async fn create_build_container(
             .unwrap_or_default();
 
         env_vars.insert("BUILD_SIGNER".into(), target);
+    } else if [
+        ServiceType::StacksStackerPool,
+        ServiceType::StacksStackerSelf,
+        ServiceType::StacksTransactionGenerator
+    ].contains(&ServiceType::from_i32(service.service_type.id)?)
+    {
+        let target = service
+            .version
+            .git_target
+            .as_ref()
+            .map(|x| x.target.clone())
+            .unwrap_or_default();
+
+        env_vars.insert("BUILD_CLI".into(), target);
     }
 
     let create_opts = ContainerCreateOpts::for_stackify_build_container(

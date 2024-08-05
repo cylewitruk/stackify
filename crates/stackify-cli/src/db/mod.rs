@@ -86,6 +86,29 @@ impl AppDb {
         Ok(())
     }
 
+    pub fn add_environment_keychain(
+        &self,
+        environment_id: i32,
+        stx_address: &str,
+        btc_address: &str,
+        public_key: &str,
+        private_key: &str,
+        mnemonic: &str,
+        remark: &str
+    ) -> Result<EnvironmentKeychain> {
+        Ok(insert_into(environment_keychain::table)
+            .values((
+                environment_keychain::environment_id.eq(environment_id),
+                environment_keychain::stx_address.eq(stx_address),
+                environment_keychain::btc_address.eq(btc_address),
+                environment_keychain::public_key.eq(public_key),
+                environment_keychain::private_key.eq(private_key),
+                environment_keychain::mnemonic.eq(mnemonic),
+                environment_keychain::remark.eq(remark),
+            ))
+            .get_result(&mut *self.conn.borrow_mut())?)
+    }
+
     pub fn add_environment_service(
         &self,
         environment_id: i32,

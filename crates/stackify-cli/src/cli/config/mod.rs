@@ -11,11 +11,11 @@ pub mod args;
 pub mod epochs;
 pub mod services;
 
-pub fn exec(ctx: &CliContext, args: ConfigArgs) -> Result<()> {
+pub async fn exec(ctx: &CliContext, args: ConfigArgs) -> Result<()> {
     match args.commands {
         ConfigSubCommands::Import(_) => todo!(),
         ConfigSubCommands::Export(_) => todo!(),
-        ConfigSubCommands::Services(inner_args) => exec_services(ctx, inner_args),
+        ConfigSubCommands::Services(inner_args) => exec_services(ctx, inner_args).await,
         ConfigSubCommands::Epochs(inner_args) => epochs::exec(ctx, inner_args),
     }
 }

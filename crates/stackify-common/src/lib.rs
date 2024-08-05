@@ -8,7 +8,7 @@ pub mod util;
 use color_eyre::eyre::{bail, Result};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ServiceType {
     BitcoinMiner = 0,
     BitcoinFollower = 1,
@@ -19,6 +19,7 @@ pub enum ServiceType {
     StacksStackerPool = 6,
     StackifyEnvironment = 7,
     StackifyDaemon = 8,
+    StacksTransactionGenerator = 9
 }
 
 impl Into<i32> for ServiceType {
@@ -39,6 +40,7 @@ impl From<i32> for ServiceType {
             6 => Self::StacksStackerPool,
             7 => Self::StackifyEnvironment,
             8 => Self::StackifyDaemon,
+            9 => Self::StacksTransactionGenerator,
             _ => panic!("Invalid service type value: {}", value),
         }
     }
@@ -56,6 +58,7 @@ impl ServiceType {
             6 => Ok(Self::StacksStackerPool),
             7 => Ok(Self::StackifyEnvironment),
             8 => Ok(Self::StackifyDaemon),
+            9 => Ok(Self::StacksTransactionGenerator),
             _ => bail!("Invalid service type value: {}", value),
         }
     }
