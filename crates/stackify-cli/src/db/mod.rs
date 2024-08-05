@@ -94,6 +94,7 @@ impl AppDb {
         public_key: &str,
         private_key: &str,
         mnemonic: &str,
+        balance: u64,
         remark: &str
     ) -> Result<EnvironmentKeychain> {
         Ok(insert_into(environment_keychain::table)
@@ -104,6 +105,7 @@ impl AppDb {
                 environment_keychain::public_key.eq(public_key),
                 environment_keychain::private_key.eq(private_key),
                 environment_keychain::mnemonic.eq(mnemonic),
+                environment_keychain::amount.eq(balance as i64),
                 environment_keychain::remark.eq(remark),
             ))
             .get_result(&mut *self.conn.borrow_mut())?)

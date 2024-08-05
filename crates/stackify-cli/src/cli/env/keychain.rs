@@ -29,8 +29,14 @@ async fn exec_new(ctx: &CliContext, args: KeychainNewArgs) -> Result<()> {
     };
     let env = ctx.db.load_environment(env_name.as_ref())?;
     
-    cliclack::intro("Generate New Keychain")?;
     let keychain = generate_stacks_keychain(ctx).await?;
+
+    let balance: u64 = cliclack::input("Balance:")
+        .required(false)
+        .placeholder("10000000000000000")
+        .default_input("10000000000000000")
+        .interact()?;
+
     let remark: String = cliclack::input("Comment:")
         .placeholder("Write a short remark about this keychain")
         .required(false)
@@ -42,7 +48,8 @@ async fn exec_new(ctx: &CliContext, args: KeychainNewArgs) -> Result<()> {
         &keychain.key_info.btc_address, 
         &keychain.key_info.public_key, 
         &keychain.key_info.private_key, 
-        &keychain.mnemonic, 
+        &keychain.mnemonic,
+        balance,
         &remark
     )?;
 
@@ -94,7 +101,7 @@ async fn generate_stacks_keychain(ctx: &CliContext) -> Result<MakeKeychainResult
     if cli_result.status_code == 0 {
         let keychain = MakeKeychainResult::from_json(&cli_stdout.join(""))?;
         generate_keychain_spinner.stop(format!(
-            "{} Generate new keychain",
+            "{} Generate keychain",
             THEME.read().unwrap().success_symbol()
         ));
         let mut msg_lines = vec![];
