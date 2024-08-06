@@ -16,8 +16,8 @@ reproduction on other machines.
 
 ## Feature Highlights
 
-✨ Interactive and intuitive CLI interface
-✨ Create one or many isolated Stacks environments, each with their own configurations
+✨ Interactive and intuitive CLI interface  
+✨ Create one or many isolated Stacks environments, each with their own configurations  
 ✨ Orchestrate in-place binary upgrades (i.e. nodes, signers, etc.) based on either epoch or block height
 ✨ Orchestrate starting and stopping of services at specific epochs or block heights
 ✨ Easily configure multiple different versions of the same service within the same environment
