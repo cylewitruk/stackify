@@ -18,10 +18,10 @@ reproduction on other machines.
 
 ✨ Interactive and intuitive CLI interface  
 ✨ Create one or many isolated Stacks environments, each with their own configurations  
-✨ Orchestrate in-place binary upgrades (i.e. nodes, signers, etc.) based on either epoch or block height
-✨ Orchestrate starting and stopping of services at specific epochs or block heights
-✨ Easily configure multiple different versions of the same service within the same environment
-✨ Portable - Stackify uses its own build and runtime containers, so configurations are guaranteed to work across machines
+✨ Orchestrate in-place binary upgrades (i.e. nodes, signers, etc.) based on either epoch or block height  
+✨ Orchestrate starting and stopping of services at specific epochs or block heights  
+✨ Easily configure multiple different versions of the same service within the same environment  
+✨ Portable - Stackify uses its own build and runtime containers, so configurations are guaranteed to work across machines  
 
 ## System Requirements
 
