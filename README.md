@@ -16,7 +16,7 @@ reproduction on other machines.
 
 ## Feature Highlights
 
-✨ Interactive, intuitive and pretty CLI interface (shoutout to [cliclack](https://github.com/fadeevab/cliclack))
+✨ Interactive, intuitive and pretty CLI interface (shoutout to [cliclack](https://github.com/fadeevab/cliclack))  
 ✨ Create one or many isolated Stacks environments, each with their own configurations  
 ✨ Orchestrate in-place binary upgrades (i.e. nodes, signers, etc.) based on either epoch or block height  
 ✨ Orchestrate starting and stopping of services at specific epochs or block heights  
