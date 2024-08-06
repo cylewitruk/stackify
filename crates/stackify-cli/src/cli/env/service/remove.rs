@@ -1,7 +1,9 @@
 use color_eyre::{eyre::eyre, Result};
 use stackify_common::types::EnvironmentName;
 
-use crate::cli::{context::CliContext, env::args::ServiceRemoveArgs, theme::ThemedObject};
+use crate::cli::{context::CliContext, theme::ThemedObject};
+
+use super::ServiceRemoveArgs;
 
 pub fn exec(ctx: &CliContext, args: ServiceRemoveArgs) -> Result<()> {
     let env_name = EnvironmentName::new(&args.env_name)?;

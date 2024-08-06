@@ -51,6 +51,13 @@ pub trait ThemedObject {
     {
         OwoColorize::style(self, style().dimmed())
     }
+
+    fn bright_black(&self) -> Styled<&Self>
+    where 
+        Self: Sized,
+    {
+        OwoColorize::style(self, style().bright_black())
+    }
 }
 
 impl<T: OwoColorize + Display> ThemedObject for T {

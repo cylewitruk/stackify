@@ -30,8 +30,8 @@ pub mod keychain;
 pub async fn exec(ctx: &CliContext, args: EnvArgs) -> Result<()> {
     match args.commands {
         args::EnvSubCommands::List(inner_args) => list::exec(ctx, inner_args).await,
-        args::EnvSubCommands::Create(inner_args) => exec_create(ctx, inner_args).await,
-        args::EnvSubCommands::Delete(inner_args) => exec_delete(ctx, inner_args).await,
+        args::EnvSubCommands::New(inner_args) => exec_create(ctx, inner_args).await,
+        args::EnvSubCommands::Remove(inner_args) => exec_delete(ctx, inner_args).await,
         args::EnvSubCommands::Start(inner_args) => start::exec(ctx, inner_args).await,
         args::EnvSubCommands::Stop(inner_args) => stop::exec(ctx, inner_args).await,
         args::EnvSubCommands::Inspect(inner_args) => exec_inspect(ctx, inner_args).await,
@@ -54,7 +54,7 @@ async fn exec_inspect(_ctx: &CliContext, args: args::InspectArgs) -> Result<()> 
     Ok(())
 }
 
-async fn exec_create(ctx: &CliContext, args: args::CreateArgs) -> Result<()> {
+async fn exec_create(ctx: &CliContext, args: args::NewArgs) -> Result<()> {
     let env_name = EnvironmentName::new(&args.env_name)?;
     let env = ctx
         .db
@@ -63,7 +63,7 @@ async fn exec_create(ctx: &CliContext, args: args::CreateArgs) -> Result<()> {
     Ok(())
 }
 
-async fn exec_delete(_ctx: &CliContext, _args: args::DeleteArgs) -> Result<()> {
+async fn exec_delete(_ctx: &CliContext, _args: args::RemoveArgs) -> Result<()> {
     println!("Delete environment");
     Ok(())
 }

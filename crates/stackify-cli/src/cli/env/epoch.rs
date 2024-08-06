@@ -3,11 +3,38 @@ use std::collections::HashMap;
 use crate::cli::{context::CliContext, theme::ThemedObject};
 use crate::cli::{finished, warn};
 
+use clap::{Args, Subcommand};
 use color_eyre::Result;
 use prettytable::{row, Table};
 use stackify_common::types::EnvironmentName;
 
-use super::args::{EpochArgs, EpochEditArgs, EpochListArgs, EpochSubCommands};
+#[derive(Debug, Args)]
+pub struct EpochArgs {
+    #[command(subcommand)]
+    pub commands: EpochSubCommands,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum EpochSubCommands {
+    /// Prints the current epoch-map for the specified environment.
+    List(EpochListArgs),
+    /// Modify the epoch-map for the specified environment.
+    Edit(EpochEditArgs),
+}
+
+#[derive(Debug, Args)]
+pub struct EpochListArgs {
+    /// The name of the environment to which the epoch-map belongs.
+    #[arg(required = true, value_name = "ENVIRONMENT")]
+    pub env_name: String,
+}
+
+#[derive(Debug, Args)]
+pub struct EpochEditArgs {
+    /// The name of the environment to which the epoch-map belongs.
+    #[arg(required = true, value_name = "ENVIRONMENT")]
+    pub env_name: String,
+}
 
 pub fn exec_epoch(ctx: &CliContext, args: EpochArgs) -> Result<()> {
     match args.commands {

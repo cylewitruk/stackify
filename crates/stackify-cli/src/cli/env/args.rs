@@ -1,6 +1,10 @@
 use clap::{Args, Subcommand};
 
-use super::service::{add::ServiceAddArgs, config::ServiceConfigArgs};
+use super::{
+    epoch::EpochArgs, 
+    keychain::KeychainArgs, 
+    service::ServiceArgs
+};
 
 #[derive(Debug, Args)]
 pub struct EnvArgs {
@@ -14,8 +18,8 @@ pub enum EnvSubCommands {
     #[clap(visible_alias = "ls")]
     List(ListArgs),
     /// Create a new environment.
-    #[clap(visible_aliases = ["new", "add"])]
-    Create(CreateArgs),
+    #[clap(visible_aliases = ["create", "add"])]
+    New(NewArgs),
     /// Builds the specified environment, compiling the necessary binaries for
     /// the services if needed and creating the Docker containers which will be
     /// used for runtime. The environment will not be started, however.
@@ -25,7 +29,7 @@ pub enum EnvSubCommands {
     /// Removes the specified environment and all associated resources. This
     /// action is irreversible.
     #[clap(visible_alias = "rm")]
-    Delete(DeleteArgs),
+    Remove(RemoveArgs),
     /// Starts the specified environment using its current configuration. If the
     /// environment has not yet been built, it will be built first, which may
     /// take some time. If the environment is already running, this command will
@@ -50,65 +54,6 @@ pub enum EnvSubCommands {
 }
 
 #[derive(Debug, Args)]
-pub struct KeychainArgs {
-    #[command(subcommand)]
-    pub commands: KeychainSubCommands,
-}
-
-#[derive(Debug, Subcommand)]
-pub enum KeychainSubCommands {
-    /// Add a new key to the keychain.
-    New(KeychainNewArgs),
-    /// Remove a key from the keychain.
-    Remove(KeychainRemoveArgs),
-    /// List all keys in the keychain.
-    List(KeychainListArgs),
-}
-
-#[derive(Debug, Args)]
-pub struct KeychainNewArgs {
-    /// The name of the environment.
-    #[arg(
-        required = false,
-        value_name = "NAME",
-        short = 'e',
-        long = "environment",
-        visible_alias = "env"
-    )]
-    pub env_name: Option<String>,
-}
-
-#[derive(Debug, Args)]
-pub struct KeychainRemoveArgs {
-    /// The name of the environment.
-    #[arg(
-        required = false,
-        value_name = "NAME",
-        short = 'e',
-        long = "environment",
-        visible_alias = "env"
-    )]
-    pub env_name: String,
-
-    /// The name of the key to remove.
-    #[arg(required = true, value_name = "NAME")]
-    pub key_name: String,
-}
-
-#[derive(Debug, Args)]
-pub struct KeychainListArgs {
-    /// The name of the environment.
-    #[arg(
-        required = false,
-        value_name = "NAME",
-        short = 'e',
-        long = "environment",
-        visible_alias = "env"
-    )]
-    pub env_name: String,
-}
-
-#[derive(Debug, Args)]
 pub struct SetArgs {
     /// The name of the environment.
     #[arg(
@@ -119,101 +64,6 @@ pub struct SetArgs {
         visible_alias = "env"
     )]
     pub env_name: String,
-}
-
-#[derive(Debug, Args)]
-pub struct EpochArgs {
-    #[command(subcommand)]
-    pub commands: EpochSubCommands,
-}
-
-#[derive(Debug, Subcommand)]
-pub enum EpochSubCommands {
-    /// Prints the current epoch-map for the specified environment.
-    List(EpochListArgs),
-    /// Modify the epoch-map for the specified environment.
-    Edit(EpochEditArgs),
-}
-
-#[derive(Debug, Args)]
-pub struct EpochListArgs {
-    /// The name of the environment to which the epoch-map belongs.
-    #[arg(required = true, value_name = "ENVIRONMENT")]
-    pub env_name: String,
-}
-
-#[derive(Debug, Args)]
-pub struct EpochEditArgs {
-    /// The name of the environment to which the epoch-map belongs.
-    #[arg(required = true, value_name = "ENVIRONMENT")]
-    pub env_name: String,
-}
-
-#[derive(Debug, Args)]
-pub struct ServiceArgs {
-    #[command(subcommand)]
-    pub commands: ServiceSubCommands,
-}
-
-#[derive(Debug, Subcommand)]
-pub enum ServiceSubCommands {
-    /// Adds a new service to the specified environment.
-    Add(ServiceAddArgs),
-    #[clap(visible_aliases = ["rm", "del"])]
-    /// Remove a service from the specified environment.
-    Remove(ServiceRemoveArgs),
-    #[clap(visible_aliases = ["insp", "show"])]
-    /// Displays detailed information about the specified service.
-    Inspect(ServiceInspectArgs),
-    /// Displays a list of services for the specified environment.
-    #[clap(visible_alias = "ls")]
-    List(ServiceListArgs),
-    /// Commands for managing service configuration files. This will provide you
-    /// with an editor to manually edit the configuration file for the specified
-    /// service.
-    #[clap(visible_alias = "cfg")]
-    Config(ServiceConfigArgs),
-}
-
-#[derive(Debug, Args)]
-pub struct ServiceInspectArgs {
-    /// The name of the service of which to inspect.
-    #[arg(required = true, value_name = "NAME")]
-    pub svc_name: String,
-
-    /// The name of the environment to which the service belongs. You can omit
-    /// this argument if the service is unique across all environments, otherwise
-    /// you will receive an error.
-    #[arg(
-        required = false,
-        value_name = "NAME",
-        short = 'e',
-        long = "environment",
-        visible_alias = "env"
-    )]
-    pub env_name: String,
-}
-
-#[derive(Debug, Args)]
-pub struct ServiceRemoveArgs {
-    /// The name of the environment from which the service should be removed.
-    /// You can omit this argument if the service is unique across all environments,
-    /// otherwise you will receive an error.
-    #[arg(
-        required = false,
-        value_name = "NAME",
-        short = 'e',
-        long = "environment",
-        visible_alias = "env"
-    )]
-    pub env_name: String,
-}
-
-#[derive(Debug, Args)]
-pub struct ServiceListArgs {
-    /// The name of the environment to list services for.
-    #[arg(required = false, value_name = "ENVIRONMENT")]
-    pub env_name: Option<String>,
 }
 
 #[derive(Debug, Args)]
@@ -245,10 +95,11 @@ pub enum ListSubCommands {
 }
 
 #[derive(Debug, Args)]
-pub struct CreateArgs {
+pub struct NewArgs {
     /// The name of the environment to create.
     #[arg(required = true, value_name = "NAME")]
     pub env_name: String,
+
     /// The speed at which blocks are mined in the Bitcoin network.
     #[arg(
         required = false,
@@ -261,7 +112,7 @@ pub struct CreateArgs {
 }
 
 #[derive(Debug, Args)]
-pub struct DeleteArgs {
+pub struct RemoveArgs {
     #[arg(required = true, value_name = "NAME")]
     pub env_name: String,
 }

@@ -1,12 +1,66 @@
+use clap::{Args, Subcommand};
 use color_eyre::{eyre::bail, Result};
 use docker_api::conn::TtyChunk;
 use futures_util::StreamExt;
+use prettytable::row;
 use stackify_common::types::EnvironmentName;
 use textwrap::Options;
 
 use crate::{cli::{context::CliContext, env::prompt_environment_name, log::clilog, theme::{ThemedObject, THEME}}, db::cli_db::CliDatabase, util::stacks_cli::MakeKeychainResult};
 
-use super::args::{KeychainArgs, KeychainListArgs, KeychainNewArgs, KeychainRemoveArgs, KeychainSubCommands};
+#[derive(Debug, Args)]
+pub struct KeychainArgs {
+    #[command(subcommand)]
+    pub commands: KeychainSubCommands,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum KeychainSubCommands {
+    /// Add a new key to the keychain.
+    New(KeychainNewArgs),
+    /// Remove a key from the keychain.
+    Remove(KeychainRemoveArgs),
+    /// List all keys in the keychain.
+    List(KeychainListArgs),
+}
+
+#[derive(Debug, Args)]
+pub struct KeychainNewArgs {
+    /// The name of the environment.
+    #[arg(
+        required = false,
+        value_name = "NAME",
+        short = 'e',
+        long = "environment",
+        visible_alias = "env"
+    )]
+    pub env_name: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct KeychainRemoveArgs {
+    /// The name of the environment.
+    #[arg(
+        required = false,
+        value_name = "NAME",
+        short = 'e',
+        long = "environment",
+        visible_alias = "env"
+    )]
+    pub env_name: String,
+
+    /// The name of the key to remove.
+    #[arg(required = true, value_name = "NAME")]
+    pub key_name: String,
+}
+
+#[derive(Debug, Args)]
+#[clap(visible_alias = "ls")]
+pub struct KeychainListArgs {
+    /// The name of the environment.
+    #[arg(required = true, value_name = "ENVIRONMENT")]
+    pub env_name: String,
+}
 
 pub async fn exec(ctx: &CliContext, args: KeychainArgs) -> Result<()> {
     match args.commands {
@@ -18,7 +72,71 @@ pub async fn exec(ctx: &CliContext, args: KeychainArgs) -> Result<()> {
 }
 
 async fn exec_list(ctx: &CliContext, args: KeychainListArgs) -> Result<()> {
-    todo!()
+    let env = ctx.db.as_clidb().load_environment(&args.env_name)?;
+    cliclack::intro(format!("Listing keychains for environment '{}'", &args.env_name.bold().magenta()))?;
+
+    let mut table = prettytable::Table::new();
+    table.set_format(*prettytable::format::consts::FORMAT_BOX_CHARS);
+    table.set_titles(row![
+        "Wallet".cyan().bold(),
+        "Details".cyan().bold(),
+    ]);
+
+    for kc in env.keychains.iter() {
+
+        let mut details_table = prettytable::Table::new();
+        details_table.set_format(*prettytable::format::consts::FORMAT_NO_BORDER_LINE_SEPARATOR);
+        let starting_balance = kc.amount.to_string()
+            .as_bytes()
+            .rchunks(3)
+            .rev()
+            .map(std::str::from_utf8)
+            .collect::<Result<Vec<&str>, _>>()
+            .unwrap()
+            .join(",");
+        let starting_balance_qualifier = if kc.amount >= 1_000_000_000_000_000 {
+            "(Quadrillion)"
+        } else if kc.amount >= 1_000_000_000_000 {
+            "(Trillion)"
+        } else if kc.amount >= 1_000_000_000 {
+            "(Billion)"
+        } else if kc.amount >= 1_000_000 {
+            "(Million)"
+        } else if kc.amount >= 1_000 {
+            "(Thousand)"
+        } else {
+            "(Hundred)"
+        };
+        details_table.add_row(row!["Starting Balance".bold(), format!("STX {} {}", starting_balance, starting_balance_qualifier.gray())]);
+        details_table.add_row(row!["Public Key".bold(), kc.public_key]);
+        details_table.add_row(row!["Private Key".bold(), kc.private_key]);
+        details_table.add_row(row!["Mnemonic".bold(), textwrap::fill(&kc.mnemonic, 60)]);
+        let remark = kc.remark.clone().unwrap_or("<none>".gray().to_string());
+        details_table.add_row(row!["Remark".bold(), if remark.is_empty() { "<none>".gray().to_string() } else { remark }]);
+
+        let wallet_text = format!("{}\n{}\n\n{}\n{}",
+            "Stacks Address".bold(),
+            kc.stx_address,
+            "Bitcoin Address".bold(),
+            kc.btc_address);
+
+        table.add_row(row![
+            wallet_text,
+            details_table
+        ]);
+    }
+
+    let mut lines = vec![];
+    table.print(&mut lines)?;
+
+    let table_str = String::from_utf8_lossy(&lines);
+    for line in table_str.lines() {
+        println!("{} {}", "│".bright_black(), line);
+    }
+
+    cliclack::outro(format!("{} keychains", env.keychains.len()))?;
+
+    Ok(())
 }
 
 async fn exec_new(ctx: &CliContext, args: KeychainNewArgs) -> Result<()> {
