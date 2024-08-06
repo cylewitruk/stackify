@@ -14,6 +14,15 @@ environments, including all dependencies, in **regtest** (_and possibly addition
 environments with an interactive interface, and import/export environments for exact
 reproduction on other machines.
 
+## Feature Highlights
+
+✨ Interactive and intuitive CLI interface
+✨ Create one or many isolated Stacks environments, each with their own configurations
+✨ Orchestrate in-place binary upgrades (i.e. nodes, signers, etc.) based on either epoch or block height
+✨ Orchestrate starting and stopping of services at specific epochs or block heights
+✨ Easily configure multiple different versions of the same service within the same environment
+✨ Portable - Stackify uses its own build and runtime containers, so configurations are guaranteed to work across machines
+
 ## System Requirements
 
 Stackify requires that you have [Docker](https://www.docker.com/) installed on your machine and enough resources to run the environments that you create. Due to the nature of freedom in how these environments may be constructed, minimum specs can't be provided, however in general at least a quad-core machine, 8GB RAM and 20GB of storage is recommended for even the smallest of environments.
