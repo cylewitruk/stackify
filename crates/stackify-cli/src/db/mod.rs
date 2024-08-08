@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use ::diesel::connection::SimpleConnection;
 use ::diesel::prelude::*;
 use ::diesel::upsert::excluded;
-use ::diesel::{delete, insert_into, update};
+use ::diesel::{delete, insert_into, update, OptionalExtension};
 use color_eyre::eyre::bail;
 use color_eyre::eyre::Report;
 use color_eyre::eyre::Result;
@@ -95,7 +95,7 @@ impl AppDb {
         private_key: &str,
         mnemonic: &str,
         balance: u64,
-        remark: &str
+        remark: &str,
     ) -> Result<EnvironmentKeychain> {
         Ok(insert_into(environment_keychain::table)
             .values((
@@ -202,6 +202,16 @@ impl AppDb {
             .map_err(|e| e.into())
     }
 
+    pub fn get_environment_keychain_by_stx_address(
+        &self,
+        stx_address: &str,
+    ) -> Result<Option<EnvironmentKeychain>> {
+        Ok(environment_keychain::table
+            .filter(environment_keychain::stx_address.eq(stx_address))
+            .first::<EnvironmentKeychain>(&mut *self.conn.borrow_mut())
+            .optional()?)
+    }
+
     pub fn update_environment_epochs(&self, epochs: HashMap<i32, i32>) -> Result<()> {
         let conn = &mut *self.conn.borrow_mut();
 
@@ -276,7 +286,35 @@ impl AppDb {
                     .filter(environment_service::environment_id.eq(environment_id)),
             )
             .execute(&mut *self.conn.borrow_mut())?;
+
+            delete(
+                environment_keychain::table
+                    .filter(environment_keychain::environment_id.eq(environment_id)),
+            )
+            .execute(&mut *self.conn.borrow_mut())?;
+
+            delete(
+                environment_epoch::table
+                    .filter(environment_epoch::environment_id.eq(environment_id)),
+            )
+            .execute(&mut *self.conn.borrow_mut())?;
+
+            delete(
+                environment::table
+                    .filter(environment::id.eq(environment_id))
+                    .filter(environment::name.eq(name)),
+            )
+            .execute(&mut *self.conn.borrow_mut())?;
         }
+
+        Ok(())
+    }
+
+    pub fn delete_environment_keychain(&self, stx_address: &str) -> Result<()> {
+        delete(
+            environment_keychain::table.filter(environment_keychain::stx_address.eq(stx_address)),
+        )
+        .execute(&mut *self.conn.borrow_mut())?;
 
         Ok(())
     }

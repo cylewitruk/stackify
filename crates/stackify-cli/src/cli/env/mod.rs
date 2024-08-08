@@ -21,11 +21,11 @@ pub mod args;
 pub mod build;
 pub mod down;
 pub mod epoch;
+pub mod keychain;
 pub mod list;
 pub mod service;
 pub mod start;
 pub mod stop;
-pub mod keychain;
 
 pub async fn exec(ctx: &CliContext, args: EnvArgs) -> Result<()> {
     match args.commands {
@@ -75,10 +75,10 @@ pub fn prompt_environment_name(ctx: &CliContext) -> Result<EnvironmentName> {
     let environments = ctx.db.list_environments()?;
 
     if environments.is_empty() {
-        bail!(CliError::Graceful { 
-            title: "No environments are configured".to_string(), 
+        bail!(CliError::Graceful {
+            title: "No environments are configured".to_string(),
             message: format!(
-                "Please create a new environment using the `{}` command first.", 
+                "Please create a new environment using the `{}` command first.",
                 "stackify env new".bold()
             )
         });

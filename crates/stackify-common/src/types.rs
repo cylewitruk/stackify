@@ -2,6 +2,7 @@ use std::{fmt::Display, ops::Deref, path::PathBuf};
 
 use color_eyre::{eyre::bail, Result};
 use regex::Regex;
+use serde::Serialize;
 
 use crate::{FileType, ServiceType, ValueType};
 
@@ -88,8 +89,7 @@ pub struct EnvironmentService {
     pub params: Vec<EnvironmentServiceParam>,
 }
 
-impl EnvironmentService {
-}
+impl EnvironmentService {}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EnvironmentEpoch {
@@ -153,11 +153,14 @@ pub struct Environment {
 }
 
 impl Environment {
-    pub fn find_service_instances(&self, service_type: ServiceType, name: &str) -> Vec<&EnvironmentService> {
+    pub fn find_service_instances(
+        &self,
+        service_type: ServiceType,
+        name: &str,
+    ) -> Vec<&EnvironmentService> {
         let service_type_id = service_type as i32;
 
-        self
-            .services
+        self.services
             .iter()
             .filter(|service| service.service_type.id == service_type_id)
             .filter(|svc| &svc.name != name)
@@ -273,7 +276,7 @@ pub struct EnvironmentServiceParam {
     pub value: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct EnvironmentKeychain {
     pub id: i32,
     pub environment_id: i32,

@@ -324,9 +324,7 @@ impl<'a> DockerOptsHelper<'a> {
             .volumes([bin_mount, entrypoint_mount])
             .image("stackify-runtime:latest")
             .labels(labels)
-            .env(vec![
-                format!("VERSION={version}"),
-            ])
+            .env(vec![format!("VERSION={version}")])
             //.entrypoint(["/bin/sh", "-c", "while true; do sleep 1; done"])
             .entrypoint([
                 "/bin/sh",

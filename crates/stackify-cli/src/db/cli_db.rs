@@ -124,6 +124,7 @@ impl CliDatabase for AppDb {
         let service_type_versions = Self::load_service_type_versions(&mut *self.conn.borrow_mut())?;
         let env_epochs = Self::load_epochs_for_environment(&mut *self.conn.borrow_mut(), env.id)?;
         let env_services = environment_service::table
+            .filter(environment_service::environment_id.eq(env.id))
             .load::<model::EnvironmentService>(&mut *self.conn.borrow_mut())?;
 
         let services = env_services

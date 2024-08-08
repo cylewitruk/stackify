@@ -1,12 +1,15 @@
-use crate::{cli::{log::clilog, theme::ThemedObject}, db::diesel::model::{Epoch, ServiceType, ServiceUpgradePath, ServiceVersion}};
+use crate::{
+    cli::{log::clilog, theme::ThemedObject},
+    db::diesel::model::{Epoch, ServiceType, ServiceUpgradePath, ServiceVersion},
+};
 use color_eyre::eyre::{bail, eyre, Error, Result};
 use console::style;
 use diesel::IntoSql;
+use octocrate::{repos, APIConfig as GithubApiConfig, GitHubAPI as GithubApi};
 use stackify_common::{
     types::{GitTarget, GitTargetKind},
     util::to_alphanumeric_snake,
 };
-use octocrate::{APIConfig as GithubApiConfig, GitHubAPI as GithubApi, repos};
 
 use crate::{
     cli::context::CliContext,
@@ -29,17 +32,16 @@ pub async fn exec_services(ctx: &CliContext, args: ServicesArgs) -> Result<()> {
 }
 
 pub async fn exec_add_service_version(ctx: &CliContext) -> Result<()> {
-    use stackify_common::{ 
-        ServiceType::StacksMiner,
-        ServiceType::StacksFollower,
-        ServiceType::StacksSigner,
-        ServiceType::BitcoinFollower,
-        ServiceType::BitcoinMiner,
+    use stackify_common::{
+        ServiceType::BitcoinFollower, ServiceType::BitcoinMiner, ServiceType::StacksFollower,
+        ServiceType::StacksMiner, ServiceType::StacksSigner,
     };
 
     cliclack::intro("Create new service configuration".bold())?;
-    cliclack::log::remark("This will add a new service configuration to your Stackify installation 
-which you can use in your environments.")?;
+    cliclack::log::remark(
+        "This will add a new service configuration to your Stackify installation 
+which you can use in your environments.",
+    )?;
 
     let service_types = ctx.db.list_service_types()?;
 
@@ -68,35 +70,37 @@ which you can use in your environments.")?;
         None
     };
 
-    let existing_versions = ctx.db.list_service_versions()?
+    let existing_versions = ctx
+        .db
+        .list_service_versions()?
         .into_iter()
         .filter(|sv| sv.service_type_id == (service_type as i32))
         .collect::<Vec<_>>();
 
     let allow_upgrade_from = if !existing_versions.is_empty() {
         cliclack::multiselect("Select the version(s) to allow upgrades from:")
-        .items(
-            &existing_versions
-                .iter()
-                .map(|sv| (sv.clone(), &sv.version, ""))
-                .collect::<Vec<_>>(),
-        )
-        .required(false)
-        .interact()?
+            .items(
+                &existing_versions
+                    .iter()
+                    .map(|sv| (sv.clone(), &sv.version, ""))
+                    .collect::<Vec<_>>(),
+            )
+            .required(false)
+            .interact()?
     } else {
         vec![]
     };
 
     let allow_upgrade_to = if !existing_versions.is_empty() {
         cliclack::multiselect("Select the version(s) to allow upgrades to:")
-        .items(
-            &existing_versions
-                .iter()
-                .map(|sv| (sv.clone(), &sv.version, ""))
-                .collect::<Vec<_>>(),
-        )
-        .required(false)
-        .interact()?
+            .items(
+                &existing_versions
+                    .iter()
+                    .map(|sv| (sv.clone(), &sv.version, ""))
+                    .collect::<Vec<_>>(),
+            )
+            .required(false)
+            .interact()?
     } else {
         vec![]
     };
@@ -111,8 +115,6 @@ which you can use in your environments.")?;
     } else {
         Some(comment)
     };
-
-
 
     todo!();
     // let service_types = ctx.db.list_service_types()?;
@@ -330,20 +332,28 @@ async fn collect_stacks_git_target() -> Result<GitTarget> {
         .item(GitTargetKind::Branch, "Branch", "")
         .item(GitTargetKind::Commit, "Commit hash", "")
         .interact()?;
-    
+
     let target = match kind {
         GitTargetKind::Tag => {
             let spinner = cliclack::spinner();
             spinner.start("Fetching tags from the 'stacks-core' repository...");
-            let mut query = repos::list_tags::Query::builder().page(1).per_page(100).build();
+            let mut query = repos::list_tags::Query::builder()
+                .page(1)
+                .per_page(100)
+                .build();
             let mut tags: Vec<String> = Vec::new();
             loop {
-                let gh_tags = gh_api.repos
+                let gh_tags = gh_api
+                    .repos
                     .list_tags("stacks-network", "stacks-core")
                     .query(&query)
                     .paginated_send()
                     .await?;
-                let tag_names = gh_tags.data.iter().map(|tag| tag.name.clone()).collect::<Vec<_>>();
+                let tag_names = gh_tags
+                    .data
+                    .iter()
+                    .map(|tag| tag.name.clone())
+                    .collect::<Vec<_>>();
                 tags.extend(tag_names);
                 if gh_tags.pages.next.is_none() {
                     break;
@@ -363,7 +373,6 @@ async fn collect_stacks_git_target() -> Result<GitTarget> {
                         } else {
                             Err("The tag you entered does not exist in the 'stacks-core' repository. Please try again.".to_string())
                         }
-                        
                     })
                     .interact()?;
 
@@ -371,19 +380,27 @@ async fn collect_stacks_git_target() -> Result<GitTarget> {
             }
 
             GitTarget::new(GitTargetKind::Tag, &tag.unwrap())
-        },
+        }
         GitTargetKind::Branch => {
             let spinner = cliclack::spinner();
             spinner.start("Fetching branches from the 'stacks-core' repository...");
-            let mut query = repos::list_branches::Query::builder().page(1).per_page(100).build();
+            let mut query = repos::list_branches::Query::builder()
+                .page(1)
+                .per_page(100)
+                .build();
             let mut branches: Vec<String> = Vec::new();
             loop {
-                let gh_branches = gh_api.repos
+                let gh_branches = gh_api
+                    .repos
                     .list_branches("stacks-network", "stacks-core")
                     .query(&query)
                     .paginated_send()
                     .await?;
-                let branch_names = gh_branches.data.iter().map(|tag| tag.name.clone()).collect::<Vec<_>>();
+                let branch_names = gh_branches
+                    .data
+                    .iter()
+                    .map(|tag| tag.name.clone())
+                    .collect::<Vec<_>>();
                 branches.extend(branch_names);
                 if gh_branches.pages.next.is_none() {
                     break;
@@ -403,7 +420,6 @@ async fn collect_stacks_git_target() -> Result<GitTarget> {
                         } else {
                             Err("The branch you entered does not exist in the 'stacks-core' repository. Please try again.".to_string())
                         }
-                        
                     })
                     .interact()?;
 
@@ -411,7 +427,7 @@ async fn collect_stacks_git_target() -> Result<GitTarget> {
             }
 
             GitTarget::new(GitTargetKind::Branch, &branch.unwrap())
-        },
+        }
         GitTargetKind::Commit => {
             let git_commit: String = cliclack::input("Enter the commit hash:").interact()?;
             GitTarget::new(GitTargetKind::Commit, &git_commit)
@@ -422,12 +438,13 @@ async fn collect_stacks_git_target() -> Result<GitTarget> {
 }
 
 async fn collect_bitcoin_version() -> Result<String> {
-    use stackify_common::{ServiceType::BitcoinMiner, ServiceType::BitcoinFollower};
+    use stackify_common::{ServiceType::BitcoinFollower, ServiceType::BitcoinMiner};
 
     let gh_config = GithubApiConfig::shared(GithubApiConfig::default());
     let gh_api = GithubApi::new(&gh_config);
 
-    let mut releases = gh_api.repos
+    let mut releases = gh_api
+        .repos
         .list_releases("bitcoin", "bitcoin")
         .send()
         .await?;
@@ -435,10 +452,16 @@ async fn collect_bitcoin_version() -> Result<String> {
     releases.sort_by(|a, b| b.tag_name.cmp(&a.tag_name));
 
     let release_items: Vec<_> = releases
-    .iter()
-    .take(5)
-    .map(|release| (release.tag_name.clone(), release.tag_name.clone(), release.name.clone().unwrap_or_default()))
-    .collect();
+        .iter()
+        .take(5)
+        .map(|release| {
+            (
+                release.tag_name.clone(),
+                release.tag_name.clone(),
+                release.name.clone().unwrap_or_default(),
+            )
+        })
+        .collect();
 
     let selected = cliclack::select("Select a Bitcoin Core release")
         .items(&release_items)

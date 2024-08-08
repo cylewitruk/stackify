@@ -53,7 +53,7 @@ pub trait ThemedObject {
     }
 
     fn bright_black(&self) -> Styled<&Self>
-    where 
+    where
         Self: Sized,
     {
         OwoColorize::style(self, style().bright_black())

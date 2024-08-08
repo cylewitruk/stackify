@@ -13,7 +13,10 @@ use super::ServiceListArgs;
 pub fn exec(ctx: &CliContext, args: ServiceListArgs) -> Result<()> {
     let env_name = EnvironmentName::new(&args.env_name)?;
 
-    cliclack::intro(format!("Listing services for environment '{}'", &env_name.bold().magenta()))?;
+    cliclack::intro(format!(
+        "Listing services for environment '{}'",
+        &env_name.bold().magenta()
+    ))?;
 
     let db = ctx.clidb();
     let env = db.load_environment(&env_name)?;

@@ -189,7 +189,9 @@ pub struct EnvironmentContainer {
     pub created_at: PrimitiveDateTime,
 }
 
-#[derive(Queryable, Associations, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, QueryableByName)]
+#[derive(
+    Queryable, Associations, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, QueryableByName,
+)]
 #[diesel(table_name = environment_container_action_log)]
 #[belongs_to(EnvironmentContainer)]
 pub struct EnvironmentContainerActionLog {

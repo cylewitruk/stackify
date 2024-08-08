@@ -48,7 +48,8 @@ This will create an application directory at `~/.stackify`, copy built-in assets
 Stackify is built around the concept of **environments**, which allow you to create completely isolated environment configurations with different ccompositions of services, versions and configurations.
 
 To create a new environment, run the following command (replacing `FOO` with your desired name for the environment):
-```
+
+```text
 stackify environment create FOO
 ```
 
@@ -88,7 +89,7 @@ Once the build has completed, you will find the built binaries in `~/.stackify/b
 
 To start the environment, which will create the necessary Docker resources and containers, generate and install related configuration files, and start the containers. Start the environment using the `environment start` command (replacing `FOO` with the name of your environment):
 
-```
+```text
 stackify env start FOO
 ```
 
@@ -96,7 +97,7 @@ stackify env start FOO
 
 Once the environment has started, you should be able to see your environment running via `docker ps`, for example:
 
-```
+```text
 ➜ docker ps
 CONTAINER ID   IMAGE                     COMMAND                  CREATED         STATUS         PORTS     NAMES
 2257523b79b1   stackify-runtime:latest   "/bin/sh -c '/entryp…"   7 minutes ago   Up 7 minutes             stx-foo-stacks-signer-9fcfcbba

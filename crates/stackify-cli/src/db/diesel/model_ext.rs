@@ -20,3 +20,19 @@ impl From<model::Epoch> for types::Epoch {
         }
     }
 }
+
+impl From<model::EnvironmentKeychain> for types::EnvironmentKeychain {
+    fn from(value: model::EnvironmentKeychain) -> Self {
+        types::EnvironmentKeychain {
+            id: value.id,
+            environment_id: value.environment_id,
+            stx_address: value.stx_address,
+            private_key: value.private_key,
+            public_key: value.public_key,
+            amount: value.amount as u64,
+            mnemonic: value.mnemonic,
+            btc_address: value.btc_address,
+            remark: value.remark,
+        }
+    }
+}

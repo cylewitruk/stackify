@@ -232,11 +232,8 @@ async fn create_build_container(
     kill_existing_build_container(ctx).await?;
 
     let mut env_vars = HashMap::<String, String>::new();
-    if [
-        ServiceType::StacksMiner,
-        ServiceType::StacksFollower,
-    ]
-    .contains(&ServiceType::from_i32(service.service_type.id)?)
+    if [ServiceType::StacksMiner, ServiceType::StacksFollower]
+        .contains(&ServiceType::from_i32(service.service_type.id)?)
     {
         let target = service
             .version
@@ -246,10 +243,7 @@ async fn create_build_container(
             .unwrap_or_default();
 
         env_vars.insert("BUILD_NODE".into(), target);
-    } else if [
-        ServiceType::StacksSigner,
-    ]
-    .contains(&ServiceType::from_i32(service.service_type.id)?)
+    } else if [ServiceType::StacksSigner].contains(&ServiceType::from_i32(service.service_type.id)?)
     {
         let target = service
             .version
@@ -262,8 +256,9 @@ async fn create_build_container(
     } else if [
         ServiceType::StacksStackerPool,
         ServiceType::StacksStackerSelf,
-        ServiceType::StacksTransactionGenerator
-    ].contains(&ServiceType::from_i32(service.service_type.id)?)
+        ServiceType::StacksTransactionGenerator,
+    ]
+    .contains(&ServiceType::from_i32(service.service_type.id)?)
     {
         let target = service
             .version
@@ -321,7 +316,7 @@ async fn follow_build_logs(
                 if msg.is_empty() {
                     continue;
                 }
-                
+
                 spinner.set_message(format!("{building_text} {msg}", msg = msg.dimmed()));
 
                 commit_hash_regex.captures(&msg).map(|captures| {
@@ -338,6 +333,7 @@ async fn follow_build_logs(
                     continue;
                 }
                 accumulated_log.push(msg.to_string());
+                clilog!("Docker: {}", msg);
                 spinner.set_message(format!("{building_text} {msg}", msg = msg.dimmed()));
             }
             Ok(TtyChunk::StdIn(_)) => unreachable!(),

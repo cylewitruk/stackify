@@ -10,6 +10,7 @@ if [ "${BUILD_SBTC}" = "true" ]; then
     && find ./ ! -name '.' -delete \
     && cp -rT /repos/sbtc /src \
     && git pull \
+    && find . -name 'Cargo.lock' -delete \
     && cargo --config /cargo-config.toml install --path sbtc-cli --root ./ \
     && mv -f ./bin/sbtc /out/sbtc \
     && echo "COMMIT_HASH=$(git rev-parse --short HEAD)"
@@ -22,6 +23,7 @@ if [ "${BUILD_CLARINET}" = "true" ]; then
     && git checkout main \
     && git pull \
     && git submodule update --recursive \
+    && find . -name 'Cargo.lock' -delete \
     && cargo --config /cargo-config.toml build --profile docker --bin clarinet \
     && mv -f /target/x86_64-unknown-linux-gnu/docker/clarinet /out/clarinet \
     && echo "COMMIT_HASH=$(git rev-parse --short HEAD)"
@@ -45,6 +47,7 @@ if [ -n "${BUILD_NODE}" ]; then
   echo "Pulling the latest changes"
   git pull
   echo "Building stacks-node"
+  find . -name 'Cargo.lock' -delete
   cargo --config /cargo-config.toml build --profile docker --package stacks-node --bin stacks-node
   echo "Moving the built binary to the output directory"
   mv -f /target/x86_64-unknown-linux-gnu/docker/stacks-node /out/stacks-node-"${BUILD_NODE}"
@@ -68,6 +71,7 @@ if [ -n "${BUILD_CLI}" ]; then
   echo "Pulling the latest changes"
   git pull
   echo "Building blockstack-cli"
+  find . -name 'Cargo.lock' -delete
   cargo --config /cargo-config.toml build --profile docker --package stackslib --bin blockstack-cli
   echo "Moving the built binary to the output directory"
   mv -f /target/x86_64-unknown-linux-gnu/docker/blockstack-cli /out/blockstack-cli-"${BUILD_CLI}"
@@ -91,6 +95,7 @@ if [ -n "${BUILD_SIGNER}" ]; then
   echo "Pulling the latest changes"
   git pull
   echo "Building stacks-signer"
+  find . -name 'Cargo.lock' -delete
   cargo --config /cargo-config.toml build --profile docker --package stacks-signer --bin stacks-signer
   echo "Moving the built binary to the output directory"
   mv -f /target/x86_64-unknown-linux-gnu/docker/stacks-signer /out/stacks-signer-"${BUILD_SIGNER}"

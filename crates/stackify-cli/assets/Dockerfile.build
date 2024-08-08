@@ -1,7 +1,7 @@
 # ------------------------------------------------------------------------------
 # Build stage for Stacks Core dependencies and build environment
 # ------------------------------------------------------------------------------
-FROM rust:1.76-slim-bookworm as build-base
+FROM rust:1.80-slim-bookworm as build-base
 ARG USER_ID
 ARG GROUP_ID
 ARG PRE_COMPILE=false
@@ -13,6 +13,7 @@ RUN apt update \
     && apt install -y build-essential libclang-dev git wget tree clang mold
 
 RUN rustup component add rustfmt
+RUN rustup update
 
 # Create our non-root user & group ('stacks')
 RUN groupadd -r -g ${GROUP_ID} stackify \

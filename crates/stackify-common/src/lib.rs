@@ -19,7 +19,7 @@ pub enum ServiceType {
     StacksStackerPool = 6,
     StackifyEnvironment = 7,
     StackifyDaemon = 8,
-    StacksTransactionGenerator = 9
+    StacksTransactionGenerator = 9,
 }
 
 impl Into<i32> for ServiceType {

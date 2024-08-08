@@ -12,13 +12,14 @@ use console::style;
 use docker_api::{
     opts::{
         ContainerConnectionOpts, ContainerCreateOpts, ContainerListOpts, NetworkCreateOpts,
-        NetworkListOpts,
+        NetworkListOpts, PullOpts,
     },
     Container,
 };
+use futures_util::StreamExt;
 use handlebars::{to_json, Handlebars};
 use stackify_common::{
-    types::{Environment, EnvironmentName, EnvironmentService},
+    types::{Environment, EnvironmentKeychain, EnvironmentName, EnvironmentService},
     FileType, ServiceType, ValueType,
 };
 
@@ -63,7 +64,7 @@ pub async fn exec(ctx: &CliContext, args: StartArgs) -> Result<()> {
         .docker()
         .api()
         .containers()
-        .list(&ContainerListOpts::for_environment(&env_name, true))
+        .list(&ContainerListOpts::for_environment(&env_name, false))
         .await?;
 
     clilog!("Existing containers: {:?}", existing_containers);
@@ -207,6 +208,12 @@ async fn assert_environment_container(
             panic!("Environment container is in an unknown state.");
         }
     } else {
+        // Pull the busybox image used for the environment container.
+        let busybox = PullOpts::builder().image("busybox:latest").build();
+        let images = ctx.docker().api().images();
+        let mut stream = images.pull(&busybox);
+        while let Some(_) = stream.next().await {}
+
         // Create the environment container. This is our "lock file" for the environment
         // within Docker -- it's the first resource we create and the last one we delete.
         let container = ctx
@@ -223,7 +230,7 @@ async fn assert_environment_container(
 }
 
 /// Start a Stacks Signer node. If a container has already been created for this
-/// service then it will be re-used and started from its shut-down state, 
+/// service then it will be re-used and started from its shut-down state,
 /// otherwise a new container will be created.
 async fn start_stacks_signer(
     ctx: &CliContext,
@@ -424,19 +431,34 @@ async fn create_stacks_signer_container(
     let handlebars = Handlebars::new();
     let mut data = serde_json::Map::new();
 
-    let stacks_node_endpoint = service.params.iter()
+    let stacks_node_endpoint = service
+        .params
+        .iter()
         .find(|param| param.param.key == "stacks_node")
         .expect("Stacks node endpoint not found for Stacks signer");
 
-    let keychain = service.params.iter()
+    let keychain = service
+        .params
+        .iter()
         .find(|param| param.param.key == "stacks_keychain")
-        .map(|param| MakeKeychainResult::from_json(&param.value))
-        .expect("Keychain not found for Stacks signer")?;
+        .map(|param| ctx.db.get_environment_keychain_by_stx_address(&param.value))
+        .ok_or_else(|| eyre!("Error getting keychain for Stacks signer"))?
+        .expect("Error retrieving keychain for stacks signer")
+        .expect("Keychain not found for Stacks signer");
 
-    data.insert("stacks_node_endpoint".to_string(), to_json(&format!("{}:20443", stacks_node_endpoint.value)));
-    data.insert("signer_private_key".to_string(), to_json(&keychain.key_info.private_key));
+    data.insert(
+        "stacks_node_endpoint".to_string(),
+        to_json(&format!("{}:20443", stacks_node_endpoint.value)),
+    );
+    data.insert(
+        "signer_private_key".to_string(),
+        to_json(&keychain.private_key),
+    );
 
-    clilog!("Generating configuration files for service: {}", &service.name);
+    clilog!(
+        "Generating configuration files for service: {}",
+        &service.name
+    );
     for file in ctx.db.load_files_for_environment_service(service)? {
         clilog!("Processing file: {}", &file.header.filename);
         let mut content = file.contents.contents;
@@ -484,7 +506,8 @@ async fn create_stacks_node_container(
 
     // Find other miners in the environment and use them as bootstrap nodes.
     // TODO: Add a param to miner configuration to set if it is the environment bootstrap node.
-    let stacks_bootstrap_nodes = env.find_service_instances(ServiceType::StacksMiner, &service.name)
+    let stacks_bootstrap_nodes = env
+        .find_service_instances(ServiceType::StacksMiner, &service.name)
         .iter()
         .map(|service| {
             let seed = service
@@ -492,9 +515,13 @@ async fn create_stacks_node_container(
                 .iter()
                 .find(|param| param.param.key == "stacks_keychain")
                 .expect("Seed param not found for Stacks miner");
-            let keychain = MakeKeychainResult::from_json(&seed.value)
+            let keychain = ctx
+                .db
+                .get_environment_keychain_by_stx_address(&seed.value)
+                .map_err(|e| eyre!(e))
+                .expect("Error getting keychain for Stacks miner")
                 .expect("Keychain not found for Stacks miner");
-            let miner_pubkey = keychain.key_info.public_key;
+            let miner_pubkey = keychain.public_key;
             format!("{miner_pubkey}@{}:20444", service.name.clone())
         })
         .collect::<Vec<_>>();
@@ -560,10 +587,16 @@ async fn create_stacks_node_container(
         // events_keys = [{{#each e.events_keys as |k|}}"{{k}}",{{/each}}]
         clilog!("Adding signer node: {}", &signer);
         let mut observer = serde_json::Map::new();
-        observer.insert("endpoint".to_string(), to_json(format!("{}:30000", &signer)));
+        observer.insert(
+            "endpoint".to_string(),
+            to_json(format!("{}:30000", &signer)),
+        );
         observer.insert("retry_count".to_string(), to_json(255));
         observer.insert("include_data_events".to_string(), to_json(false));
-        observer.insert("event_keys".to_string(), to_json(vec!["stackerdb", "block_proposal", "burn_blocks"]));
+        observer.insert(
+            "event_keys".to_string(),
+            to_json(vec!["stackerdb", "block_proposal", "burn_blocks"]),
+        );
         event_observers.push(to_json(observer));
     }
     data.insert("event_observers".to_string(), to_json(event_observers));
@@ -576,7 +609,10 @@ async fn create_stacks_node_container(
     }
 
     // Add configuration parameters.
-    clilog!("Processing configuration parameters for service: {}", &service.name);
+    clilog!(
+        "Processing configuration parameters for service: {}",
+        &service.name
+    );
     for param in &service.params {
         clilog!("Inserting param: {:?}", param);
         match param.param.value_type {
@@ -601,17 +637,25 @@ async fn create_stacks_node_container(
                     &param.param.key,
                     &param.value
                 );
-                data.insert(
-                    param.param.key.clone(),
-                    to_json(MakeKeychainResult::from_json(&param.value)?),
-                );
+                let keychain = ctx
+                    .db
+                    .get_environment_keychain_by_stx_address(&param.value)?;
+                if let Some(keychain) = keychain {
+                    let keychain: EnvironmentKeychain = keychain.into();
+                    data.insert(param.param.key.clone(), to_json(keychain));
+                } else {
+                    bail!("Keychain not found for Stacks node: {}", &param.value);
+                }
             }
             _ => bail!("Unsupported value type: {:?}", param.param.value_type),
         }
     }
 
     // Replace values in configuration files.
-    clilog!("Generating configuration files for service: {}", &service.name);
+    clilog!(
+        "Generating configuration files for service: {}",
+        &service.name
+    );
     for file in ctx.db.load_files_for_environment_service(service)? {
         clilog!("Processing file: {}", &file.header.filename);
         let mut content = file.contents.contents;

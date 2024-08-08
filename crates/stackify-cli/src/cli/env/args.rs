@@ -1,10 +1,6 @@
 use clap::{Args, Subcommand};
 
-use super::{
-    epoch::EpochArgs, 
-    keychain::KeychainArgs, 
-    service::ServiceArgs
-};
+use super::{epoch::EpochArgs, keychain::KeychainArgs, service::ServiceArgs};
 
 #[derive(Debug, Args)]
 pub struct EnvArgs {
