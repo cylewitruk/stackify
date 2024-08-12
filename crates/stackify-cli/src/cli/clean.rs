@@ -1,8 +1,11 @@
 use clap::Args;
 use color_eyre::eyre::{eyre, Result};
-use docker_api::opts::NetworkListOpts;
 
-use crate::{cli::context::CliContext, docker::opts::ListNetworks};
+use crate::{
+    docker_api::opts::NetworkListOpts,
+    cli::context::CliContext, 
+    docker::opts::ListNetworks
+};
 
 #[derive(Debug, Args)]
 pub struct CleanArgs {}

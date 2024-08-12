@@ -1,9 +1,9 @@
 use cliclack::{intro, multi_progress, outro};
 use color_eyre::{eyre::eyre, Result};
-use docker_api::opts::{ContainerListOpts, ContainerStopOpts};
 use stackify_common::types::EnvironmentName;
 
 use crate::{
+    docker_api::opts::{ContainerListOpts, ContainerStopOpts},
     cli::{context::CliContext, theme::ThemedObject},
     docker::{network_name, opts::ListContainers, ContainerState},
 };

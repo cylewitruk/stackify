@@ -1,10 +1,6 @@
 use cliclack::{intro, multi_progress, outro_cancel, outro_note, ProgressBar};
 use color_eyre::Result;
 use console::style;
-use docker_api::conn::TtyChunk;
-use docker_api::models::ContainerState;
-use docker_api::opts::{ContainerCreateOpts, ContainerStopOpts, LogsOpts};
-use docker_api::Container;
 use futures_util::StreamExt;
 use regex::Regex;
 use stackify_common::types::{EnvironmentName, EnvironmentService};
@@ -17,6 +13,10 @@ use crate::cli::theme::ThemedObject;
 use crate::db::cli_db::CliDatabase as _;
 use crate::docker::opts::CreateContainer;
 use crate::docker::ActionResult;
+use crate::docker_api::conn::TtyChunk;
+use crate::docker_api::models::ContainerState;
+use crate::docker_api::opts::{ContainerCreateOpts, ContainerStopOpts, LogsOpts};
+use crate::docker_api::Container;
 
 use super::args::BuildArgs;
 

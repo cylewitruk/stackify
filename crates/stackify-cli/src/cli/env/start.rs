@@ -9,13 +9,6 @@ use color_eyre::{
     Result,
 };
 use console::style;
-use docker_api::{
-    opts::{
-        ContainerConnectionOpts, ContainerCreateOpts, ContainerListOpts, NetworkCreateOpts,
-        NetworkListOpts, PullOpts,
-    },
-    Container,
-};
 use futures_util::StreamExt;
 use handlebars::{to_json, Handlebars};
 use stackify_common::{
@@ -24,6 +17,13 @@ use stackify_common::{
 };
 
 use crate::{
+    docker_api::{
+        opts::{
+            ContainerConnectionOpts, ContainerCreateOpts, ContainerListOpts, NetworkCreateOpts,
+            NetworkListOpts, PullOpts,
+        },
+        Container,
+    },
     cli::{context::CliContext, theme::ThemedObject},
     db::cli_db::CliDatabase,
     docker::opts::{CreateContainer, CreateNetwork, ListContainers, ListNetworks},

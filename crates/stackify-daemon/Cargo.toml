@@ -1,7 +1,13 @@
 [package]
-name = "stackify-daemon"
-version = "0.1.0"
-edition = "2021"
+name = "stackifyd"
+
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+keywords.workspace = true
+authors.workspace = true
+homepage.workspace = true
+repository.workspace = true
 
 [[bin]]
 name = "stackifyd"
@@ -15,7 +21,7 @@ time  = { workspace = true }
 home = { workspace = true }
 
 # Bitcoin
-bitcoincore-rpc = "0.18.0"
+bitcoincore-rpc = "0.19.0"
 
 # Async
 tokio = { workspace = true }
@@ -36,6 +42,9 @@ okapi = "0.7.0"
 reqwest = { workspace = true }
 rocket_okapi = { version = "0.8.0-rc.2", features = ["swagger", "secrets"] }
 
+# Network
+libp2p = { workspace = true, features = [ "tokio", "gossipsub", "mdns", "noise", "macros", "tcp", "yamux", "quic", "ping"] }
+
 # Error Handling
 color-eyre = { workspace = true }
 thiserror = { workspace = true }
@@ -43,6 +52,8 @@ thiserror = { workspace = true }
 # Logging
 log = { workspace = true }
 env_logger = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["env-filter"] }
 
 # Local
 stackify-common = { path = "../stackify-common" }

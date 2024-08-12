@@ -1,8 +1,5 @@
 use color_eyre::eyre::{bail, eyre, Result};
 use console::style;
-use docker_api::opts::{
-    ContainerCreateOpts, ContainerListOpts, ContainerStopOpts, NetworkCreateOpts,
-};
 use stackify_common::types::EnvironmentName;
 
 use crate::cli::context::CliContext;
@@ -10,6 +7,9 @@ use crate::cli::theme::ThemedObject;
 use crate::cli::warn;
 use crate::docker::opts::{CreateContainer, CreateNetwork, ListContainers};
 use crate::errors::CliError;
+use crate::docker_api::opts::{
+    ContainerCreateOpts, ContainerListOpts, ContainerStopOpts, NetworkCreateOpts,
+};
 
 use self::args::EnvArgs;
 use self::epoch::exec_epoch;

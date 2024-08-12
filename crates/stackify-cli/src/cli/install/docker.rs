@@ -1,9 +1,9 @@
 use color_eyre::{eyre::bail, Result};
-use docker_api::{models::ImageBuildChunk, opts::ImageBuildOpts};
 use futures_util::StreamExt;
 use regex::Regex;
 
 use crate::{
+    docker_api::{models::ImageBuildChunk, opts::ImageBuildOpts},
     cli::{context::CliContext, log::clilog, theme::ThemedObject},
     docker::BuildResult,
 };

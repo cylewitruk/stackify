@@ -29,10 +29,6 @@ pub struct Service {
     pub version: String,
     pub expected_service_state_id: i32,
     pub actual_service_state_id: i32,
-    pub host: Option<String>,
-    pub p2p_port: Option<i32>,
-    pub rpc_port: Option<i32>,
-    pub rpc_username: Option<String>,
-    pub rpc_password: Option<String>,
     pub is_local: bool,
+    pub service_data: Option<String>,
 }

@@ -3,13 +3,6 @@
 use std::collections::HashMap;
 
 use color_eyre::{eyre::eyre, owo_colors::OwoColorize, Result};
-use docker_api::{
-    models::{ContainerSummary, Network},
-    opts::{
-        ContainerCreateOpts, ContainerFilter, ContainerListOpts, NetworkFilter, NetworkListOpts,
-    },
-    Id,
-};
 
 use stackify_common::{
     types::{EnvironmentName, EnvironmentService},
@@ -17,6 +10,13 @@ use stackify_common::{
 };
 
 use crate::{
+    docker_api::{
+        models::{ContainerSummary, Network},
+        opts::{
+            ContainerCreateOpts, ContainerFilter, ContainerListOpts, NetworkFilter, NetworkListOpts,
+        },
+        Id,
+    },
     cli::{log::clilog, StackifyHostDirs},
     docker::LabelKey,
     util::names::service_container_name,
@@ -26,7 +26,7 @@ use super::{network_name, ContainerUser, StackifyContainerDirs};
 
 #[derive(Clone)]
 pub struct DockerApi {
-    docker: ::docker_api::Docker,
+    docker: ::stackify_docker_api::Docker,
     host_dirs: StackifyHostDirs,
     container_dirs: StackifyContainerDirs,
     container_user: ContainerUser,
@@ -38,7 +38,7 @@ impl DockerApi {
         host_dirs: StackifyHostDirs,
         container_dirs: StackifyContainerDirs,
     ) -> Result<Self> {
-        let docker = docker_api::Docker::new("unix:///var/run/user/1000/docker.sock")?;
+        let docker = stackify_docker_api::Docker::new("unix:///var/run/user/1000/docker.sock")?;
 
         let docker_info = docker.info().await?;
         let rootless = docker_info.security_options.map_or(false, |sec_opts| {
@@ -65,7 +65,7 @@ impl DockerApi {
         })
     }
 
-    pub fn api(&self) -> &::docker_api::Docker {
+    pub fn api(&self) -> &::stackify_docker_api::Docker {
         &self.docker
     }
 

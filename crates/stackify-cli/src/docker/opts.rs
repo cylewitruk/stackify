@@ -1,16 +1,16 @@
 use std::collections::HashMap;
 
 use color_eyre::Result;
-use docker_api::opts::{
-    ContainerCreateOpts, ContainerFilter, ContainerListOpts, ContainerStatus, ImageBuildOpts,
-    NetworkCreateOpts, NetworkFilter, NetworkListOpts,
-};
 use stackify_common::{
     types::{EnvironmentName, EnvironmentService},
     ServiceType,
 };
 
 use crate::{
+    docker_api::opts::{
+        ContainerCreateOpts, ContainerFilter, ContainerListOpts, ContainerStatus, ImageBuildOpts,
+        NetworkCreateOpts, NetworkFilter, NetworkListOpts,
+    },
     cli::StackifyHostDirs,
     util::names::{environment_container_name, service_container_name},
 };

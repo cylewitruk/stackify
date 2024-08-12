@@ -3,13 +3,13 @@ use color_eyre::{
     eyre::{bail, eyre},
     Result,
 };
-use docker_api::conn::TtyChunk;
 use futures_util::StreamExt;
 use prettytable::row;
 use stackify_common::types::EnvironmentName;
 use textwrap::Options;
 
 use crate::{
+    docker_api::conn::TtyChunk,
     cli::{
         context::CliContext,
         env::prompt_environment_name,

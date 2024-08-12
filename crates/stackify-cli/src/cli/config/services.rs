@@ -438,7 +438,6 @@ async fn collect_stacks_git_target() -> Result<GitTarget> {
 }
 
 async fn collect_bitcoin_version() -> Result<String> {
-    use stackify_common::{ServiceType::BitcoinFollower, ServiceType::BitcoinMiner};
 
     let gh_config = GithubApiConfig::shared(GithubApiConfig::default());
     let gh_api = GithubApi::new(&gh_config);

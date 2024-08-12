@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use color_eyre::{
     eyre::{bail, eyre},
     Result,
@@ -5,7 +7,10 @@ use color_eyre::{
 use diesel::{connection::SimpleConnection, Connection, SqliteConnection};
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use env_logger::Env;
+use futures_util::StreamExt;
 use log::info;
+use tracing_subscriber::EnvFilter;
+use libp2p::{gossipsub, tcp, yamux, ping, mdns, noise, swarm::{NetworkBehaviour, SwarmEvent}, SwarmBuilder, Multiaddr};
 
 pub mod api;
 pub mod control;
@@ -13,6 +18,13 @@ pub mod db;
 pub mod errors;
 
 pub const DB_MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
+
+#[derive(NetworkBehaviour)]
+struct StackifyBehavior {
+    gossipsub: gossipsub::Behaviour,
+    mdns: mdns::tokio::Behaviour,
+    ping: ping::Behaviour,
+}
 
 #[rocket::main]
 async fn main() -> Result<()> {
@@ -26,6 +38,28 @@ async fn main() -> Result<()> {
         .launch()
         .await?;
 
+    let mut swarm = SwarmBuilder::with_new_identity()
+        .with_tokio()
+        .with_tcp(
+            tcp::Config::default(),
+            noise::Config::new,
+            yamux::Config::default
+        )?
+        .with_quic()
+        .with_behaviour(|_| ping::Behaviour::default())?
+        .with_swarm_config(|cfg| cfg.with_idle_connection_timeout(Duration::from_secs(5)))
+        .build();
+
+    swarm.listen_on("/ip4/0.0.0.0/tcp/30249".parse()?)?;
+
+    loop {
+        match swarm.select_next_some().await {
+            SwarmEvent::NewListenAddr { address, .. } => println!("Listening on {address:?}"),
+            SwarmEvent::Behaviour(event) => println!("{event:?}"),
+            _ => println!("Unhandled event"),
+        }
+    }
+
     Ok(())
 }
 
@@ -33,6 +67,10 @@ pub fn initialize() -> Result<String> {
     let env = Env::default().filter_or("RUST_LOG", "trace");
     env_logger::init_from_env(env);
     color_eyre::install().unwrap();
+
+    let _ = tracing_subscriber::fmt()
+        .with_env_filter(EnvFilter::from_default_env())
+        .try_init();
 
     let home_dir = home::home_dir().ok_or_else(|| eyre!("Failed to get home directory."))?;
 

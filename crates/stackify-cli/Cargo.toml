@@ -1,7 +1,15 @@
 [package]
-name = "stackify-cli"
-version = "1.0.0"
-edition = "2021"
+name = "stackify"
+
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+keywords.workspace = true
+authors.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+publish = true
 
 [[bin]]
 name = "stackify"
@@ -38,7 +46,7 @@ tokio-util = { workspace = true }
 futures-util = { workspace = true }
 
 # Docker
-docker-api = { git = "https://github.com/cylewitruk/docker-api-rs.git", branch = "feat/image-build-args", features = ["tls", "par-compress"], default-features = false }
+stackify-docker-api = { version = "0.15.0", features = ["tls", "par-compress"], default-features = false }
 
 # Logging
 log = { workspace = true }

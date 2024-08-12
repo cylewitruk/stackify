@@ -7,6 +7,8 @@ use diesel::{Connection, SqliteConnection};
 use docker::api::DockerApi;
 use tokio::sync::broadcast;
 
+pub(crate) use stackify_docker_api as docker_api;
+
 use crate::{
     cli::{log::get_log, Cli, Commands},
     errors::ReportResultExt,

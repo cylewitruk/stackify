@@ -10,7 +10,7 @@ use tokio::process::Command;
 
 use crate::db::model;
 
-use super::{Monitor, MonitorContext, MonitorData};
+use super::{models::BitcoinNodeData, Monitor, MonitorContext, MonitorData};
 
 impl Monitor {
     pub async fn local_bitcoin_miner(
@@ -62,28 +62,18 @@ impl Monitor {
         service: &model::Service,
         _data: &mut MonitorData,
     ) -> Result<()> {
-        let host = service
-            .host
-            .clone()
-            .ok_or(eyre!("Service host is not set"))?;
-        let port = service
-            .rpc_port
-            .ok_or(eyre!("Service RPC port is not set"))?;
-        let url = Url::parse(&format!("http://{}:{}/", host, port))?;
-        let username = service
-            .rpc_username
-            .clone()
-            .ok_or(eyre!("Service username is not set"))?;
-        let password = service
-            .rpc_password
-            .clone()
-            .ok_or(eyre!("Service password is not set"))?;
+        // let service_data = service.service_data
+        //     .ok_or_else(|| eyre!("Service data is not set"))?;
 
-        if bitcoin_ping(&host, port as u16, &username, &password) {
-            return Ok(());
-        } else {
-            bail!("Failed to ping remote Bitcoin node at {}", url.to_string());
-        }
+        // let node_data: BitcoinNodeData = serde_json::from_str(&service_data)?;
+
+        // if bitcoin_ping(&node_data.host, node_data.rpc_port as u16, &node_data.rpc_username, &node_data.rpc_password) {
+        //     return Ok(());
+        // } else {
+        //     bail!("Failed to ping remote Bitcoin node at {}", url.to_string());
+        // }
+
+        todo!()
     }
 }
 

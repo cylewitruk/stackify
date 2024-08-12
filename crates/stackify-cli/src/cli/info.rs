@@ -6,11 +6,12 @@ use color_eyre::{
     owo_colors::OwoColorize,
 };
 use console::style;
-use docker_api::opts::ImageListOpts;
 use prettytable::{row, Table};
 use regex::Regex;
 
 use super::context::CliContext;
+
+use crate::docker_api::opts::ImageListOpts;
 
 #[derive(Debug, Args)]
 pub struct InfoArgs {

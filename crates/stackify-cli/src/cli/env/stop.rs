@@ -1,10 +1,10 @@
 use cliclack::{intro, log::*, outro, outro_note};
 use color_eyre::{eyre::eyre, Result};
 use console::style;
-use docker_api::opts::{ContainerListOpts, ContainerStopOpts};
 use stackify_common::types::EnvironmentName;
 
 use crate::{
+    docker_api::opts::{ContainerListOpts, ContainerStopOpts},
     cli::{context::CliContext, theme::ThemedObject},
     docker::opts::ListContainers,
 };

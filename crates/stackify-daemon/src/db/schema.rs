@@ -24,11 +24,7 @@ table! {
         version -> Text,
         expected_service_state_id -> Integer,
         actual_service_state_id -> Integer,
-        host -> Nullable<Text>,
-        p2p_port -> Nullable<Integer>,
-        rpc_port -> Nullable<Integer>,
-        rpc_username -> Nullable<Text>,
-        rpc_password -> Nullable<Text>,
-        is_local -> Bool
+        is_local -> Bool,
+        service_data -> Nullable<Text>,
     }
 }
