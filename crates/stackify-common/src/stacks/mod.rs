@@ -11,22 +11,13 @@ pub struct ConsensusHash(pub [u8; 20]);
 pub struct StacksBlockId(pub [u8; 32]);
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Sha512Trunc256Sum(
-    #[serde(with = "BigArray")]
-    pub [u8; 32],
-);
+pub struct Sha512Trunc256Sum(#[serde(with = "BigArray")] pub [u8; 32]);
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct BlockHeaderHash(
-    #[serde(with = "BigArray")]
-    pub [u8; 32]
-);
+pub struct BlockHeaderHash(#[serde(with = "BigArray")] pub [u8; 32]);
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct MessageSignature(
-    #[serde(with = "BigArray")]
-    pub [u8; 65],
-);
+pub struct MessageSignature(#[serde(with = "BigArray")] pub [u8; 65]);
 
 #[repr(u8)]
 #[derive(Debug, Clone, PartialEq, Copy, Serialize, Deserialize)]

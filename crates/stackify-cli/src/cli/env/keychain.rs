@@ -9,7 +9,6 @@ use stackify_common::types::EnvironmentName;
 use textwrap::Options;
 
 use crate::{
-    docker_api::conn::TtyChunk,
     cli::{
         context::CliContext,
         env::prompt_environment_name,
@@ -17,6 +16,7 @@ use crate::{
         theme::{ThemedObject, THEME},
     },
     db::cli_db::CliDatabase,
+    docker_api::conn::TtyChunk,
     errors::CliError,
     util::stacks_cli::MakeKeychainResult,
 };

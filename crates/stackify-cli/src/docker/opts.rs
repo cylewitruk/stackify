@@ -7,11 +7,11 @@ use stackify_common::{
 };
 
 use crate::{
+    cli::StackifyHostDirs,
     docker_api::opts::{
         ContainerCreateOpts, ContainerFilter, ContainerListOpts, ContainerStatus, ImageBuildOpts,
         NetworkCreateOpts, NetworkFilter, NetworkListOpts,
     },
-    cli::StackifyHostDirs,
     util::names::{environment_container_name, service_container_name},
 };
 

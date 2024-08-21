@@ -17,6 +17,9 @@ use stackify_common::{
 };
 
 use crate::{
+    cli::{context::CliContext, theme::ThemedObject},
+    db::cli_db::CliDatabase,
+    docker::opts::{CreateContainer, CreateNetwork, ListContainers, ListNetworks},
     docker_api::{
         opts::{
             ContainerConnectionOpts, ContainerCreateOpts, ContainerListOpts, NetworkCreateOpts,
@@ -24,9 +27,6 @@ use crate::{
         },
         Container,
     },
-    cli::{context::CliContext, theme::ThemedObject},
-    db::cli_db::CliDatabase,
-    docker::opts::{CreateContainer, CreateNetwork, ListContainers, ListNetworks},
     util::names::environment_container_name,
 };
 

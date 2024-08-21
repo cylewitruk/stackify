@@ -3,9 +3,9 @@ use futures_util::StreamExt;
 use regex::Regex;
 
 use crate::{
-    docker_api::{models::ImageBuildChunk, opts::ImageBuildOpts},
     cli::{context::CliContext, log::clilog, theme::ThemedObject},
     docker::BuildResult,
+    docker_api::{models::ImageBuildChunk, opts::ImageBuildOpts},
 };
 
 pub async fn clean_images(ctx: &CliContext) -> Result<()> {

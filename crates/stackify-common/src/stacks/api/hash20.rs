@@ -108,13 +108,13 @@ impl<'a> From<&'a [u8]> for Hash160 {
             (left_val, right_val) => {
                 if !(*left_val == *right_val) {
                     todo!("Implement correct error handling")
-                //     let kind = crate::panicking::AssertKind::Eq;
-                //     $crate::panicking::assert_failed(
-                //         kind,
-                //         &*left_val,
-                //         &*right_val,
-                //         $crate::option::Option::None,
-                //     );
+                    //     let kind = crate::panicking::AssertKind::Eq;
+                    //     $crate::panicking::assert_failed(
+                    //         kind,
+                    //         &*left_val,
+                    //         &*right_val,
+                    //         $crate::option::Option::None,
+                    //     );
                 }
             }
         };

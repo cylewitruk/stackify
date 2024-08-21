@@ -1,5 +1,5 @@
 //! Types for building Stacks transactions.
-//! 
+//!
 //! This code is largely borrowed from https://github.com/stacks-network/sbtc
 //! and https://github.com/stacks-network/stacks-core.
 
@@ -7,16 +7,21 @@ use libsecp256k1::PublicKey;
 use serde::{Deserialize, Serialize};
 use serde_big_array::BigArray;
 
-use crate::stacks::{BlockHeaderHash, ConsensusHash, MessageSignature, Sha512Trunc256Sum, StacksAddress, StacksBlockId, TransactionPublicKeyEncoding};
+use crate::stacks::{
+    BlockHeaderHash, ConsensusHash, MessageSignature, Sha512Trunc256Sum, StacksAddress,
+    StacksBlockId, TransactionPublicKeyEncoding,
+};
 
-use super::{clarity::{ClarityVersion, PrincipalData, Value}, errors::Error, hash20::Hash160};
+use super::{
+    clarity::{ClarityVersion, PrincipalData, Value},
+    errors::Error,
+    hash20::Hash160,
+};
 
 const C32_ADDRESS_VERSION_MAINNET_SINGLESIG: u8 = 22; // P
 const C32_ADDRESS_VERSION_MAINNET_MULTISIG: u8 = 20; // M
 const C32_ADDRESS_VERSION_TESTNET_SINGLESIG: u8 = 26; // T
 const C32_ADDRESS_VERSION_TESTNET_MULTISIG: u8 = 21; // N
-
-
 
 /// Post-condition modes for unspecified assets
 #[repr(u8)]
@@ -205,10 +210,7 @@ impl OrderIndependentMultisigHashMode {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum TransactionAuthField {
     PublicKey(PublicKey),
-    Signature(
-        TransactionPublicKeyEncoding,
-        MessageSignature
-    ),
+    Signature(TransactionPublicKeyEncoding, MessageSignature),
 }
 
 /// A structure that encodes enough state to authenticate

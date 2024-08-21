@@ -4,9 +4,9 @@ use console::style;
 use stackify_common::types::EnvironmentName;
 
 use crate::{
-    docker_api::opts::{ContainerListOpts, ContainerStopOpts},
     cli::{context::CliContext, theme::ThemedObject},
     docker::opts::ListContainers,
+    docker_api::opts::{ContainerListOpts, ContainerStopOpts},
 };
 
 use super::args::StopArgs;

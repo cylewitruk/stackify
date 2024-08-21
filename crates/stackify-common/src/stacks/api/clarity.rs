@@ -9,7 +9,6 @@ pub enum ClarityVersion {
     Clarity3,
 }
 
-
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct BufferLength(u32);
 

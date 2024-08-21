@@ -11,6 +11,7 @@ use self::service::exec_service;
 
 pub mod args;
 pub mod build;
+pub mod contract;
 pub mod down;
 pub mod epoch;
 pub mod keychain;
@@ -18,7 +19,6 @@ pub mod list;
 pub mod service;
 pub mod start;
 pub mod stop;
-pub mod contract;
 
 pub async fn exec(ctx: &CliContext, args: EnvArgs) -> Result<()> {
     match args.commands {

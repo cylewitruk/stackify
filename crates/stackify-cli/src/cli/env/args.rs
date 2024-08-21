@@ -48,7 +48,7 @@ pub enum EnvSubCommands {
     /// Manage keychains (Stacks accounts) for the environment.
     Keychain(KeychainArgs),
     /// Manage contracts for the environment.
-    Contract(super::contract::ContractArgs)
+    Contract(super::contract::ContractArgs),
 }
 
 #[derive(Debug, Args)]

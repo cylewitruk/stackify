@@ -1,10 +1,10 @@
 pub mod api;
 pub mod download;
+pub mod stacks;
 #[cfg(test)]
 pub mod tests;
 pub mod types;
 pub mod util;
-pub mod stacks;
 
 use color_eyre::eyre::{bail, Result};
 use serde::{Deserialize, Serialize};

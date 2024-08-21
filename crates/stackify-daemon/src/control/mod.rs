@@ -12,10 +12,10 @@ use color_eyre::{eyre::bail, owo_colors::OwoColorize, Result};
 use crate::db::DaemonDb;
 
 pub mod bitcoin;
+pub mod models;
 pub mod stacks_node;
 pub mod stacks_signer;
 pub mod stacks_stacker;
-pub mod models;
 
 /// This struct is responsible for monitoring the state of the services running
 /// on the local node, as well as reporting status for remote services (i.e. services

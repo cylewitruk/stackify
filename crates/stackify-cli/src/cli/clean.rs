@@ -2,9 +2,7 @@ use clap::Args;
 use color_eyre::eyre::{eyre, Result};
 
 use crate::{
-    docker_api::opts::NetworkListOpts,
-    cli::context::CliContext, 
-    docker::opts::ListNetworks
+    cli::context::CliContext, docker::opts::ListNetworks, docker_api::opts::NetworkListOpts,
 };
 
 #[derive(Debug, Args)]

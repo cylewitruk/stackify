@@ -8,9 +8,13 @@ use diesel::{connection::SimpleConnection, Connection, SqliteConnection};
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use env_logger::Env;
 use futures_util::StreamExt;
+use libp2p::{
+    gossipsub, mdns, noise, ping,
+    swarm::{NetworkBehaviour, SwarmEvent},
+    tcp, yamux, Multiaddr, SwarmBuilder,
+};
 use log::info;
 use tracing_subscriber::EnvFilter;
-use libp2p::{gossipsub, tcp, yamux, ping, mdns, noise, swarm::{NetworkBehaviour, SwarmEvent}, SwarmBuilder, Multiaddr};
 
 pub mod api;
 pub mod control;
@@ -43,7 +47,7 @@ async fn main() -> Result<()> {
         .with_tcp(
             tcp::Config::default(),
             noise::Config::new,
-            yamux::Config::default
+            yamux::Config::default,
         )?
         .with_quic()
         .with_behaviour(|_| ping::Behaviour::default())?

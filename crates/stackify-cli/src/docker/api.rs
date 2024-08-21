@@ -10,6 +10,8 @@ use stackify_common::{
 };
 
 use crate::{
+    cli::{log::clilog, StackifyHostDirs},
+    docker::LabelKey,
     docker_api::{
         models::{ContainerSummary, Network},
         opts::{
@@ -17,8 +19,6 @@ use crate::{
         },
         Id,
     },
-    cli::{log::clilog, StackifyHostDirs},
-    docker::LabelKey,
     util::names::service_container_name,
 };
 

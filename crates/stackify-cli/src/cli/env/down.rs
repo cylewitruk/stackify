@@ -3,9 +3,9 @@ use color_eyre::{eyre::eyre, Result};
 use stackify_common::types::EnvironmentName;
 
 use crate::{
-    docker_api::opts::{ContainerListOpts, ContainerStopOpts},
     cli::{context::CliContext, theme::ThemedObject},
     docker::{network_name, opts::ListContainers, ContainerState},
+    docker_api::opts::{ContainerListOpts, ContainerStopOpts},
 };
 
 use super::args::DownArgs;

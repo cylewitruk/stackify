@@ -3,7 +3,6 @@ use cliclack::{multi_progress, outro, spinner};
 use color_eyre::{eyre::bail, Result};
 
 use crate::{
-    docker_api::opts::ImageBuildOpts,
     cli::{
         context::CliContext,
         install::{db::load_default_configuration_params, docker::clean_images},
@@ -12,6 +11,7 @@ use crate::{
         ABOUT,
     },
     docker::{opts::BuildImage, BuildResult},
+    docker_api::opts::ImageBuildOpts,
 };
 
 use self::{
