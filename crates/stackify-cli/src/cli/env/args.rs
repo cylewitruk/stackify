@@ -12,14 +12,14 @@ pub struct EnvArgs {
 pub enum EnvSubCommands {
     /// Displays a list of created environments.
     #[clap(visible_alias = "ls")]
-    List(ListArgs),
+    List(super::list::ListArgs),
     /// Create a new environment.
     #[clap(visible_aliases = ["create", "add"])]
     New(NewArgs),
     /// Builds the specified environment, compiling the necessary binaries for
     /// the services if needed and creating the Docker containers which will be
     /// used for runtime. The environment will not be started, however.
-    Build(BuildArgs),
+    Build(super::build::BuildArgs),
     /// Displays detailed information about the specified environment.
     Inspect(InspectArgs),
     /// Removes the specified environment and all associated resources. This
@@ -47,6 +47,8 @@ pub enum EnvSubCommands {
     Set(SetArgs),
     /// Manage keychains (Stacks accounts) for the environment.
     Keychain(KeychainArgs),
+    /// Manage contracts for the environment.
+    Contract(super::contract::ContractArgs)
 }
 
 #[derive(Debug, Args)]
@@ -63,12 +65,6 @@ pub struct SetArgs {
 }
 
 #[derive(Debug, Args)]
-pub struct BuildArgs {
-    #[arg(required = true, value_name = "ENVIRONMENT")]
-    pub env_name: String,
-}
-
-#[derive(Debug, Args)]
 pub struct DownArgs {
     #[arg(required = true, value_name = "ENVIRONMENT")]
     pub env_name: String,
@@ -79,15 +75,6 @@ pub struct InspectArgs {
     /// The name of the environment to inspect.
     #[arg(required = true, value_name = "ENVIRONMENT")]
     pub env_name: String,
-}
-
-#[derive(Debug, Args)]
-pub struct ListArgs {}
-
-#[derive(Debug, Subcommand)]
-pub enum ListSubCommands {
-    Environments,
-    Services,
 }
 
 #[derive(Debug, Args)]

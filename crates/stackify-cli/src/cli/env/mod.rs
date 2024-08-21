@@ -1,21 +1,13 @@
-use color_eyre::eyre::{bail, eyre, Result};
-use console::style;
+use color_eyre::eyre::{bail, Result};
 use stackify_common::types::EnvironmentName;
 
 use crate::cli::context::CliContext;
 use crate::cli::theme::ThemedObject;
-use crate::cli::warn;
-use crate::docker::opts::{CreateContainer, CreateNetwork, ListContainers};
 use crate::errors::CliError;
-use crate::docker_api::opts::{
-    ContainerCreateOpts, ContainerListOpts, ContainerStopOpts, NetworkCreateOpts,
-};
 
 use self::args::EnvArgs;
 use self::epoch::exec_epoch;
 use self::service::exec_service;
-
-use super::info;
 
 pub mod args;
 pub mod build;
@@ -26,6 +18,7 @@ pub mod list;
 pub mod service;
 pub mod start;
 pub mod stop;
+pub mod contract;
 
 pub async fn exec(ctx: &CliContext, args: EnvArgs) -> Result<()> {
     match args.commands {
@@ -41,6 +34,7 @@ pub async fn exec(ctx: &CliContext, args: EnvArgs) -> Result<()> {
         args::EnvSubCommands::Epoch(inner_args) => exec_epoch(ctx, inner_args),
         args::EnvSubCommands::Set(inner_args) => exec_set(ctx, inner_args).await,
         args::EnvSubCommands::Keychain(inner_args) => keychain::exec(ctx, inner_args).await,
+        args::EnvSubCommands::Contract(inner_args) => contract::exec(ctx, inner_args).await,
     }
 }
 

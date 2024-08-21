@@ -81,22 +81,21 @@ pub struct ServiceListArgs {
 pub async fn exec_service(ctx: &CliContext, args: ServiceArgs) -> Result<()> {
     match args.commands {
         ServiceSubCommands::Add(inner_args) => {
-            add::exec(ctx, inner_args).await?;
+            add::exec(ctx, inner_args).await
         }
         ServiceSubCommands::Remove(inner_args) => {
-            remove::exec(ctx, inner_args)?;
+            remove::exec(ctx, inner_args)
         }
         ServiceSubCommands::Inspect(inner_args) => {
-            exec_inspect(ctx, inner_args)?;
+            exec_inspect(ctx, inner_args)
         }
         ServiceSubCommands::List(inner_args) => {
-            list::exec(ctx, inner_args)?;
+            list::exec(ctx, inner_args)
         }
         ServiceSubCommands::Config(inner_args) => {
-            config::exec(ctx, inner_args)?;
+            config::exec(ctx, inner_args)
         }
     }
-    Ok(())
 }
 
 fn exec_inspect(_ctx: &CliContext, args: ServiceInspectArgs) -> Result<()> {

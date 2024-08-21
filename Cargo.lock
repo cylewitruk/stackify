@@ -4626,7 +4626,7 @@ dependencies = [
  "serde_json",
  "shellwords",
  "signal-hook",
- "stackify-common",
+ "stackify-common 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "stackify-docker-api",
  "tar",
  "tempfile",
@@ -4640,6 +4640,34 @@ dependencies = [
 [[package]]
 name = "stackify-common"
 version = "0.1.0"
+dependencies = [
+ "bytes",
+ "color-eyre",
+ "diesel",
+ "diesel_migrations",
+ "docker-api",
+ "flate2",
+ "futures-util",
+ "hex",
+ "libc",
+ "log",
+ "rand",
+ "regex",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tar",
+ "tempfile",
+ "thiserror",
+ "time",
+ "tokio",
+]
+
+[[package]]
+name = "stackify-common"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8d73d76a8432010f41758894dfadb48e74d5656d9a71c770948947ffdf97ec9f"
 dependencies = [
  "bytes",
  "color-eyre",
@@ -4718,7 +4746,7 @@ dependencies = [
  "rocket_okapi",
  "serde",
  "serde_json",
- "stackify-common",
+ "stackify-common 0.1.0",
  "thiserror",
  "time",
  "tokio",

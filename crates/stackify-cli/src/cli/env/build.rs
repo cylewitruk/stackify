@@ -1,3 +1,4 @@
+use clap::Args;
 use cliclack::{intro, multi_progress, outro_cancel, outro_note, ProgressBar};
 use color_eyre::Result;
 use console::style;
@@ -18,7 +19,11 @@ use crate::docker_api::models::ContainerState;
 use crate::docker_api::opts::{ContainerCreateOpts, ContainerStopOpts, LogsOpts};
 use crate::docker_api::Container;
 
-use super::args::BuildArgs;
+#[derive(Debug, Args)]
+pub struct BuildArgs {
+    #[arg(required = true, value_name = "ENVIRONMENT")]
+    pub env_name: String,
+}
 
 pub async fn exec(ctx: &CliContext, args: BuildArgs) -> Result<()> {
     let db = ctx.db.as_clidb();

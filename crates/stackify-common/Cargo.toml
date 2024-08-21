@@ -1,5 +1,6 @@
 [package]
 name = "stackify-common"
+description = "Common utilities for the Stackify project"
 
 version.workspace = true
 edition.workspace = true

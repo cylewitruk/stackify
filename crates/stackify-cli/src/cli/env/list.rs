@@ -1,3 +1,4 @@
+use clap::Args;
 use color_eyre::Result;
 
 use cliclack::{intro, outro_note};
@@ -9,7 +10,8 @@ use crate::{
     db::cli_db::CliDatabase,
 };
 
-use super::args::ListArgs;
+#[derive(Debug, Args)]
+pub struct ListArgs {}
 
 pub async fn exec(ctx: &CliContext, _args: ListArgs) -> Result<()> {
     intro("List Environments".bold())?;

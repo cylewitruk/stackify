@@ -1,5 +1,6 @@
 [package]
 name = "stackify"
+description = "A CLI tool for managing Stacks blockchain environments (www.stacks.co)"
 
 version.workspace = true
 edition.workspace = true
@@ -80,7 +81,8 @@ diesel = { workspace = true }
 diesel_migrations = { workspace = true }
 
 # Local deps
-stackify-common = { path = "../stackify-common" }
+#stackify-common = { path = "../stackify-common" }
+stackify-common = "0.1.0"
 
 # Compression/Archiving
 flate2 = { workspace = true }
