@@ -9,19 +9,16 @@ use serde_big_array::BigArray;
 
 use crate::stacks::{
     BlockHeaderHash, ConsensusHash, MessageSignature, Sha512Trunc256Sum, StacksAddress,
-    StacksBlockId, TransactionPublicKeyEncoding,
+    StacksBlockId, TransactionPublicKeyEncoding, C32_ADDRESS_VERSION_MAINNET_MULTISIG,
+    C32_ADDRESS_VERSION_MAINNET_SINGLESIG, C32_ADDRESS_VERSION_TESTNET_MULTISIG,
+    C32_ADDRESS_VERSION_TESTNET_SINGLESIG,
 };
 
 use super::{
     clarity::{ClarityVersion, PrincipalData, Value},
     errors::Error,
-    hash20::Hash160,
+    hash::Hash160,
 };
-
-const C32_ADDRESS_VERSION_MAINNET_SINGLESIG: u8 = 22; // P
-const C32_ADDRESS_VERSION_MAINNET_MULTISIG: u8 = 20; // M
-const C32_ADDRESS_VERSION_TESTNET_SINGLESIG: u8 = 26; // T
-const C32_ADDRESS_VERSION_TESTNET_MULTISIG: u8 = 21; // N
 
 /// Post-condition modes for unspecified assets
 #[repr(u8)]

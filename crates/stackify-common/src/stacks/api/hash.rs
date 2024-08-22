@@ -1,4 +1,7 @@
+use libsecp256k1::PublicKey;
+use ripemd::{Digest, Ripemd160};
 use serde::{Deserialize, Serialize};
+use sha2::Sha256;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Hash160(
@@ -8,6 +11,28 @@ pub struct Hash160(
     )]
     pub [u8; 20],
 );
+
+impl Hash160 {
+    pub fn from_sha256(sha256_hash: &[u8; 32]) -> Hash160 {
+        let mut rmd = Ripemd160::new();
+        let mut ret = [0u8; 20];
+        rmd.update(sha256_hash);
+        ret.copy_from_slice(rmd.finalize().as_slice());
+        Hash160(ret)
+    }
+
+    /// Create a hash by hashing some data
+    // (borrowed from Andrew Poelstra)
+    pub fn from_data(data: &[u8]) -> Hash160 {
+        let sha2_result = Sha256::digest(data);
+        let ripe_160_result = Ripemd160::digest(sha2_result.as_slice());
+        Self::from(ripe_160_result.as_slice())
+    }
+
+    pub fn from_public_key(pubkey: &PublicKey) -> Hash160 {
+        Self::from_data(&pubkey.serialize_compressed())
+    }
+}
 
 fn hash20_json_serialize<S>(hash: &[u8; 20], serializer: S) -> Result<S::Ok, S::Error>
 where

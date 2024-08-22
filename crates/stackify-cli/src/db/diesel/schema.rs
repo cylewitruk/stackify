@@ -134,6 +134,17 @@ table! {
 }
 
 table! {
+    environment_service_port (id) {
+        id -> Integer,
+        environment_service_id -> Integer,
+        source_port -> Integer,
+        publish_port -> Integer,
+        network_protocol_id -> Integer,
+        remark -> Nullable<Text>,
+    }
+}
+
+table! {
     environment_service_file (id) {
         id -> Integer,
         environment_id -> Integer,

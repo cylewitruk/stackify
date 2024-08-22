@@ -1,6 +1,5 @@
 use super::schema::*;
 use diesel::prelude::*;
-use stackify_common::types;
 use time::PrimitiveDateTime;
 
 #[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, QueryableByName)]
@@ -146,6 +145,27 @@ pub struct EnvironmentService {
     pub service_version_id: i32,
     pub name: String,
     pub comment: Option<String>,
+}
+
+/*table! {
+    environment_service_port (id) {
+        id -> Integer,
+        environment_service_id -> Integer,
+        source_port -> Integer,
+        publish_port -> Integer,
+        network_protocol_id -> Integer,
+        remark -> Nullable<Text>,
+    }
+} */
+#[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, QueryableByName)]
+#[diesel(table_name = environment_service_port)]
+pub struct EnvironmentServicePort {
+    pub id: i32,
+    pub environment_service_id: i32,
+    pub source_port: i32,
+    pub publish_port: i32,
+    pub network_protocol_id: i32,
+    pub remark: Option<String>,
 }
 
 #[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, QueryableByName)]

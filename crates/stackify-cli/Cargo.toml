@@ -81,8 +81,7 @@ diesel = { workspace = true }
 diesel_migrations = { workspace = true }
 
 # Local deps
-#stackify-common = { path = "../stackify-common" }
-stackify-common = "0.1.0"
+stackify-common.workspace = true
 
 # Compression/Archiving
 flate2 = { workspace = true }

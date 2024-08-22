@@ -5,7 +5,7 @@ use color_eyre::{eyre::eyre, Result};
 use ::diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use diesel::{JoinOnDsl, SelectableHelper};
 use stackify_common::{
-    types::{self, EnvironmentName, EnvironmentService},
+    types::{self, EnvironmentName, EnvironmentService, NetworkProtocol, PortMap},
     FileType, ServiceType,
 };
 
@@ -248,6 +248,19 @@ impl CliDatabase for AppDb {
                     params.push(param);
                 }
 
+                let mut port_mappings: Vec<PortMap> = Vec::new();
+
+                for portmap in environment_service_port::table
+                    .filter(environment_service_port::environment_service_id.eq(es.id))
+                    .load::<model::EnvironmentServicePort>(&mut *self.conn.borrow_mut())?
+                {
+                    port_mappings.push(PortMap {
+                        protocol: NetworkProtocol::try_from(portmap.network_protocol_id)?,
+                        host_port: portmap.publish_port as u16,
+                        container_port: portmap.source_port as u16,
+                    });
+                }
+
                 let service = types::EnvironmentService {
                     id: es.id,
                     service_type,
@@ -266,6 +279,7 @@ impl CliDatabase for AppDb {
                     remark: es.comment.clone(),
                     file_headers,
                     params,
+                    port_mappings,
                 };
 
                 Ok(service)

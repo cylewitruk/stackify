@@ -1,6 +1,6 @@
 pub mod clarity;
 pub mod errors;
-pub mod hash20;
+pub mod hash;
 pub mod transactions;
 
 #[cfg(test)]

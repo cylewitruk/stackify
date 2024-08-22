@@ -1,4 +1,5 @@
 pub mod api;
+pub mod bitcoin;
 pub mod download;
 pub mod stacks;
 #[cfg(test)]

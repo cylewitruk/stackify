@@ -235,6 +235,34 @@ CREATE TABLE environment_service (
     FOREIGN KEY (service_version_id) REFERENCES service_version (id)
 );
 
+CREATE TABLE network_protocol (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL
+) WITHOUT ROWID;
+
+INSERT INTO network_protocol (id, name) 
+    VALUES 
+        (0, 'tcp'),
+        (1, 'udp'),
+        (2, 'sctp')
+    ;
+
+CREATE TABLE environment_service_port (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    environment_service_id INTEGER NOT NULL,
+    source_port INTEGER NOT NULL,
+    publish_port INTEGER NOT NULL,
+    network_protocol_id INTEGER NOT NULL,
+    remark TEXT NULL,
+
+    UNIQUE (environment_service_id, source_port),
+    UNIQUE (publish_port),
+    FOREIGN KEY (environment_service_id) REFERENCES environment_service (id),
+    FOREIGN KEY (network_protocol_id) REFERENCES network_protocol (id),
+    CONSTRAINT ck_environment_service_port_source_port CHECK (source_port > 0 AND source_port <= 65535),
+    CONSTRAINT ck_environment_service_port_publish_port CHECK (publish_port > 0 AND publish_port <= 65535)
+);
+
 CREATE TABLE environment_service_file (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     environment_id INTEGER NOT NULL,

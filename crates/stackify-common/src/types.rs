@@ -79,6 +79,33 @@ impl TryFrom<String> for EnvironmentName {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PortMap {
+    pub host_port: u16,
+    pub container_port: u16,
+    pub protocol: NetworkProtocol,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum NetworkProtocol {
+    Tcp = 1,
+    Udp = 2,
+    Sctp = 3,
+}
+
+impl TryFrom<i32> for NetworkProtocol {
+    type Error = color_eyre::eyre::Error;
+
+    fn try_from(value: i32) -> Result<Self> {
+        match value {
+            1 => Ok(NetworkProtocol::Tcp),
+            2 => Ok(NetworkProtocol::Udp),
+            3 => Ok(NetworkProtocol::Sctp),
+            _ => bail!("Invalid network protocol value: {}", value),
+        }
+    }
+}   
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EnvironmentService {
     pub id: i32,
     pub service_type: ServiceTypeSimple,
@@ -87,6 +114,7 @@ pub struct EnvironmentService {
     pub remark: Option<String>,
     pub file_headers: Vec<EnvironmentServiceFileHeader>,
     pub params: Vec<EnvironmentServiceParam>,
+    pub port_mappings: Vec<PortMap>,
 }
 
 impl EnvironmentService {}

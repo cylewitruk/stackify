@@ -64,6 +64,10 @@ serde_json = "1.0.125"
 # Crypto
 libsecp256k1 = "0.7.1"
 
+# Local deps
+stackify-common = { path = "crates/stackify-common" }
+#stackify-common = "0.1.0"
+
 [profile.release]
 lto = true
 opt-level = 3

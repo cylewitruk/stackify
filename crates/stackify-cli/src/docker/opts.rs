@@ -2,9 +2,10 @@ use std::collections::HashMap;
 
 use color_eyre::Result;
 use stackify_common::{
-    types::{EnvironmentName, EnvironmentService},
+    types::{EnvironmentName, EnvironmentService, NetworkProtocol},
     ServiceType,
 };
+use stackify_docker_api::opts::PublishPort;
 
 use crate::{
     cli::StackifyHostDirs,
@@ -109,15 +110,23 @@ pub trait CreateContainer {
         let service_id = service.id.to_string();
         labels.insert(LabelKey::ServiceId.to_string(), &service_id);
 
-        let opts = ContainerCreateOpts::builder()
+        let mut opts = ContainerCreateOpts::builder()
             .name(service_container_name(service))
             .user(container_user.to_string())
             .volumes([bin_mount])
             .image("stackify-runtime:latest")
-            .labels(labels)
-            .build();
+            .labels(labels);
 
-        Ok(opts)
+        for map in service.port_mappings.iter() {
+            let publish_port = match map.protocol {
+                NetworkProtocol::Tcp => PublishPort::tcp(map.container_port.into()),
+                NetworkProtocol::Udp => PublishPort::udp(map.container_port.into()),
+                NetworkProtocol::Sctp => PublishPort::sctp(map.container_port.into()),
+            };
+            opts = opts.expose::<u32>(publish_port , map.host_port.into());
+        }
+
+        Ok(opts.build())
     }
 }
 
