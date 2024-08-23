@@ -337,6 +337,8 @@ impl CliDatabase for AppDb {
 
         let service_type_versions = service_version::table.load::<model::ServiceVersion>(conn)?;
 
+        let service_type_ports = service_type_port::table.load::<model::ServiceTypePort>(conn)?;
+
         let epochs = epoch::table
             .load::<model::Epoch>(conn)?
             .into_iter()
@@ -379,6 +381,19 @@ impl CliDatabase for AppDb {
                         }
                     });
 
+                let service_ports = service_type_ports
+                    .iter()
+                    .filter(|sp| sp.service_type_id == service_type.id)
+                    .map(|sp| types::ServiceTypePort {
+                        id: sp.id,
+                        service_type: stackify_common::ServiceType::from_i32(service_type.id)
+                            .expect("Service type not found"),
+                        protocol: NetworkProtocol::try_from(sp.network_protocol_id)
+                            .expect("Network protocol not found"),
+                        port: sp.port as u16,
+                        remark: sp.remark.clone(),
+                    });
+
                 let ret = types::ServiceTypeFull {
                     id: service_type.id,
                     name: service_type.name.clone(),
@@ -387,6 +402,7 @@ impl CliDatabase for AppDb {
                     allow_max_epoch: service_type.allow_maximum_epoch,
                     allow_min_epoch: service_type.allow_minimum_epoch,
                     versions: service_versions.collect(),
+                    ports: service_ports.collect(),
                 };
 
                 Ok(ret)

@@ -81,6 +81,16 @@ table! {
 }
 
 table! {
+    service_type_port (id) {
+        id -> Integer,
+        service_type_id -> Integer,
+        network_protocol_id -> Integer,
+        port -> Integer,
+        remark -> Nullable<Text>,
+    }
+}
+
+table! {
     service_version (id) {
         id -> Integer,
         service_type_id -> Integer,

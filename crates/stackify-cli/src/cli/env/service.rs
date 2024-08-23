@@ -10,6 +10,7 @@ pub mod add;
 pub mod config;
 pub mod list;
 pub mod remove;
+pub mod publish;
 
 #[derive(Debug, Args)]
 pub struct ServiceArgs {
@@ -35,6 +36,9 @@ pub enum ServiceSubCommands {
     /// service.
     #[clap(visible_alias = "cfg")]
     Config(ServiceConfigArgs),
+    /// Publish (expose) a service on the host machine.
+    #[clap(visible_alias = "pub")]
+    Publish(publish::ServicePublishArgs),
 }
 
 #[derive(Debug, Args)]
@@ -85,6 +89,7 @@ pub async fn exec_service(ctx: &CliContext, args: ServiceArgs) -> Result<()> {
         ServiceSubCommands::Inspect(inner_args) => exec_inspect(ctx, inner_args),
         ServiceSubCommands::List(inner_args) => list::exec(ctx, inner_args),
         ServiceSubCommands::Config(inner_args) => config::exec(ctx, inner_args),
+        ServiceSubCommands::Publish(inner_args) => publish::exec(ctx, inner_args).await,
     }
 }
 

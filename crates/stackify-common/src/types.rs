@@ -135,6 +135,15 @@ pub struct ServiceTypeSimple {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ServiceTypePort {
+    pub id: i32,
+    pub service_type: ServiceType,
+    pub port: u16,
+    pub protocol: NetworkProtocol,
+    pub remark: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ServiceTypeFull {
     pub id: i32,
     pub name: String,
@@ -143,6 +152,7 @@ pub struct ServiceTypeFull {
     pub allow_min_epoch: bool,
     pub allow_git_target: bool,
     pub versions: Vec<ServiceVersion>,
+    pub ports: Vec<ServiceTypePort>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

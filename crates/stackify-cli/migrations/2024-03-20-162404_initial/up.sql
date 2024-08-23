@@ -32,6 +32,18 @@ INSERT INTO environment_status (id, name)
         (2, 'error')
     ;
 
+CREATE TABLE network_protocol (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL
+) WITHOUT ROWID;
+
+INSERT INTO network_protocol (id, name) 
+    VALUES 
+        (0, 'tcp'),
+        (1, 'udp'),
+        (2, 'sctp')
+    ;
+
 CREATE TABLE environment (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
@@ -142,6 +154,35 @@ CREATE TABLE service_type_param (
     FOREIGN KEY (service_type_id) REFERENCES service_type (id)
 );
 
+CREATE TABLE service_type_port (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    service_type_id INTEGER NOT NULL,
+    network_protocol_id INTEGER NOT NULL,
+    port INTEGER NOT NULL,
+    remark TEXT NULL,
+
+    UNIQUE (service_type_id, port),
+    FOREIGN KEY (service_type_id) REFERENCES service_type (id),
+    FOREIGN KEY (network_protocol_id) REFERENCES network_protocol (id),
+    CONSTRAINT ck_service_type_port_port CHECK (port > 0 AND port <= 65535)
+);
+
+INSERT INTO service_type_port (service_type_id, network_protocol_id, port, remark)
+    VALUES
+        -- Bitcoin Miner
+        (0, 1, 18443, 'Bitcoin RPC'),
+        (0, 1, 18444, 'Bitcoin P2P'),
+        -- Bitcoin Follower
+        (1, 1, 18443, 'Bitcoin RPC'),
+        (1, 1, 18444, 'Bitcoin P2P'),
+        -- Stacks Miner
+        (2, 1, 20443, 'Stacks RPC'),
+        (2, 1, 20444, 'Stacks P2P'),
+        -- Stacks Follower
+        (3, 1, 20443, 'Stacks RPC'),
+        (3, 1, 20444, 'Stacks P2P')
+    ;
+
 CREATE TABLE service_version (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     service_type_id INTEGER NOT NULL,
@@ -234,18 +275,6 @@ CREATE TABLE environment_service (
     FOREIGN KEY (environment_id) REFERENCES environment (id),
     FOREIGN KEY (service_version_id) REFERENCES service_version (id)
 );
-
-CREATE TABLE network_protocol (
-    id INTEGER PRIMARY KEY,
-    name TEXT NOT NULL
-) WITHOUT ROWID;
-
-INSERT INTO network_protocol (id, name) 
-    VALUES 
-        (0, 'tcp'),
-        (1, 'udp'),
-        (2, 'sctp')
-    ;
 
 CREATE TABLE environment_service_port (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

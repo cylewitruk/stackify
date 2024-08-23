@@ -319,6 +319,15 @@ impl AppDb {
         Ok(())
     }
 
+    pub fn list_ports_for_service_type_id(
+        &self,
+        service_type_id: i32
+    ) -> Result<Vec<ServiceTypePort>> {
+        Ok(service_type_port::table
+            .filter(service_type_port::service_type_id.eq(service_type_id))
+            .load(&mut *self.conn.borrow_mut())?)
+    }
+
     pub fn list_environment_services_for_environment_id(
         &self,
         environment_id: i32,

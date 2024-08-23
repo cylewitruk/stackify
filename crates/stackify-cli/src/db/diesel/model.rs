@@ -92,6 +92,16 @@ pub struct ServiceTypeParam {
     pub allowed_values: Option<String>,
 }
 
+#[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, QueryableByName)]
+#[diesel(table_name = service_type_port)]
+pub struct ServiceTypePort {
+    pub id: i32,
+    pub service_type_id: i32,
+    pub network_protocol_id: i32,
+    pub port: i32,
+    pub remark: Option<String>,
+}
+
 // TODO: Change this to `ServiceTypeVersion` like the other models which aren't directly connected to an environment.
 #[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Clone, QueryableByName)]
 #[diesel(table_name = service_version)]
